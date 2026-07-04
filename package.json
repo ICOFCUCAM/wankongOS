@@ -1,0 +1,29 @@
+{
+  "name": "wankong-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WankongOS — the operating system businesses use to hire, manage, supervise, and scale AI employees.",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" run build",
+    "typecheck": "tsc -b tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "api": "pnpm --filter @wankong/api run dev",
+    "web": "pnpm --filter @wankong/web run dev",
+    "seed:print": "pnpm --filter @wankong/store run print",
+    "lint": "tsc -b tsconfig.build.json --pretty"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

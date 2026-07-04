@@ -1,0 +1,14 @@
+/**
+ * @wankong/core — the domain model shared by every app and package.
+ *
+ * This package is pure: no I/O, no network, no framework. It defines the
+ * typed shape of every business object, the rules that govern them
+ * (permissions, org hierarchy, KPIs), and nothing else. Everything upstream
+ * depends on these types so the whole system speaks one language.
+ */
+export * from "./ids.js";
+export * from "./enums.js";
+export * from "./schemas.js";
+export * from "./permissions.js";
+export * from "./org.js";
+export * from "./kpi.js";
