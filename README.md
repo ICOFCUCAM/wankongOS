@@ -116,6 +116,7 @@ store code is tested in CI on real SQL via PGlite (ADR-0009).
 | `POST` | `/v1/employees/:id/rollback` | Restore a version (gate-checked) *(employee:manage)* |
 | `GET/POST` | `/v1/employees/:id/reviews` | KPI-backed performance reviews *(read/manage)* |
 | `GET/POST` | `/v1/api-keys` · `DELETE /v1/api-keys/:id` | Scoped machine credentials *(apikey:manage)* |
+| `GET/POST` | `/v1/integrations` · `DELETE /v1/integrations/:id` | Connect MCP tool servers *(integration:manage)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 

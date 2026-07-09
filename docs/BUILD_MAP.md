@@ -24,7 +24,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | Workflow engine | `packages/workflow` | ✅ engine · 🟡 visual builder |
 | Memory system | `packages/core` (scoring/pruning) + `packages/store` | ✅ scoring/pruning/timeline · ⬜ vector recall |
 | Knowledge system | `packages/knowledge` + `packages/store` | ✅ ingestion/embeddings/search/citations · ⬜ PDF/Word/connector sources |
-| Integrations | `packages/workflow/connectors` + `packages/integrations` | 🟡 framework · ⬜ real connectors |
+| Integrations | `packages/workflow/connectors` + `packages/integrations` | 🟡 framework · ✅ MCP client · ⬜ SaaS connectors |
 | Notifications | audit-backed hook + `packages/notifications` | 🟡 · ⬜ delivery |
 | Auth / RBAC / multi-tenancy | `packages/core` (permissions) + `packages/auth` | 🟡 model · ⬜ SSO/sessions |
 | Billing | `packages/billing` | ⬜ |
@@ -168,13 +168,16 @@ The audit trail and RLS design exist; package them for the compliance officer.
 - ⬜ **Canary rollout** — route a fraction of an employee's traffic to the new
   version; promote on eval + KPI parity.
 
-### 3.6 Interoperability — fit the stack, don't fight it ⬜ → M4
+### 3.6 Interoperability — fit the stack, don't fight it 🟡 (MCP shipped)
 *Boundary: `packages/integrations`.*
-- **MCP support** — employees can consume any Model Context Protocol tool server,
-  instantly inheriting the whole MCP ecosystem as employee tools.
-- **SCIM provisioning + SSO** — enterprise IT manages human users the way they
+- ✅ **MCP support** — connect any Model Context Protocol tool server
+  (`POST /v1/integrations`, Streamable HTTP client, session-aware, JSON+SSE
+  framings); discovered tools become assignable employee tools
+  (`mcp.<server>.<tool>`) executed through the agent loop. Disconnect removes
+  them on the next request.
+- ⬜ **SCIM provisioning + SSO** — enterprise IT manages human users the way they
   already manage everything else.
-- **Outbound event bus** — every domain event (task done, approval pending, run
+- ⬜ **Outbound event bus** — every domain event (task done, approval pending, run
   failed) streams to webhooks/queues so companies build on top of the OS.
 
 ### 3.7 Business Continuity ⬜ → M5
@@ -210,10 +213,14 @@ The audit trail and RLS design exist; package them for the compliance officer.
   the console). Built-ins: task.create, kb.search, memory.save — real effects,
   audited. The hermetic local provider decides via declared per-tool triggers;
   cloud models decide natively from the same neutral definitions.
-- **M4b — Integrations & worker** → credentialed connectors, OAuth, MCP tool
-  support, SCIM, outbound event bus (§3.6); native tool-calling wire formats for
-  the Anthropic/OpenAI/Google providers; `apps/worker` for scheduled/queued jobs
-  and background workflow runs.
+- **M4b — MCP tool support** ✅ dependency-free MCP client (Streamable HTTP,
+  session-aware, JSON+SSE response framings); integrations API connects servers
+  and discovers tools; MCP tools compose into the per-request registry and run
+  through the agent loop under employee permissions.
+- **M4c — Connectors, worker & event bus** → credentialed SaaS connectors, OAuth,
+  SCIM, outbound webhooks (§3.6); native tool-calling wire formats for
+  Anthropic/OpenAI/Google providers; `apps/worker` for scheduled/queued jobs and
+  background workflow runs.
 - **M5 — Observability, compliance & hardening** → tracing, cost/latency analytics,
   rate limiting, prompt-injection defenses, backups; evidence exports, retention
   policies, PII redaction (§3.4); provider failover + degraded mode (§3.7).

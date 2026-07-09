@@ -33,7 +33,9 @@
       "@wankong/knowledge": ["packages/knowledge/src/index.ts"],
       "@wankong/knowledge/*": ["packages/knowledge/src/*"],
       "@wankong/evals": ["packages/evals/src/index.ts"],
-      "@wankong/evals/*": ["packages/evals/src/*"]
+      "@wankong/evals/*": ["packages/evals/src/*"],
+      "@wankong/integrations": ["packages/integrations/src/index.ts"],
+      "@wankong/integrations/*": ["packages/integrations/src/*"]
     }
   }
 }

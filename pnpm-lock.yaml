@@ -35,6 +35,9 @@ importers:
       '@wankong/evals':
         specifier: workspace:*
         version: link:../../packages/evals
+      '@wankong/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@wankong/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
@@ -139,6 +142,18 @@ importers:
         specifier: workspace:*
         version: link:../core
     devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/integrations:
+    devDependencies:
+      '@hono/node-server':
+        specifier: ^1.13.7
+        version: 1.19.14(hono@4.12.27)
+      hono:
+        specifier: ^4.6.14
+        version: 4.12.27
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

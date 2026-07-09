@@ -111,6 +111,7 @@ export const IntegrationKind = z.enum([
   "microsoft_365",
   "github",
   "notion",
+  "mcp",
   "rest",
   "webhook",
 ]);

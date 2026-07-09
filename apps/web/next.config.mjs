@@ -9,6 +9,7 @@ const nextConfig = {
     "@wankong/workflow",
     "@wankong/knowledge",
     "@wankong/evals",
+    "@wankong/integrations",
     "@wankong/api",
   ],
   eslint: { ignoreDuringBuilds: true },
