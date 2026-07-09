@@ -114,12 +114,16 @@ store code is tested in CI on real SQL via PGlite (ADR-0009).
 | `GET`  | `/v1/employees/:id/usage` | Today's tokens vs. budget *(employee:read)* |
 | `GET`  | `/v1/employees/:id/versions` | Config version history *(employee:read)* |
 | `POST` | `/v1/employees/:id/rollback` | Restore a version (gate-checked) *(employee:manage)* |
+| `GET/POST` | `/v1/employees/:id/reviews` | KPI-backed performance reviews *(read/manage)* |
+| `GET/POST` | `/v1/api-keys` · `DELETE /v1/api-keys/:id` | Scoped machine credentials *(apikey:manage)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 
-Authorization is permission-based. In this dev build, requests act as the org owner;
-pass `x-demo-role: viewer|member|manager|admin|owner` to exercise the permission model.
-The `actorFor()` seam is where a real SSO / API-key resolver drops in.
+Authorization is permission-based. Machine access: create an API key and call with
+`Authorization: Bearer wk_live_…` — the request carries exactly the key's scopes.
+In this dev build, browser requests act as the org owner; pass
+`x-demo-role: viewer|member|manager|admin|owner` to exercise the permission model.
+Human sessions/SSO drop into the same `actorFor()` seam (M3d).
 
 ## Testing
 

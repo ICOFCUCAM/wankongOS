@@ -20,6 +20,9 @@ import { knowledgeRoutes } from "./routes/knowledge.js";
 import { memoryRoutes } from "./routes/memories.js";
 import { evalRoutes } from "./routes/evals.js";
 import { lifecycleRoutes } from "./routes/lifecycle.js";
+import { apiKeyRoutes } from "./routes/apikeys.js";
+import { reviewRoutes } from "./routes/reviews.js";
+import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 
 export interface CreateAppOptions {
   context?: AppContext;
@@ -45,6 +48,27 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
     // Store init (schema/seed for Postgres) completes before any request runs.
     await context.ready;
     c.set("ctx", context);
+
+    // Machine access: a Bearer API key authenticates with exactly its scopes.
+    const bearer = c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
+    if (bearer && looksLikeApiKey(bearer)) {
+      const resolved = await resolveApiKey(context.store, context.organizationId, bearer);
+      if (!resolved) return c.json({ error: "Invalid or revoked API key" }, 401);
+      c.set("actor", {
+        user: {
+          id: resolved.key.id,
+          organizationId: context.organizationId,
+          email: "apikey@wankong.local",
+          name: `API key: ${resolved.key.name}`,
+          role: "member",
+          status: "active",
+          createdAt: resolved.key.createdAt,
+          updatedAt: resolved.key.updatedAt,
+        },
+        permissions: resolved.permissions,
+      });
+      return next();
+    }
 
     const owner = (await context.store.users.list((u) => u.role === "owner"))[0];
     const fallback = owner ?? {
@@ -78,6 +102,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", memoryRoutes);
   v1.route("/", evalRoutes);
   v1.route("/", lifecycleRoutes);
+  v1.route("/", apiKeyRoutes);
+  v1.route("/", reviewRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

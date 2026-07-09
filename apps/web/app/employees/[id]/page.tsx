@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { Chat } from "@/components/Chat";
 import { EvalPanel } from "@/components/EvalPanel";
 import { EmployeeControls } from "@/components/EmployeeControls";
+import { ReviewPanel } from "@/components/ReviewPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,15 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   let memories: Awaited<ReturnType<typeof api.employeeMemories>>;
   let evals: Awaited<ReturnType<typeof api.employeeEvals>>;
   let usage: Awaited<ReturnType<typeof api.employeeUsage>>;
+  let reviews: Awaited<ReturnType<typeof api.employeeReviews>>;
   try {
-    [employee, goals, memories, evals, usage] = await Promise.all([
+    [employee, goals, memories, evals, usage, reviews] = await Promise.all([
       api.employee(id),
       api.employeeGoals(id),
       api.employeeMemories(id),
       api.employeeEvals(id),
       api.employeeUsage(id),
+      api.employeeReviews(id),
     ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
@@ -129,6 +132,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           )}
 
           <EvalPanel employeeId={employee.id} suite={evals.suite} initialReports={evals.reports} />
+
+          <ReviewPanel employeeId={employee.id} initialReviews={reviews} />
 
           <div className="card">
             <h3 className="mb-3 text-xs uppercase tracking-wide text-muted">Memory timeline</h3>

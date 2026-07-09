@@ -11,6 +11,7 @@ import type {
   Memory,
   OrgChartNode,
   Organization,
+  Report,
   Task,
   Workflow,
   WorkflowRun,
@@ -87,6 +88,8 @@ export const api = {
     ),
   employeeEvals: (id: string) =>
     call<{ suite: EvalSuite | null; reports: EvalReport[] }>(`/v1/employees/${id}/evals`),
+  employeeReviews: (id: string) =>
+    call<{ data: Report[] }>(`/v1/employees/${id}/reviews`).then((r) => r.data),
   employeeUsage: (id: string) =>
     call<{ todayTokens: number; dailyTokenBudget: number | null; remaining: number | null }>(
       `/v1/employees/${id}/usage`,
