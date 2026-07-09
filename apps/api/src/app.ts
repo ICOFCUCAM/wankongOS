@@ -19,6 +19,7 @@ import { workflowRoutes } from "./routes/workflows.js";
 import { knowledgeRoutes } from "./routes/knowledge.js";
 import { memoryRoutes } from "./routes/memories.js";
 import { evalRoutes } from "./routes/evals.js";
+import { lifecycleRoutes } from "./routes/lifecycle.js";
 
 export interface CreateAppOptions {
   context?: AppContext;
@@ -74,6 +75,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", knowledgeRoutes);
   v1.route("/", memoryRoutes);
   v1.route("/", evalRoutes);
+  v1.route("/", lifecycleRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

@@ -87,6 +87,10 @@ export const api = {
     ),
   employeeEvals: (id: string) =>
     call<{ suite: EvalSuite | null; reports: EvalReport[] }>(`/v1/employees/${id}/evals`),
+  employeeUsage: (id: string) =>
+    call<{ todayTokens: number; dailyTokenBudget: number | null; remaining: number | null }>(
+      `/v1/employees/${id}/usage`,
+    ),
 };
 
 export interface DocumentMeta {

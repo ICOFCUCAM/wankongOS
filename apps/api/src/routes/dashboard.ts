@@ -46,6 +46,7 @@ dashboardRoutes.get("/dashboard", async (c) => {
       employees: employees.length,
       activeEmployees,
       departments: departments.length,
+      byStatus: countBy(employees, (e) => e.status),
     },
     tasks: {
       total: tasks.length,

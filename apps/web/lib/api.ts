@@ -25,7 +25,12 @@ export class ApiError extends Error {
 
 export interface DashboardData {
   organizationId: string;
-  workforce: { employees: number; activeEmployees: number; departments: number };
+  workforce: {
+    employees: number;
+    activeEmployees: number;
+    departments: number;
+    byStatus: Record<string, number>;
+  };
   tasks: { total: number; open: number; completed: number; byStatus: Record<string, number> };
   approvals: { pending: number };
   goals: { total: number; byStatus: Record<string, number>; averageProgress: number };

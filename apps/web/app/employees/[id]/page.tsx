@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/server-api";
 import { Avatar } from "@/components/Avatar";
 import { Chat } from "@/components/Chat";
 import { EvalPanel } from "@/components/EvalPanel";
+import { EmployeeControls } from "@/components/EmployeeControls";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,14 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   let goals: Goal[];
   let memories: Awaited<ReturnType<typeof api.employeeMemories>>;
   let evals: Awaited<ReturnType<typeof api.employeeEvals>>;
+  let usage: Awaited<ReturnType<typeof api.employeeUsage>>;
   try {
-    [employee, goals, memories, evals] = await Promise.all([
+    [employee, goals, memories, evals, usage] = await Promise.all([
       api.employee(id),
       api.employeeGoals(id),
       api.employeeMemories(id),
       api.employeeEvals(id),
+      api.employeeUsage(id),
     ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
@@ -52,15 +55,20 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
       <div className="flex items-start gap-4">
         <Avatar name={employee.name} size={64} />
         <div className="flex-1">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold">{employee.name}</h1>
             <span
               className={`pill ${
-                employee.status === "active" ? "border-success/40 text-success" : "text-muted"
+                employee.status === "active"
+                  ? "border-success/40 text-success"
+                  : employee.status === "training"
+                    ? "border-warn/50 text-warn"
+                    : "text-muted"
               }`}
             >
-              {employee.status}
+              {employee.status === "training" ? "probation" : employee.status}
             </span>
+            <EmployeeControls employeeId={employee.id} status={employee.status} />
           </div>
           <p className="text-muted">{employee.title}</p>
           <p className="mt-3 max-w-2xl text-sm text-muted">{employee.description}</p>
@@ -172,6 +180,12 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                 <div>{employee.escalationRules.length} escalation rule(s)</div>
                 <div>{employee.permissions.length} permission(s)</div>
                 <div>Provider: {employee.provider ?? "org default"}</div>
+                <div>
+                  Token budget:{" "}
+                  {usage.dailyTokenBudget
+                    ? `${usage.todayTokens.toLocaleString()} / ${usage.dailyTokenBudget.toLocaleString()} today`
+                    : `unlimited (${usage.todayTokens.toLocaleString()} used today)`}
+                </div>
               </div>
             </div>
           </div>

@@ -29,6 +29,7 @@ export const ID_PREFIXES = {
   auditEvent: "evt",
   evalSuite: "evs",
   evalReport: "evr",
+  employeeVersion: "empv",
 } as const;
 
 export type EntityKind = keyof typeof ID_PREFIXES;

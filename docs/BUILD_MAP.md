@@ -29,7 +29,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | Auth / RBAC / multi-tenancy | `packages/core` (permissions) + `packages/auth` | 🟡 model · ⬜ SSO/sessions |
 | Billing | `packages/billing` | ⬜ |
 | AI QA / evaluations (§3.2) | `packages/evals` | ✅ golden suites + regression gate · ⬜ drift detection |
-| Trust & governance (§3.1, §3.5) | `packages/core` policies + API/web | ⬜ |
+| Trust & governance (§3.1, §3.5) | `packages/core` policies + API/web | ✅ probation/kill switch/budgets/versioning · ⬜ reviews/canary |
 | Analytics / observability | `packages/analytics` + API instrumentation | 🟡 dashboard · ⬜ tracing/cost |
 | Design system / UI kit | `packages/design-system`, `packages/ui` | 🟡 in web · ⬜ extracted |
 | REST API | `apps/api` | ✅ |
@@ -117,19 +117,18 @@ The directive covers table stakes. These are the capabilities that make an
 enterprise *trust* an AI workforce enough to scale it — the moat. Each is mapped
 to a boundary and a milestone so it's a deliverable, not a slogan.
 
-### 3.1 Trust & Governance (treat AI employees like real hires) ⬜ → M2/M3
+### 3.1 Trust & Governance (treat AI employees like real hires) 🟡 (core shipped)
 The org already models approval/escalation rules; extend it into a full employment
 lifecycle. *Boundary: `packages/core` (policy), `apps/api`, `apps/web`.*
-- **Probation mode** — new/edited employees start with tighter approval thresholds
-  that relax automatically as their approval-rate earns trust.
-- **Performance reviews** — periodic, KPI-backed review records per employee
-  (attainment trend, escalation rate, rework rate), rendered like a real review.
-- **Budget caps** — hard per-employee/department token & spend ceilings; the
-  runtime refuses work past the cap instead of silently billing.
-- **Kill switch** — one click pauses an employee (or a whole department) and
-  freezes its pending workflow steps, org-wide in seconds.
-- **Sandbox trials** — run a candidate employee against recorded real tasks with
-  connectors in dry-run mode before granting live access.
+- ✅ **Probation mode** — new hires start in status `training` and refuse real work;
+  activation (`POST /employees/:id/activate`) requires PASSING the employee's eval
+  suite. Trust is earned by evidence.
+- ✅ **Budget caps** — `dailyTokenBudget` per employee is a hard ceiling: chat refuses
+  with 429 once today's tokens are spent; usage surfaced on the profile.
+- ✅ **Kill switch** — pause one employee or the whole workforce in one click
+  (`POST /workforce/pause`); chat returns 409 and workflow steps fail visibly.
+- ⬜ **Performance reviews** — periodic, KPI-backed review records per employee.
+- ⬜ **Sandbox trials** — dry-run candidates against recorded tasks before live access.
 
 ### 3.2 Evaluation & Quality — AI QA ⬜ → M2
 No company promotes an untested human; same rule for AI. *Boundary: new
@@ -159,11 +158,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
 - **Human-accountability chain** — every consequential AI action names the human
   who authorized the rule that permitted it.
 
-### 3.5 Change Management — ship employee changes safely ⬜ → M3
+### 3.5 Change Management — ship employee changes safely 🟡 (versioning shipped)
 *Boundary: `packages/core` (versioning), `apps/api`.*
-- **Versioned employee configs** (prompt, tools, permissions) with diff view and
-  instant rollback.
-- **Canary rollout** — route a fraction of an employee's traffic to the new
+- ✅ **Versioned employee configs** — every change snapshots the prior config
+  (`GET /employees/:id/versions`); **rollback** restores it through the same eval
+  gate as any edit. ⬜ Diff view in the console.
+- ⬜ **Canary rollout** — route a fraction of an employee's traffic to the new
   version; promote on eval + KPI parity.
 
 ### 3.6 Interoperability — fit the stack, don't fight it ⬜ → M4
@@ -192,10 +192,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
   search → citations in chat; memory scoring/pruning + timeline; golden-task eval
   suites and the regression gate (§3.2). *Deferred from M2 → M3:* probation mode +
   performance reviews (§3.1), pgvector-backed storage (rides with the Postgres store).
-- **M3 — Real persistence, auth & trust** → Postgres/Supabase repository behind the
-  existing interface (ADR-0005), sessions + SSO-ready auth, invitation flow, API keys;
-  budget caps + kill switch (§3.1), versioned configs + canary rollout (§3.5),
-  cost-per-outcome FinOps (§3.3).
+- **M3a — Trust & governance** ✅ probation lifecycle (hire → training → evals →
+  activate), per-employee daily token budgets (hard 429), individual + org-wide kill
+  switch, config versioning with gate-checked rollback (§3.1, §3.5).
+- **M3b — Real persistence & auth** → Postgres/Supabase repository behind the
+  existing interface (ADR-0005), sessions + SSO-ready auth, invitation flow, API
+  keys; performance reviews, canary rollout, cost-per-outcome FinOps (§3.3).
 - **M4 — Integrations & worker** → credentialed connectors, OAuth, MCP tool support,
   SCIM, outbound event bus (§3.6); `apps/worker` for scheduled/queued jobs and
   background workflow runs.

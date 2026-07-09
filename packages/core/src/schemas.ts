@@ -163,6 +163,13 @@ export const Employee = z.object({
   model: z.string().max(120).optional(),
   temperature: z.number().min(0).max(2).default(0.4),
 
+  /**
+   * Hard daily token ceiling (input+output across this employee's
+   * conversations). Work is refused once the cap is reached — spend control,
+   * not advisory. Unset = unlimited.
+   */
+  dailyTokenBudget: z.number().int().positive().optional(),
+
   // Capabilities & governance
   toolIds: z.array(ToolId).default([]),
   permissions: z.array(Permission).default([]),
@@ -343,6 +350,24 @@ export const AuditEvent = z.object({
   metadata: z.record(z.unknown()).default({}),
 });
 export type AuditEvent = z.infer<typeof AuditEvent>;
+
+/**
+ * Immutable snapshot of an employee's configuration, taken before every
+ * change. Powers the version history view and one-click rollback — prompt and
+ * role edits are production deployments and get deployment-grade controls.
+ */
+export const EmployeeVersion = z.object({
+  ...auditFields,
+  organizationId: Id,
+  employeeId: Id,
+  version: z.number().int().positive(),
+  changedBy: Id,
+  /** Human-readable summary of what changed (field names). */
+  changeSummary: z.string().max(500),
+  /** The full employee record as it was BEFORE the change. */
+  snapshot: z.record(z.unknown()),
+});
+export type EmployeeVersion = z.infer<typeof EmployeeVersion>;
 
 export const Report = z.object({
   ...auditFields,
