@@ -1,4 +1,9 @@
-import type { AIProvider, CompletionChunk, CompletionRequest } from "../types.js";
+import type {
+  AIProvider,
+  ChatMessage,
+  CompletionChunk,
+  CompletionRequest,
+} from "../types.js";
 import { ProviderError } from "../types.js";
 import { parseSSE } from "./sse.js";
 
@@ -9,9 +14,9 @@ export interface OpenAIConfig {
 }
 
 /**
- * OpenAI Chat Completions provider (streaming) via `fetch`. Works against any
- * OpenAI-compatible endpoint by overriding `baseUrl` (Azure, local gateways,
- * etc.), which keeps us from locking into a single vendor's hosting.
+ * OpenAI Chat Completions provider (streaming, native tool calling) via
+ * `fetch`. Works against any OpenAI-compatible endpoint by overriding
+ * `baseUrl` (Azure, local gateways, etc.).
  */
 export class OpenAIProvider implements AIProvider {
   readonly id = "openai" as const;
@@ -37,11 +42,11 @@ export class OpenAIProvider implements AIProvider {
         max_tokens: request.maxTokens,
         stream: true,
         stream_options: { include_usage: true },
-        messages: request.messages.map((m) => ({
-          role: m.role === "tool" ? "tool" : m.role,
-          content: m.content,
-          ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+        tools: request.tools?.map((t) => ({
+          type: "function",
+          function: { name: t.name, description: t.description, parameters: t.parameters },
         })),
+        messages: mapMessages(request.messages),
       }),
       signal: request.signal,
     });
@@ -53,6 +58,8 @@ export class OpenAIProvider implements AIProvider {
     let inputTokens = 0;
     let outputTokens = 0;
     let finishReason: "stop" | "tool_calls" | "length" = "stop";
+    // Tool call fragments accumulate by index until the stream ends.
+    const pending = new Map<number, { id: string; name: string; args: string }>();
 
     for await (const data of parseSSE(res.body)) {
       const event = safeJson(data);
@@ -61,15 +68,51 @@ export class OpenAIProvider implements AIProvider {
       if (choice?.delta?.content) {
         yield { type: "text", delta: choice.delta.content };
       }
+      for (const frag of choice?.delta?.tool_calls ?? []) {
+        const slot = pending.get(frag.index) ?? { id: "", name: "", args: "" };
+        if (frag.id) slot.id = frag.id;
+        if (frag.function?.name) slot.name += frag.function.name;
+        if (frag.function?.arguments) slot.args += frag.function.arguments;
+        pending.set(frag.index, slot);
+      }
       if (choice?.finish_reason === "length") finishReason = "length";
+      if (choice?.finish_reason === "tool_calls") finishReason = "tool_calls";
       if (event.usage) {
         inputTokens = event.usage.prompt_tokens ?? inputTokens;
         outputTokens = event.usage.completion_tokens ?? outputTokens;
       }
     }
 
+    for (const [, slot] of [...pending.entries()].sort((a, b) => a[0] - b[0])) {
+      yield {
+        type: "tool_call",
+        call: { id: slot.id, name: slot.name, arguments: safeJson(slot.args || "{}") ?? {} },
+      };
+    }
+
     yield { type: "done", usage: { inputTokens, outputTokens }, finishReason };
   }
+}
+
+/** Map neutral messages to OpenAI wire format, including tool history. */
+function mapMessages(messages: ChatMessage[]): unknown[] {
+  return messages.map((m) => {
+    if (m.role === "assistant" && m.toolCalls?.length) {
+      return {
+        role: "assistant",
+        content: m.content || null,
+        tool_calls: m.toolCalls.map((call) => ({
+          id: call.id,
+          type: "function",
+          function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+        })),
+      };
+    }
+    if (m.role === "tool") {
+      return { role: "tool", tool_call_id: m.toolCallId ?? "", content: m.content };
+    }
+    return { role: m.role, content: m.content };
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
