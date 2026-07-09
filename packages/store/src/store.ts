@@ -18,6 +18,8 @@ import {
   type ApiKey,
   type Webhook,
   type Report,
+  type Workflow,
+  type WorkflowRun,
 } from "@wankong/core";
 import { MemoryRepository, type Clock, systemClock } from "./repository.js";
 
@@ -46,6 +48,8 @@ export class MemoryStore {
   readonly webhooks: MemoryRepository<Webhook>;
   readonly reports: MemoryRepository<Report>;
   readonly auditEvents: MemoryRepository<AuditEvent>;
+  readonly workflows: MemoryRepository<Workflow>;
+  readonly workflowRuns: MemoryRepository<WorkflowRun>;
 
   constructor(private readonly clock: Clock = systemClock) {
     this.organizations = new MemoryRepository("organization", clock);
@@ -66,6 +70,8 @@ export class MemoryStore {
     this.webhooks = new MemoryRepository("webhook", clock);
     this.reports = new MemoryRepository("report", clock);
     this.auditEvents = new MemoryRepository("auditEvent", clock);
+    this.workflows = new MemoryRepository("workflow", clock);
+    this.workflowRuns = new MemoryRepository("workflowRun", clock);
   }
 
   // --- cross-entity read helpers ------------------------------------------
@@ -80,6 +86,15 @@ export class MemoryStore {
 
   async orgChart(organizationId: string): Promise<OrgChartNode[]> {
     return buildOrgChart(await this.employeesByOrg(organizationId));
+  }
+
+  async workflowsByOrg(organizationId: string): Promise<Workflow[]> {
+    return this.workflows.list((w) => w.organizationId === organizationId);
+  }
+
+  async runsForWorkflow(workflowId: string): Promise<WorkflowRun[]> {
+    const runs = await this.workflowRuns.list((r) => r.workflowId === workflowId);
+    return runs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   async conversationMessages(conversationId: string): Promise<Message[]> {

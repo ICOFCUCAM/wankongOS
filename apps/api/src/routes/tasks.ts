@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Task } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
+import { resumePausedRun } from "./workflows.js";
 
 const CreateTask = Task.omit({
   id: true,
@@ -92,5 +93,9 @@ taskRoutes.post("/approvals/:id/decision", async (c) => {
     targetId: updated.id,
     metadata: {},
   });
+
+  // If this approval was gating a paused workflow run, resume it now.
+  await resumePausedRun(ctx, updated.id, decision);
+
   return c.json(updated);
 });

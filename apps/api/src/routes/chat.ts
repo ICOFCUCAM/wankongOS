@@ -5,6 +5,7 @@ import type { ChatMessage } from "@wankong/agents";
 import type { Employee } from "@wankong/core";
 import type { AppContext, Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
+import { buildEmployeePromptContext } from "../employee-context.js";
 
 const ChatInput = z.object({
   input: z.string().min(1).max(20000),
@@ -105,39 +106,8 @@ async function loadHistory(ctx: AppContext, conversationId: string): Promise<Cha
     .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 }
 
-async function buildPromptContext(ctx: AppContext, employee: Employee) {
-  const [org, department, manager] = await Promise.all([
-    ctx.store.organizations.get(ctx.organizationId),
-    ctx.store.departments.get(employee.departmentId),
-    employee.managerId ? ctx.store.employees.get(employee.managerId) : Promise.resolve(null),
-  ]);
-
-  // Retrieve the most salient employee/org memories (real retrieval, no stub).
-  const memories = (
-    await ctx.store.memories.list(
-      (m) =>
-        m.organizationId === ctx.organizationId &&
-        (m.scope === "organization" || m.ownerId === employee.id),
-    )
-  )
-    .sort((a, b) => b.importance - a.importance)
-    .slice(0, 5)
-    .map((m) => m.content);
-
-  // Pull a few knowledge chunks from the employee's knowledge bases.
-  const docs = await ctx.store.documents.list(
-    (d) => employee.knowledgeBaseIds.includes(d.knowledgeBaseId),
-  );
-  const knowledge = docs.slice(0, 3).map((d) => ({ title: d.title, text: d.content.slice(0, 500) }));
-
-  return {
-    organizationName: org?.name ?? "the company",
-    departmentName: department?.name,
-    managerName: manager?.name,
-    memories,
-    knowledge,
-    toolNames: employee.toolIds,
-  };
+function buildPromptContext(ctx: AppContext, employee: Employee) {
+  return buildEmployeePromptContext(ctx.store, ctx.organizationId, employee);
 }
 
 async function recordExchange(

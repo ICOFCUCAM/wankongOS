@@ -13,7 +13,7 @@ dashboardRoutes.get("/dashboard", async (c) => {
   const ctx = c.get("ctx");
   const orgId = ctx.organizationId;
 
-  const [employees, departments, tasks, approvals, goals, messages, conversations] =
+  const [employees, departments, tasks, approvals, goals, messages, conversations, workflows, runs] =
     await Promise.all([
       ctx.store.employees.list((e) => e.organizationId === orgId),
       ctx.store.departmentsByOrg(orgId),
@@ -22,6 +22,8 @@ dashboardRoutes.get("/dashboard", async (c) => {
       ctx.store.goals.list((g) => g.organizationId === orgId),
       ctx.store.messages.list(),
       ctx.store.conversations.list((c2) => c2.organizationId === orgId),
+      ctx.store.workflows.list((w) => w.organizationId === orgId),
+      ctx.store.workflowRuns.list((r) => r.organizationId === orgId),
     ]);
 
   const activeEmployees = employees.filter((e) => e.status === "active").length;
@@ -65,6 +67,11 @@ dashboardRoutes.get("/dashboard", async (c) => {
       tokensIn,
       tokensOut,
       utilization: employees.length === 0 ? 0 : Math.round((activeEmployees / employees.length) * 100) / 100,
+    },
+    workflows: {
+      defined: workflows.length,
+      runs: runs.length,
+      byStatus: countBy(runs, (r) => r.status),
     },
     automation: {
       estimatedHoursSaved,

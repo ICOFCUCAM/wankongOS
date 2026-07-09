@@ -5,6 +5,8 @@ import type {
   OrgChartNode,
   Organization,
   Task,
+  Workflow,
+  WorkflowRun,
 } from "@wankong/core";
 
 /** Base URL of the WankongOS API. Configure with API_URL in the environment. */
@@ -38,6 +40,7 @@ export interface DashboardData {
   approvals: { pending: number };
   goals: { total: number; byStatus: Record<string, number>; averageProgress: number };
   ai: { conversations: number; tokensIn: number; tokensOut: number; utilization: number };
+  workflows: { defined: number; runs: number; byStatus: Record<string, number> };
   automation: { estimatedHoursSaved: number; formula: string };
 }
 
@@ -51,4 +54,10 @@ export const api = {
     apiFetch<{ data: Goal[] }>(`/v1/employees/${id}/goals`).then((r) => r.data),
   tasks: () => apiFetch<{ data: Task[] }>("/v1/tasks").then((r) => r.data),
   dashboard: () => apiFetch<DashboardData>("/v1/dashboard"),
+  workflows: () => apiFetch<{ data: Workflow[] }>("/v1/workflows").then((r) => r.data),
+  workflow: (id: string) =>
+    apiFetch<{ workflow: Workflow; runs: WorkflowRun[] }>(`/v1/workflows/${id}`),
+  runs: () => apiFetch<{ data: WorkflowRun[] }>("/v1/runs").then((r) => r.data),
 };
+
+export type { Workflow, WorkflowRun };

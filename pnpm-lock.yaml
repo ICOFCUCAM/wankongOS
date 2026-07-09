@@ -35,6 +35,9 @@ importers:
       '@wankong/store':
         specifier: workspace:*
         version: link:../../packages/store
+      '@wankong/workflow':
+        specifier: workspace:*
+        version: link:../../packages/workflow
       hono:
         specifier: ^4.6.14
         version: 4.12.27
@@ -118,6 +121,19 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.23.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/workflow:
+    dependencies:
+      '@wankong/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@wankong/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

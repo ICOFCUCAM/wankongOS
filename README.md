@@ -21,6 +21,7 @@ packages/
   core/      Domain model: typed entities, permissions, org hierarchy, KPIs (pure, no I/O)
   agents/    Provider-agnostic AI runtime: Anthropic / OpenAI / Google + hermetic local
   store/     Data layer: async repository abstraction, in-memory impl, seeded demo org
+  workflow/  Workflow engine: employee/decision/approval/integration nodes, retries, pause & resume
 apps/
   api/       REST API (Hono): every object over /v1, buffered + streaming chat
   web/       Next.js console: CEO dashboard, org chart, employee profiles, live chat, tasks
@@ -86,6 +87,10 @@ and pin an employee to that provider to use a hosted model instead.
 | `GET`  | `/v1/tasks` | Tasks (`?status=`, `?assigneeId=`) |
 | `POST` | `/v1/tasks` | Create a task *(task:create)* |
 | `POST` | `/v1/approvals/:id/decision` | Approve/reject *(task:approve)* |
+| `GET`  | `/v1/workflows` | List workflows *(workflow:read)* |
+| `GET`  | `/v1/workflows/:id` | Workflow + recent runs *(workflow:read)* |
+| `POST` | `/v1/workflows/:id/run` | Start a run *(workflow:run)* |
+| `GET`  | `/v1/workflows/runs/:runId` | Run detail *(workflow:read)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 
@@ -108,7 +113,8 @@ per-tenant Row-Level Security — live in [`packages/store/schema.sql`](packages
 
 ## Roadmap
 
-This slice is the foundation. The architecture is laid out so these extend it
-without rework: workflow engine execution, embeddings-backed knowledge ingestion,
-the integrations connectors, billing, the employee marketplace, and the admin/worker/mobile
-apps. Each maps to a package or app boundary already defined here.
+The build is tracked in **[`docs/BUILD_MAP.md`](docs/BUILD_MAP.md)** — a living map
+that ties every directive module to a package/app boundary with its current state and
+milestone. Delivered so far: the foundation (M0) and the workflow engine (M1). Next:
+knowledge & memory with embeddings (M2), then real persistence + auth (M3), integrations
++ background worker (M4), observability + hardening (M5), and the commercial surface (M6).
