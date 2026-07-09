@@ -1,5 +1,5 @@
 import { embedChunks, searchDocuments, type Citation, type Embedder } from "@wankong/knowledge";
-import type { MemoryStore } from "@wankong/store";
+import type { Store } from "@wankong/store";
 
 export interface SearchOptions {
   knowledgeBaseIds?: readonly string[];
@@ -13,7 +13,7 @@ export interface SearchOptions {
  * blocks on the embedder.
  */
 export async function searchKnowledge(
-  store: MemoryStore,
+  store: Store,
   organizationId: string,
   embedder: Embedder,
   query: string,

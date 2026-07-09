@@ -1,10 +1,10 @@
 import { HTTPException } from "hono/http-exception";
 import type { Employee } from "@wankong/core";
-import type { MemoryStore } from "@wankong/store";
+import type { Store } from "@wankong/store";
 
 /** Tokens (input + output) consumed today across an employee's conversations. */
 export async function todaysTokenUsage(
-  store: MemoryStore,
+  store: Store,
   employeeId: string,
   now: Date = new Date(),
 ): Promise<number> {
@@ -23,7 +23,7 @@ export async function todaysTokenUsage(
  * once today's usage reaches the cap, new work is refused with 429 until the
  * day rolls over or the budget is raised.
  */
-export async function assertWithinBudget(store: MemoryStore, employee: Employee): Promise<void> {
+export async function assertWithinBudget(store: Store, employee: Employee): Promise<void> {
   if (!employee.dailyTokenBudget) return;
   const used = await todaysTokenUsage(store, employee.id);
   if (used >= employee.dailyTokenBudget) {

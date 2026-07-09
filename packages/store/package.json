@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@wankong/core": "workspace:*",
-    "@wankong/knowledge": "workspace:*"
+    "@wankong/knowledge": "workspace:*",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.2.15",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

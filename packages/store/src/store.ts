@@ -1,11 +1,15 @@
 import {
   buildOrgChart,
+  type ApiKey,
   type Approval,
   type AuditEvent,
   type Conversation,
   type Department,
   type Document,
   type Employee,
+  type EmployeeVersion,
+  type EvalReport,
+  type EvalSuite,
   type Goal,
   type Integration,
   type KnowledgeBase,
@@ -13,72 +17,135 @@ import {
   type Message,
   type Organization,
   type OrgChartNode,
-  type Task,
-  type User,
-  type ApiKey,
-  type Webhook,
   type Report,
+  type Task,
+  type Team,
+  type User,
+  type Webhook,
   type Workflow,
   type WorkflowRun,
 } from "@wankong/core";
-import { MemoryRepository, type Clock, systemClock } from "./repository.js";
+import type { EntityKind } from "@wankong/core";
+import { MemoryRepository, systemClock, type Clock, type Repository } from "./repository.js";
+
+// Re-exported so store implementations can share the entity-kind mapping.
+export type { EntityKind };
+
+/** One repository per entity kind — the shape every store implementation fills. */
+export interface StoreRepositories {
+  readonly organizations: Repository<Organization>;
+  readonly users: Repository<User>;
+  readonly departments: Repository<Department>;
+  readonly teams: Repository<Team>;
+  readonly employees: Repository<Employee>;
+  readonly goals: Repository<Goal>;
+  readonly tasks: Repository<Task>;
+  readonly approvals: Repository<Approval>;
+  readonly conversations: Repository<Conversation>;
+  readonly messages: Repository<Message>;
+  readonly memories: Repository<Memory>;
+  readonly knowledgeBases: Repository<KnowledgeBase>;
+  readonly documents: Repository<Document>;
+  readonly integrations: Repository<Integration>;
+  readonly apiKeys: Repository<ApiKey>;
+  readonly webhooks: Repository<Webhook>;
+  readonly reports: Repository<Report>;
+  readonly auditEvents: Repository<AuditEvent>;
+  readonly workflows: Repository<Workflow>;
+  readonly workflowRuns: Repository<WorkflowRun>;
+  readonly evalSuites: Repository<EvalSuite>;
+  readonly evalReports: Repository<EvalReport>;
+  readonly employeeVersions: Repository<EmployeeVersion>;
+}
+
+/** Entity kind ids in repository order — shared by every store implementation. */
+export const STORE_ENTITY_KINDS = [
+  "organization",
+  "user",
+  "department",
+  "team",
+  "employee",
+  "goal",
+  "task",
+  "approval",
+  "conversation",
+  "message",
+  "memory",
+  "knowledgeBase",
+  "document",
+  "integration",
+  "apiKey",
+  "webhook",
+  "report",
+  "auditEvent",
+  "workflow",
+  "workflowRun",
+  "evalSuite",
+  "evalReport",
+  "employeeVersion",
+] as const satisfies readonly EntityKind[];
+
+const REPO_FIELDS = [
+  "organizations",
+  "users",
+  "departments",
+  "teams",
+  "employees",
+  "goals",
+  "tasks",
+  "approvals",
+  "conversations",
+  "messages",
+  "memories",
+  "knowledgeBases",
+  "documents",
+  "integrations",
+  "apiKeys",
+  "webhooks",
+  "reports",
+  "auditEvents",
+  "workflows",
+  "workflowRuns",
+  "evalSuites",
+  "evalReports",
+  "employeeVersions",
+] as const;
+
+/** Field name ↔ entity kind pairs, for implementations that build repos generically. */
+export const STORE_REPO_KINDS: readonly { field: (typeof REPO_FIELDS)[number]; kind: EntityKind }[] =
+  REPO_FIELDS.map((field, i) => ({ field, kind: STORE_ENTITY_KINDS[i]! }));
 
 /**
- * The application's data access surface. It aggregates one repository per
- * entity plus a handful of cross-entity read helpers (org chart, scoped
- * lookups, audit). Everything is async so this can be reimplemented over a real
- * database without touching callers.
+ * The application's data access surface: one repository per entity plus
+ * cross-entity read helpers. `BaseStore` implements the helpers over the
+ * repository interface only, so any backend (in-memory, Postgres, …) that
+ * supplies repositories inherits identical behaviour — this is the seam that
+ * makes the persistence layer swappable (ADR-0005).
  */
-export class MemoryStore {
-  readonly organizations: MemoryRepository<Organization>;
-  readonly users: MemoryRepository<User>;
-  readonly departments: MemoryRepository<Department>;
-  readonly teams: MemoryRepository<import("@wankong/core").Team>;
-  readonly employees: MemoryRepository<Employee>;
-  readonly goals: MemoryRepository<Goal>;
-  readonly tasks: MemoryRepository<Task>;
-  readonly approvals: MemoryRepository<Approval>;
-  readonly conversations: MemoryRepository<Conversation>;
-  readonly messages: MemoryRepository<Message>;
-  readonly memories: MemoryRepository<Memory>;
-  readonly knowledgeBases: MemoryRepository<KnowledgeBase>;
-  readonly documents: MemoryRepository<Document>;
-  readonly integrations: MemoryRepository<Integration>;
-  readonly apiKeys: MemoryRepository<ApiKey>;
-  readonly webhooks: MemoryRepository<Webhook>;
-  readonly reports: MemoryRepository<Report>;
-  readonly auditEvents: MemoryRepository<AuditEvent>;
-  readonly workflows: MemoryRepository<Workflow>;
-  readonly workflowRuns: MemoryRepository<WorkflowRun>;
-  readonly evalSuites: MemoryRepository<import("@wankong/core").EvalSuite>;
-  readonly evalReports: MemoryRepository<import("@wankong/core").EvalReport>;
-  readonly employeeVersions: MemoryRepository<import("@wankong/core").EmployeeVersion>;
-
-  constructor(private readonly clock: Clock = systemClock) {
-    this.organizations = new MemoryRepository("organization", clock);
-    this.users = new MemoryRepository("user", clock);
-    this.departments = new MemoryRepository("department", clock);
-    this.teams = new MemoryRepository("team", clock);
-    this.employees = new MemoryRepository("employee", clock);
-    this.goals = new MemoryRepository("goal", clock);
-    this.tasks = new MemoryRepository("task", clock);
-    this.approvals = new MemoryRepository("approval", clock);
-    this.conversations = new MemoryRepository("conversation", clock);
-    this.messages = new MemoryRepository("message", clock);
-    this.memories = new MemoryRepository("memory", clock);
-    this.knowledgeBases = new MemoryRepository("knowledgeBase", clock);
-    this.documents = new MemoryRepository("document", clock);
-    this.integrations = new MemoryRepository("integration", clock);
-    this.apiKeys = new MemoryRepository("apiKey", clock);
-    this.webhooks = new MemoryRepository("webhook", clock);
-    this.reports = new MemoryRepository("report", clock);
-    this.auditEvents = new MemoryRepository("auditEvent", clock);
-    this.workflows = new MemoryRepository("workflow", clock);
-    this.workflowRuns = new MemoryRepository("workflowRun", clock);
-    this.evalSuites = new MemoryRepository("evalSuite", clock);
-    this.evalReports = new MemoryRepository("evalReport", clock);
-    this.employeeVersions = new MemoryRepository("employeeVersion", clock);
-  }
+export abstract class BaseStore implements StoreRepositories {
+  abstract readonly organizations: Repository<Organization>;
+  abstract readonly users: Repository<User>;
+  abstract readonly departments: Repository<Department>;
+  abstract readonly teams: Repository<Team>;
+  abstract readonly employees: Repository<Employee>;
+  abstract readonly goals: Repository<Goal>;
+  abstract readonly tasks: Repository<Task>;
+  abstract readonly approvals: Repository<Approval>;
+  abstract readonly conversations: Repository<Conversation>;
+  abstract readonly messages: Repository<Message>;
+  abstract readonly memories: Repository<Memory>;
+  abstract readonly knowledgeBases: Repository<KnowledgeBase>;
+  abstract readonly documents: Repository<Document>;
+  abstract readonly integrations: Repository<Integration>;
+  abstract readonly apiKeys: Repository<ApiKey>;
+  abstract readonly webhooks: Repository<Webhook>;
+  abstract readonly reports: Repository<Report>;
+  abstract readonly auditEvents: Repository<AuditEvent>;
+  abstract readonly workflows: Repository<Workflow>;
+  abstract readonly workflowRuns: Repository<WorkflowRun>;
+  abstract readonly evalSuites: Repository<EvalSuite>;
+  abstract readonly evalReports: Repository<EvalReport>;
+  abstract readonly employeeVersions: Repository<EmployeeVersion>;
 
   // --- cross-entity read helpers ------------------------------------------
 
@@ -111,5 +178,62 @@ export class MemoryStore {
   /** Append an audit event. Returns the stored event. */
   async audit(event: Omit<AuditEvent, "id" | "createdAt" | "updatedAt">): Promise<AuditEvent> {
     return this.auditEvents.create(event);
+  }
+}
+
+/** The store type every consumer programs against. */
+export type Store = BaseStore;
+
+/** In-memory store — fully working; dev, tests, and demos. */
+export class MemoryStore extends BaseStore {
+  readonly organizations: MemoryRepository<Organization>;
+  readonly users: MemoryRepository<User>;
+  readonly departments: MemoryRepository<Department>;
+  readonly teams: MemoryRepository<Team>;
+  readonly employees: MemoryRepository<Employee>;
+  readonly goals: MemoryRepository<Goal>;
+  readonly tasks: MemoryRepository<Task>;
+  readonly approvals: MemoryRepository<Approval>;
+  readonly conversations: MemoryRepository<Conversation>;
+  readonly messages: MemoryRepository<Message>;
+  readonly memories: MemoryRepository<Memory>;
+  readonly knowledgeBases: MemoryRepository<KnowledgeBase>;
+  readonly documents: MemoryRepository<Document>;
+  readonly integrations: MemoryRepository<Integration>;
+  readonly apiKeys: MemoryRepository<ApiKey>;
+  readonly webhooks: MemoryRepository<Webhook>;
+  readonly reports: MemoryRepository<Report>;
+  readonly auditEvents: MemoryRepository<AuditEvent>;
+  readonly workflows: MemoryRepository<Workflow>;
+  readonly workflowRuns: MemoryRepository<WorkflowRun>;
+  readonly evalSuites: MemoryRepository<EvalSuite>;
+  readonly evalReports: MemoryRepository<EvalReport>;
+  readonly employeeVersions: MemoryRepository<EmployeeVersion>;
+
+  constructor(clock: Clock = systemClock) {
+    super();
+    this.organizations = new MemoryRepository("organization", clock);
+    this.users = new MemoryRepository("user", clock);
+    this.departments = new MemoryRepository("department", clock);
+    this.teams = new MemoryRepository("team", clock);
+    this.employees = new MemoryRepository("employee", clock);
+    this.goals = new MemoryRepository("goal", clock);
+    this.tasks = new MemoryRepository("task", clock);
+    this.approvals = new MemoryRepository("approval", clock);
+    this.conversations = new MemoryRepository("conversation", clock);
+    this.messages = new MemoryRepository("message", clock);
+    this.memories = new MemoryRepository("memory", clock);
+    this.knowledgeBases = new MemoryRepository("knowledgeBase", clock);
+    this.documents = new MemoryRepository("document", clock);
+    this.integrations = new MemoryRepository("integration", clock);
+    this.apiKeys = new MemoryRepository("apiKey", clock);
+    this.webhooks = new MemoryRepository("webhook", clock);
+    this.reports = new MemoryRepository("report", clock);
+    this.auditEvents = new MemoryRepository("auditEvent", clock);
+    this.workflows = new MemoryRepository("workflow", clock);
+    this.workflowRuns = new MemoryRepository("workflowRun", clock);
+    this.evalSuites = new MemoryRepository("evalSuite", clock);
+    this.evalReports = new MemoryRepository("evalReport", clock);
+    this.employeeVersions = new MemoryRepository("employeeVersion", clock);
   }
 }

@@ -1,7 +1,7 @@
 import type { PromptContext } from "@wankong/agents";
 import { rankMemories, type Employee } from "@wankong/core";
 import type { Citation, Embedder } from "@wankong/knowledge";
-import type { MemoryStore } from "@wankong/store";
+import type { Store } from "@wankong/store";
 import { searchKnowledge } from "./retrieval.js";
 
 export interface GroundedContext {
@@ -26,7 +26,7 @@ export interface GroundingOptions {
  * workflow engine so an employee behaves identically in both.
  */
 export async function buildGroundedEmployeeContext(
-  store: MemoryStore,
+  store: Store,
   organizationId: string,
   employee: Employee,
   options: GroundingOptions = {},
@@ -78,7 +78,7 @@ export async function buildGroundedEmployeeContext(
 
 /** Context without query grounding (used where no user input exists yet). */
 export async function buildEmployeePromptContext(
-  store: MemoryStore,
+  store: Store,
   organizationId: string,
   employee: Employee,
 ): Promise<PromptContext> {

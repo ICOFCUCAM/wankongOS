@@ -42,6 +42,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
 
   // Context + authentication.
   app.use("*", async (c, next) => {
+    // Store init (schema/seed for Postgres) completes before any request runs.
+    await context.ready;
     c.set("ctx", context);
 
     const owner = (await context.store.users.list((u) => u.role === "owner"))[0];

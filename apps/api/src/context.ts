@@ -1,9 +1,13 @@
 import { EmployeeRuntime, ProviderRegistry } from "@wankong/agents";
 import { embedderFromEnv, type Embedder } from "@wankong/knowledge";
 import {
+  createPostgresClient,
   createSeededStore,
-  MemoryStore,
+  ensurePgSchema,
+  PgStore,
   SEED_ORG_ID,
+  seedStoreAsync,
+  type Store,
 } from "@wankong/store";
 import type { Permission, User, UserRole } from "@wankong/core";
 import { newId, permissionsForRole } from "@wankong/core";
@@ -22,59 +26,93 @@ export interface Actor {
 
 /** Everything a route handler needs, assembled once at boot. */
 export interface AppContext {
-  store: MemoryStore;
+  /** Do not touch before `ready` resolves — the app middleware awaits it. */
+  store: Store;
   registry: ProviderRegistry;
   runtime: EmployeeRuntime;
   workflowEngine: WorkflowEngine;
   embedder: Embedder;
   /** The organization this API instance serves (single-tenant per instance). */
   organizationId: string;
+  /** Resolves once the store is initialised (schema ensured, seeded if empty). */
+  ready: Promise<void>;
 }
 
 export interface AppContextOptions {
-  store?: MemoryStore;
+  store?: Store;
   registry?: ProviderRegistry;
   organizationId?: string;
   embedder?: Embedder;
+  /** Postgres connection string; defaults to env DATABASE_URL. */
+  databaseUrl?: string;
 }
 
 /**
- * Build the application context. By default it comes pre-loaded with the demo
- * organization and a provider registry configured from the environment, so the
- * API is fully functional out of the box — with real cloud models when keys are
- * present, and the local provider otherwise.
+ * Build the application context.
+ *
+ * Store selection: an explicitly-passed store wins; otherwise a configured
+ * DATABASE_URL selects the durable Postgres store (schema ensured and demo org
+ * seeded on first boot); otherwise the seeded in-memory store. Postgres setup
+ * is asynchronous, so the store is initialised behind `ready`, which the app
+ * middleware awaits before serving any request.
  */
 export function createAppContext(options: AppContextOptions = {}): AppContext {
-  const store = options.store ?? createSeededStore();
   const registry = options.registry ?? ProviderRegistry.fromEnv();
   const runtime = new EmployeeRuntime(registry);
   const organizationId = options.organizationId ?? SEED_ORG_ID;
   const embedder = options.embedder ?? embedderFromEnv();
+  const databaseUrl = options.databaseUrl ?? process.env.DATABASE_URL;
 
-  // Seed the demo workflow here (kept out of @wankong/store so the store carries
-  // no AI dependency; the API is the layer that composes store + engine).
-  store.workflows.insert(buildSeedWorkflow(organizationId));
+  const context: AppContext = {
+    store: undefined as unknown as Store,
+    registry,
+    runtime,
+    workflowEngine: undefined as unknown as WorkflowEngine,
+    embedder,
+    organizationId,
+    ready: Promise.resolve(),
+  };
 
-  const workflowEngine = new WorkflowEngine({
+  context.ready = (async () => {
+    if (options.store) {
+      context.store = options.store;
+    } else if (databaseUrl) {
+      const client = await createPostgresClient(databaseUrl);
+      await ensurePgSchema(client);
+      const pg = new PgStore(client);
+      if ((await pg.organizations.count()) === 0) await seedStoreAsync(pg);
+      context.store = pg;
+    } else {
+      context.store = createSeededStore();
+    }
+    // Seed the demo workflow (kept out of @wankong/store so the store carries
+    // no AI dependency). Fixed id → idempotent upsert on every boot.
+    await context.store.workflows.insert(buildSeedWorkflow(organizationId));
+  })();
+
+  context.workflowEngine = new WorkflowEngine({
     runtime,
     connectors: defaultConnectors(),
     resolveEmployee: async (id) => {
-      const employee = await store.employees.get(id);
+      const employee = await context.store.employees.get(id);
       if (!employee || employee.organizationId !== organizationId) return null;
       // Paused/training employees don't take on workflow steps (kill switch,
       // probation): the step fails visibly rather than silently proceeding.
       if (employee.status !== "active") return null;
-      return { employee, context: await buildEmployeePromptContext(store, organizationId, employee) };
+      return {
+        employee,
+        context: await buildEmployeePromptContext(context.store, organizationId, employee),
+      };
     },
     createApproval: async ({ summary, requiredPermission, runId, nodeId }) => {
-      const approval = await store.approvals.create({
+      const approval = await context.store.approvals.create({
         organizationId,
         requestedBy: { kind: "employee", id: "workflow" },
         summary,
         requiredPermission,
         status: "pending",
       });
-      await store.audit({
+      await context.store.audit({
         organizationId,
         actor: { kind: "user", id: "system" },
         action: "workflow.approval.requested",
@@ -85,7 +123,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
       return approval.id;
     },
     emitNotification: async ({ channel, message, to, runId }) => {
-      await store.audit({
+      await context.store.audit({
         organizationId,
         actor: { kind: "user", id: "system" },
         action: "notification.emit",
@@ -96,7 +134,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     },
   });
 
-  return { store, registry, runtime, workflowEngine, embedder, organizationId };
+  return context;
 }
 
 /** Generate a fresh workflow-run id. */

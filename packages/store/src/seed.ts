@@ -464,4 +464,21 @@ export function createSeededStore(): MemoryStore {
   return seedStore(new MemoryStore());
 }
 
+/**
+ * Awaited variant of `seedStore` for stores with real (asynchronous) writes,
+ * e.g. the Postgres store. Idempotent: inserts are upserts on fixed seed ids.
+ */
+export async function seedStoreAsync(store: import("./store.js").Store): Promise<void> {
+  const data = buildSeedData();
+  await store.organizations.insert(data.organization);
+  await store.users.insert(data.owner);
+  for (const d of data.departments) await store.departments.insert(d);
+  for (const e of data.employees) await store.employees.insert(e);
+  for (const kb of data.knowledgeBases) await store.knowledgeBases.insert(kb);
+  for (const g of data.goals) await store.goals.create(g);
+  for (const t of data.tasks) await store.tasks.create(t);
+  for (const doc of buildSeedDocuments()) await store.documents.insert(doc);
+  for (const suite of buildSeedEvalSuites()) await store.evalSuites.insert(suite);
+}
+
 export const SEED_ORG_ID = ORG_ID;
