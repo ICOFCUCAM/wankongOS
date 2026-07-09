@@ -1,5 +1,5 @@
 import type { Employee, Task } from "@wankong/core";
-import { api } from "@/lib/api";
+import { api } from "@/lib/server-api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { Avatar } from "@/components/Avatar";
 

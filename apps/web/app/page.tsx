@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { api, type DashboardData } from "@/lib/api";
+import { api } from "@/lib/server-api";
+import type { DashboardData } from "@/lib/api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 
 export const dynamic = "force-dynamic";

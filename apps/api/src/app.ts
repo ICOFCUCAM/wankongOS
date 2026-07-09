@@ -15,6 +15,7 @@ import { employeeRoutes } from "./routes/employees.js";
 import { taskRoutes } from "./routes/tasks.js";
 import { chatRoutes } from "./routes/chat.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { workflowRoutes } from "./routes/workflows.js";
 
 export interface CreateAppOptions {
   context?: AppContext;
@@ -66,6 +67,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", taskRoutes);
   v1.route("/", chatRoutes);
   v1.route("/", dashboardRoutes);
+  v1.route("/", workflowRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

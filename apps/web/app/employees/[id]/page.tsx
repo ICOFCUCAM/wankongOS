@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Employee, Goal } from "@wankong/core";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/server-api";
 import { Avatar } from "@/components/Avatar";
 import { Chat } from "@/components/Chat";
 

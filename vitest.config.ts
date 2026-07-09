@@ -9,6 +9,7 @@ export default defineConfig({
       "@wankong/core": r("./packages/core/src/index.ts"),
       "@wankong/agents": r("./packages/agents/src/index.ts"),
       "@wankong/store": r("./packages/store/src/index.ts"),
+      "@wankong/workflow": r("./packages/workflow/src/index.ts"),
     },
   },
   test: {

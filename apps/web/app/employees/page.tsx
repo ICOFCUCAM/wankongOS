@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Department, Employee } from "@wankong/core";
-import { api } from "@/lib/api";
+import { api } from "@/lib/server-api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { OrgChart } from "@/components/OrgChart";
 import { Avatar } from "@/components/Avatar";

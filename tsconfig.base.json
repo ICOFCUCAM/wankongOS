@@ -27,7 +27,9 @@
       "@wankong/agents": ["packages/agents/src/index.ts"],
       "@wankong/agents/*": ["packages/agents/src/*"],
       "@wankong/store": ["packages/store/src/index.ts"],
-      "@wankong/store/*": ["packages/store/src/*"]
+      "@wankong/store/*": ["packages/store/src/*"],
+      "@wankong/workflow": ["packages/workflow/src/index.ts"],
+      "@wankong/workflow/*": ["packages/workflow/src/*"]
     }
   }
 }
