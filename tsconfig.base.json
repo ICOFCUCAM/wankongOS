@@ -29,7 +29,11 @@
       "@wankong/store": ["packages/store/src/index.ts"],
       "@wankong/store/*": ["packages/store/src/*"],
       "@wankong/workflow": ["packages/workflow/src/index.ts"],
-      "@wankong/workflow/*": ["packages/workflow/src/*"]
+      "@wankong/workflow/*": ["packages/workflow/src/*"],
+      "@wankong/knowledge": ["packages/knowledge/src/index.ts"],
+      "@wankong/knowledge/*": ["packages/knowledge/src/*"],
+      "@wankong/evals": ["packages/evals/src/index.ts"],
+      "@wankong/evals/*": ["packages/evals/src/*"]
     }
   }
 }

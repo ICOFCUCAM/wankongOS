@@ -95,6 +95,13 @@ and pin an employee to that provider to use a hosted model instead.
 | `GET`  | `/v1/workflows/:id` | Workflow + recent runs *(workflow:read)* |
 | `POST` | `/v1/workflows/:id/run` | Start a run *(workflow:run)* |
 | `GET`  | `/v1/workflows/runs/:runId` | Run detail *(workflow:read)* |
+| `GET`  | `/v1/knowledge-bases` | Knowledge bases + doc counts *(knowledge:read)* |
+| `POST` | `/v1/documents` | Ingest/re-version a document *(knowledge:write)* |
+| `POST` | `/v1/knowledge/search` | Semantic search → citations *(knowledge:read)* |
+| `GET`  | `/v1/employees/:id/memories` | Salience-ranked memory timeline *(employee:read)* |
+| `POST` | `/v1/memories/prune` | Prune memories per owner *(org:manage)* |
+| `GET`  | `/v1/employees/:id/evals` | Golden suite + recent reports *(employee:read)* |
+| `POST` | `/v1/employees/:id/evals/run` | Run the suite now *(employee:manage)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 

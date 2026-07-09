@@ -13,3 +13,5 @@ export * from "./permissions.js";
 export * from "./org.js";
 export * from "./kpi.js";
 export * from "./workflow.js";
+export * from "./memory.js";
+export * from "./evals.js";

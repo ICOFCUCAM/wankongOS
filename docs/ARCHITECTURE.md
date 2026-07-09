@@ -47,6 +47,20 @@ store (see `schema.sql`) without any caller changing.
 
 ## Apps
 
+### `@wankong/workflow` — the workflow engine
+Interprets declarative node graphs (defined in core): employee steps, decisions,
+parallel branches, connector calls, notifications, and human approvals that pause
+and resume runs. Pure orchestration — persistence and side effects are injected.
+See ADR-0006.
+
+### `@wankong/knowledge` — chunking, embeddings, retrieval
+An `Embedder` abstraction (hermetic local embedder + OpenAI seam), paragraph-aware
+chunking, and cosine-ranked search returning citations. See ADR-0007.
+
+### `@wankong/evals` — AI QA
+Golden-task suites run through the real runtime, powering on-demand quality runs
+and the regression gate on employee config edits. Schemas live in core. See ADR-0007.
+
 ### `apps/api` — REST API (Hono)
 Transport only; all logic lives in the packages. Versioned `/v1` routes for every
 object, permission checks at each sensitive route, Zod validation on every body,

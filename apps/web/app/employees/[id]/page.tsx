@@ -4,6 +4,7 @@ import type { Employee, Goal } from "@wankong/core";
 import { api, ApiError } from "@/lib/server-api";
 import { Avatar } from "@/components/Avatar";
 import { Chat } from "@/components/Chat";
+import { EvalPanel } from "@/components/EvalPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,15 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   let employee: Employee;
   let goals: Goal[];
+  let memories: Awaited<ReturnType<typeof api.employeeMemories>>;
+  let evals: Awaited<ReturnType<typeof api.employeeEvals>>;
   try {
-    [employee, goals] = await Promise.all([api.employee(id), api.employeeGoals(id)]);
+    [employee, goals, memories, evals] = await Promise.all([
+      api.employee(id),
+      api.employeeGoals(id),
+      api.employeeMemories(id),
+      api.employeeEvals(id),
+    ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
@@ -111,6 +119,36 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
               </div>
             </div>
           )}
+
+          <EvalPanel employeeId={employee.id} suite={evals.suite} initialReports={evals.reports} />
+
+          <div className="card">
+            <h3 className="mb-3 text-xs uppercase tracking-wide text-muted">Memory timeline</h3>
+            {memories.length === 0 ? (
+              <p className="text-sm text-muted">
+                Nothing remembered yet — memories form as this employee works.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {memories.slice(0, 6).map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-start justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2"
+                  >
+                    <div>
+                      <div className="text-xs">{m.content}</div>
+                      <div className="mt-0.5 text-[11px] text-muted">
+                        {m.kind} · {new Date(m.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <span className="pill shrink-0 text-[11px] text-muted">
+                      salience {m.score.toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="card">

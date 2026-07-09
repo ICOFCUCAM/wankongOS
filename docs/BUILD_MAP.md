@@ -22,13 +22,13 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | AI provider abstraction | `packages/agents` | ✅ |
 | Data layer / database | `packages/store` (+ `schema.sql`) | ✅ in-memory · ⬜ Postgres impl |
 | Workflow engine | `packages/workflow` | ✅ engine · 🟡 visual builder |
-| Memory system | `packages/store` (memories) + retrieval in `agents` | 🟡 |
-| Knowledge system | `packages/store` (kb/docs) + `packages/knowledge` | 🟡 model · ⬜ ingestion/embeddings |
+| Memory system | `packages/core` (scoring/pruning) + `packages/store` | ✅ scoring/pruning/timeline · ⬜ vector recall |
+| Knowledge system | `packages/knowledge` + `packages/store` | ✅ ingestion/embeddings/search/citations · ⬜ PDF/Word/connector sources |
 | Integrations | `packages/workflow/connectors` + `packages/integrations` | 🟡 framework · ⬜ real connectors |
 | Notifications | audit-backed hook + `packages/notifications` | 🟡 · ⬜ delivery |
 | Auth / RBAC / multi-tenancy | `packages/core` (permissions) + `packages/auth` | 🟡 model · ⬜ SSO/sessions |
 | Billing | `packages/billing` | ⬜ |
-| AI QA / evaluations (§3.2) | `packages/evals` | ⬜ |
+| AI QA / evaluations (§3.2) | `packages/evals` | ✅ golden suites + regression gate · ⬜ drift detection |
 | Trust & governance (§3.1, §3.5) | `packages/core` policies + API/web | ⬜ |
 | Analytics / observability | `packages/analytics` + API instrumentation | 🟡 dashboard · ⬜ tracing/cost |
 | Design system / UI kit | `packages/design-system`, `packages/ui` | 🟡 in web · ⬜ extracted |
@@ -62,15 +62,26 @@ parallel fan-out/join, and **human approvals that pause & resume**. Seeded
 "Inbound Lead Handling" workflow runs end-to-end. 🟡 *Visual drag-and-drop builder*
 and ⬜ *scheduled triggers* (needs `apps/worker`) remain.
 
-### Memory system 🟡
-Scoped memory (conversation/employee/department/organization) with importance scoring
-and salience-ranked retrieval into prompts. ⬜ Embeddings, semantic search, pruning
-policy, and the searchable timeline UI.
+### Memory system ✅ (core) / ⬜ (vector recall)
+Scoped memory with salience scoring (importance × recency half-life), scored
+retrieval into prompts, capacity-based pruning per owner (`POST /v1/memories/prune`),
+and the per-employee memory timeline in API and console. ⬜ Embedding-based memory
+recall (currently salience-ranked).
 
-### Knowledge system 🟡
-Knowledge bases + versioned documents + chunk model; retrieval wired into employee
-prompts with citation-ready structure. ⬜ Ingestion (PDF/Word/Excel/CSV/Notion/Drive),
-automatic embeddings, semantic search.
+### Knowledge system ✅ (pipeline) / ⬜ (rich sources)
+Full pipeline: ingestion (`POST /v1/documents`, text/markdown/CSV) → paragraph-aware
+chunking → embeddings via an `Embedder` abstraction (deterministic local embedder,
+OpenAI seam picked up from env) → semantic search (`POST /v1/knowledge/search`) →
+**citations in chat replies** (API + UI). Re-ingest bumps document versions; seeded
+embeddings backfill lazily on first search. ⬜ PDF/Word/Excel parsers and
+Notion/Drive/SharePoint/Confluence source connectors (M4 connector framework).
+
+### AI QA ✅ (suites + gate) / ⬜ (drift)
+Golden-task suites per employee (`packages/evals`, schemas in core) run through the
+real runtime; on-demand runs from the console; and the **regression gate**: a config
+edit (prompt/title/model/…) that fails the employee's suite is rejected with 422 and
+the failing report. Two seeded suites cover the Support Manager and Sales Director.
+⬜ Drift detection over live outputs and cross-provider bake-off reports.
 
 ### Integrations 🟡
 Connector framework with a pluggable registry and hermetic default handlers for 12
@@ -177,9 +188,10 @@ The audit trail and RLS design exist; package them for the compliance officer.
 
 - **M0 — Foundation** ✅ monorepo, core domain, provider abstraction, store + seed, API, web console.
 - **M1 — Workflow engine** ✅ executable workflows with approvals, connectors, and the runs UI.
-- **M2 — Knowledge, memory & AI QA** 🟡→ ingestion pipeline, embeddings + vector search
-  (pgvector), citations in chat, memory timeline; golden-task eval suites and the
-  regression gate (§3.2); probation mode + performance reviews (§3.1). *(next)*
+- **M2 — Knowledge, memory & AI QA** ✅ ingestion → chunking → embeddings → semantic
+  search → citations in chat; memory scoring/pruning + timeline; golden-task eval
+  suites and the regression gate (§3.2). *Deferred from M2 → M3:* probation mode +
+  performance reviews (§3.1), pgvector-backed storage (rides with the Postgres store).
 - **M3 — Real persistence, auth & trust** → Postgres/Supabase repository behind the
   existing interface (ADR-0005), sessions + SSO-ready auth, invitation flow, API keys;
   budget caps + kill switch (§3.1), versioned configs + canary rollout (§3.5),
