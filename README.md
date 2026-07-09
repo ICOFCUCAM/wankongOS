@@ -72,6 +72,12 @@ so every employee is chattable, and the whole system is testable, entirely offli
 Add `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY` (see `.env.example`)
 and pin an employee to that provider to use a hosted model instead.
 
+**Durability**: by default data lives in a seeded in-memory store (resets on
+restart — fine for demos). Set `DATABASE_URL` to any Postgres connection string
+(Supabase, Neon, RDS…) and the durable **Postgres store** takes over automatically —
+schema created and demo org seeded on first boot, no other changes needed. The same
+store code is tested in CI on real SQL via PGlite (ADR-0009).
+
 ## API surface (v1)
 
 | Method | Path | Description |

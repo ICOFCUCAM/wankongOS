@@ -12,6 +12,9 @@ const nextConfig = {
     "@wankong/api",
   ],
   eslint: { ignoreDuringBuilds: true },
+  // The Postgres driver is server-only and loaded dynamically when
+  // DATABASE_URL is set; keep it out of webpack's bundle.
+  serverExternalPackages: ["postgres"],
   webpack: (config) => {
     // Workspace packages use NodeNext-style ".js" specifiers in TS source;
     // teach webpack to resolve them to .ts files when transpiling.

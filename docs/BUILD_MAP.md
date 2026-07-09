@@ -20,7 +20,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | --- | --- | --- |
 | Core objects & domain rules | `packages/core` | ✅ |
 | AI provider abstraction | `packages/agents` | ✅ |
-| Data layer / database | `packages/store` (+ `schema.sql`) | ✅ in-memory · ⬜ Postgres impl |
+| Data layer / database | `packages/store` (+ `schema.sql`) | ✅ in-memory · ✅ Postgres (JSONB, ADR-0009) · ⬜ normalised SQL |
 | Workflow engine | `packages/workflow` | ✅ engine · 🟡 visual builder |
 | Memory system | `packages/core` (scoring/pruning) + `packages/store` | ✅ scoring/pruning/timeline · ⬜ vector recall |
 | Knowledge system | `packages/knowledge` + `packages/store` | ✅ ingestion/embeddings/search/citations · ⬜ PDF/Word/connector sources |
@@ -195,9 +195,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
 - **M3a — Trust & governance** ✅ probation lifecycle (hire → training → evals →
   activate), per-employee daily token budgets (hard 429), individual + org-wide kill
   switch, config versioning with gate-checked rollback (§3.1, §3.5).
-- **M3b — Real persistence & auth** → Postgres/Supabase repository behind the
-  existing interface (ADR-0005), sessions + SSO-ready auth, invitation flow, API
-  keys; performance reviews, canary rollout, cost-per-outcome FinOps (§3.3).
+- **M3b — Real persistence** ✅ Postgres store behind the same interface
+  (ADR-0009): JSONB document tables, postgres.js driver selected by DATABASE_URL,
+  schema ensured + idempotent seed on first boot, full API test suite runs on real
+  SQL via PGlite in CI. Setting DATABASE_URL on Vercel turns on durability.
+- **M3c — Auth & remaining trust** → sessions + SSO-ready auth, invitation flow,
+  API keys; performance reviews, canary rollout, cost-per-outcome FinOps (§3.3).
 - **M4 — Integrations & worker** → credentialed connectors, OAuth, MCP tool support,
   SCIM, outbound event bus (§3.6); `apps/worker` for scheduled/queued jobs and
   background workflow runs.

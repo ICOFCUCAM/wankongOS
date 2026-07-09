@@ -24,6 +24,8 @@ export interface Repository<T extends BaseEntity> {
   get(id: string): Promise<T | null>;
   list(predicate?: (item: T) => boolean): Promise<T[]>;
   create(input: CreateInput<T>): Promise<T>;
+  /** Upsert a fully-formed entity verbatim (deterministic seeds, imports). */
+  insert(entity: T): Promise<T> | T;
   update(id: string, patch: Partial<CreateInput<T>>): Promise<T>;
   delete(id: string): Promise<boolean>;
   count(predicate?: (item: T) => boolean): Promise<number>;

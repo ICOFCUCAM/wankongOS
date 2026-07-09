@@ -8,5 +8,6 @@
  */
 export * from "./repository.js";
 export * from "./store.js";
+export * from "./pg.js";
 export * from "./seed.js";
 export * from "./seed-knowledge.js";
