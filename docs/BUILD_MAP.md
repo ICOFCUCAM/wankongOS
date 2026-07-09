@@ -28,6 +28,8 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | Notifications | audit-backed hook + `packages/notifications` | 🟡 · ⬜ delivery |
 | Auth / RBAC / multi-tenancy | `packages/core` (permissions) + `packages/auth` | 🟡 model · ⬜ SSO/sessions |
 | Billing | `packages/billing` | ⬜ |
+| AI QA / evaluations (§3.2) | `packages/evals` | ⬜ |
+| Trust & governance (§3.1, §3.5) | `packages/core` policies + API/web | ⬜ |
 | Analytics / observability | `packages/analytics` + API instrumentation | 🟡 dashboard · ⬜ tracing/cost |
 | Design system / UI kit | `packages/design-system`, `packages/ui` | 🟡 in web · ⬜ extracted |
 | REST API | `apps/api` | ✅ |
@@ -98,25 +100,104 @@ Boundaries defined above; not yet started.
 
 ---
 
-## 3. Milestone sequencing
+## 3. Differentiators — what makes this the best AI-workforce OS for companies
+
+The directive covers table stakes. These are the capabilities that make an
+enterprise *trust* an AI workforce enough to scale it — the moat. Each is mapped
+to a boundary and a milestone so it's a deliverable, not a slogan.
+
+### 3.1 Trust & Governance (treat AI employees like real hires) ⬜ → M2/M3
+The org already models approval/escalation rules; extend it into a full employment
+lifecycle. *Boundary: `packages/core` (policy), `apps/api`, `apps/web`.*
+- **Probation mode** — new/edited employees start with tighter approval thresholds
+  that relax automatically as their approval-rate earns trust.
+- **Performance reviews** — periodic, KPI-backed review records per employee
+  (attainment trend, escalation rate, rework rate), rendered like a real review.
+- **Budget caps** — hard per-employee/department token & spend ceilings; the
+  runtime refuses work past the cap instead of silently billing.
+- **Kill switch** — one click pauses an employee (or a whole department) and
+  freezes its pending workflow steps, org-wide in seconds.
+- **Sandbox trials** — run a candidate employee against recorded real tasks with
+  connectors in dry-run mode before granting live access.
+
+### 3.2 Evaluation & Quality — AI QA ⬜ → M2
+No company promotes an untested human; same rule for AI. *Boundary: new
+`packages/evals`, wired into CI and the console.*
+- **Golden-task suites** per employee: curated input → expected-properties checks,
+  run on demand and on every prompt/model/config change.
+- **Regression gate** — a prompt edit that fails its suite can't go live.
+- **Drift detection** — score live outputs over time; alert when quality slides.
+- **Model bake-offs** — run the same suite across providers to choose per-role
+  models on evidence, not vibes (the provider abstraction makes this nearly free).
+
+### 3.3 ROI & FinOps — CFO-legible numbers ⬜ → M3
+Token counts are already recorded; turn them into money. *Boundary:
+`packages/analytics`, dashboard.*
+- **Cost per task / per outcome**, rolled up by employee and department.
+- **AI vs. human cost comparison** with explicit, editable assumptions
+  (extending the transparent hours-saved formula already on the dashboard).
+- **Budget enforcement** — caps from §3.1 surfaced as forecasts and alerts.
+
+### 3.4 Compliance Pack — audit you can hand to an auditor ⬜ → M5
+The audit trail and RLS design exist; package them for the compliance officer.
+*Boundary: `packages/analytics` + `apps/api` export endpoints.*
+- **Evidence exports** — one-click SOC 2 / GDPR evidence packs (who approved what,
+  which data each employee touched, full delegation chains).
+- **Retention policies** per data class (conversations, memories, documents).
+- **PII redaction** at the memory/knowledge boundary before storage.
+- **Human-accountability chain** — every consequential AI action names the human
+  who authorized the rule that permitted it.
+
+### 3.5 Change Management — ship employee changes safely ⬜ → M3
+*Boundary: `packages/core` (versioning), `apps/api`.*
+- **Versioned employee configs** (prompt, tools, permissions) with diff view and
+  instant rollback.
+- **Canary rollout** — route a fraction of an employee's traffic to the new
+  version; promote on eval + KPI parity.
+
+### 3.6 Interoperability — fit the stack, don't fight it ⬜ → M4
+*Boundary: `packages/integrations`.*
+- **MCP support** — employees can consume any Model Context Protocol tool server,
+  instantly inheriting the whole MCP ecosystem as employee tools.
+- **SCIM provisioning + SSO** — enterprise IT manages human users the way they
+  already manage everything else.
+- **Outbound event bus** — every domain event (task done, approval pending, run
+  failed) streams to webhooks/queues so companies build on top of the OS.
+
+### 3.7 Business Continuity ⬜ → M5
+*Boundary: `packages/agents`.*
+- **Provider failover** — automatic retry on a secondary provider on outage, with
+  the hermetic local provider as the always-available floor.
+- **Degraded mode** — read-only workforce visibility even when model providers or
+  connectors are down.
+
+---
+
+## 4. Milestone sequencing
 
 - **M0 — Foundation** ✅ monorepo, core domain, provider abstraction, store + seed, API, web console.
 - **M1 — Workflow engine** ✅ executable workflows with approvals, connectors, and the runs UI.
-- **M2 — Knowledge & memory** 🟡→ ingestion pipeline, embeddings + vector search (pgvector),
-  citations in chat, memory timeline. *(next)*
-- **M3 — Real persistence & auth** → Postgres/Supabase repository behind the existing
-  interface (ADR-0005), sessions + SSO-ready auth, invitation flow, API keys.
-- **M4 — Integrations & worker** → credentialed connectors, OAuth, `apps/worker` for
-  scheduled/queued jobs and background workflow runs.
-- **M5 — Observability & security hardening** → tracing, cost/latency analytics,
-  rate limiting, prompt-injection defenses, backups.
-- **M6 — Commercial surface** → billing, marketplace, `apps/admin`, `apps/mobile`.
+- **M2 — Knowledge, memory & AI QA** 🟡→ ingestion pipeline, embeddings + vector search
+  (pgvector), citations in chat, memory timeline; golden-task eval suites and the
+  regression gate (§3.2); probation mode + performance reviews (§3.1). *(next)*
+- **M3 — Real persistence, auth & trust** → Postgres/Supabase repository behind the
+  existing interface (ADR-0005), sessions + SSO-ready auth, invitation flow, API keys;
+  budget caps + kill switch (§3.1), versioned configs + canary rollout (§3.5),
+  cost-per-outcome FinOps (§3.3).
+- **M4 — Integrations & worker** → credentialed connectors, OAuth, MCP tool support,
+  SCIM, outbound event bus (§3.6); `apps/worker` for scheduled/queued jobs and
+  background workflow runs.
+- **M5 — Observability, compliance & hardening** → tracing, cost/latency analytics,
+  rate limiting, prompt-injection defenses, backups; evidence exports, retention
+  policies, PII redaction (§3.4); provider failover + degraded mode (§3.7).
+- **M6 — Commercial surface** → billing, marketplace, `apps/admin`, `apps/mobile`;
+  sandbox trials for marketplace employees (§3.1).
 
 Each milestone is one or more PRs into `main`; this map is updated as each lands.
 
 ---
 
-## 4. Working agreements
+## 5. Working agreements
 
 - Every commit compiles (`pnpm typecheck`) and passes tests (`pnpm test`).
 - No placeholders, no TODOs, no faked functionality — a capability is ✅ only when it
