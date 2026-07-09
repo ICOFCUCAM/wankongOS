@@ -205,9 +205,15 @@ The audit trail and RLS design exist; package them for the compliance officer.
   plaintext once, Bearer auth with exact scopes, no privilege escalation, revocation)
   and KPI-backed performance reviews (§3.1). *Remaining for M3d:* sessions + SSO
   auth, invitation flow, canary rollout, cost-per-outcome FinOps (§3.3).
-- **M4 — Integrations & worker** → credentialed connectors, OAuth, MCP tool support,
-  SCIM, outbound event bus (§3.6); `apps/worker` for scheduled/queued jobs and
-  background workflow runs.
+- **M4a — Executable employee tools** ✅ the agent loop: chat → tool call →
+  permission-gated execution → result grounded into the reply (visible as chips in
+  the console). Built-ins: task.create, kb.search, memory.save — real effects,
+  audited. The hermetic local provider decides via declared per-tool triggers;
+  cloud models decide natively from the same neutral definitions.
+- **M4b — Integrations & worker** → credentialed connectors, OAuth, MCP tool
+  support, SCIM, outbound event bus (§3.6); native tool-calling wire formats for
+  the Anthropic/OpenAI/Google providers; `apps/worker` for scheduled/queued jobs
+  and background workflow runs.
 - **M5 — Observability, compliance & hardening** → tracing, cost/latency analytics,
   rate limiting, prompt-injection defenses, backups; evidence exports, retention
   policies, PII redaction (§3.4); provider failover + degraded mode (§3.7).

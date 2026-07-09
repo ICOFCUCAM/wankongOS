@@ -16,6 +16,12 @@ export interface ToolDefinition {
   description: string;
   /** JSON Schema for the tool's arguments. */
   parameters: Record<string, unknown>;
+  /**
+   * Regex sources the hermetic local provider uses to decide when to call this
+   * tool (cloud models decide natively and ignore these). Explicit triggers
+   * keep offline behaviour deterministic instead of fuzzy.
+   */
+  triggers?: string[];
 }
 
 /** A tool invocation emitted by the model. */
