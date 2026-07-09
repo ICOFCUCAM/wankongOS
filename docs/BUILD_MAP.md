@@ -127,7 +127,9 @@ lifecycle. *Boundary: `packages/core` (policy), `apps/api`, `apps/web`.*
   with 429 once today's tokens are spent; usage surfaced on the profile.
 - ✅ **Kill switch** — pause one employee or the whole workforce in one click
   (`POST /workforce/pause`); chat returns 409 and workflow steps fail visibly.
-- ⬜ **Performance reviews** — periodic, KPI-backed review records per employee.
+- ✅ **Performance reviews** — KPI-backed review records compiled from real activity
+  (eval pass rate, task throughput, goals, conversations, config stability) with an
+  evidence-stating narrative and rating; generated on demand from the profile.
 - ⬜ **Sandbox trials** — dry-run candidates against recorded tasks before live access.
 
 ### 3.2 Evaluation & Quality — AI QA ⬜ → M2
@@ -199,8 +201,10 @@ The audit trail and RLS design exist; package them for the compliance officer.
   (ADR-0009): JSONB document tables, postgres.js driver selected by DATABASE_URL,
   schema ensured + idempotent seed on first boot, full API test suite runs on real
   SQL via PGlite in CI. Setting DATABASE_URL on Vercel turns on durability.
-- **M3c — Auth & remaining trust** → sessions + SSO-ready auth, invitation flow,
-  API keys; performance reviews, canary rollout, cost-per-outcome FinOps (§3.3).
+- **M3c — API keys & performance reviews** ✅ scoped API keys (SHA-256 stored,
+  plaintext once, Bearer auth with exact scopes, no privilege escalation, revocation)
+  and KPI-backed performance reviews (§3.1). *Remaining for M3d:* sessions + SSO
+  auth, invitation flow, canary rollout, cost-per-outcome FinOps (§3.3).
 - **M4 — Integrations & worker** → credentialed connectors, OAuth, MCP tool support,
   SCIM, outbound event bus (§3.6); `apps/worker` for scheduled/queued jobs and
   background workflow runs.

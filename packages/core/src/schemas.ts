@@ -373,6 +373,9 @@ export const Report = z.object({
   ...auditFields,
   organizationId: Id,
   title: z.string().min(1).max(200),
+  /** What the report is about, e.g. an employee id for performance reviews. */
+  subjectId: Id.optional(),
+  kind: z.enum(["generic", "performance_review"]).default("generic"),
   period: z.object({ from: Timestamp, to: Timestamp }),
   metrics: z.record(z.number()),
   narrative: z.string().max(20000).optional(),
