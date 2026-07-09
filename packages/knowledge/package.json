@@ -1,5 +1,5 @@
 {
-  "name": "@wankong/store",
+  "name": "@wankong/knowledge",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,15 +9,12 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc -b tsconfig.json",
-    "print": "tsx src/print.ts"
+    "build": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@wankong/core": "workspace:*",
-    "@wankong/knowledge": "workspace:*"
+    "@wankong/core": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }

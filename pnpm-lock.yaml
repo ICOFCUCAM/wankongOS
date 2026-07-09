@@ -32,6 +32,12 @@ importers:
       '@wankong/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@wankong/evals':
+        specifier: workspace:*
+        version: link:../../packages/evals
+      '@wankong/knowledge':
+        specifier: workspace:*
+        version: link:../../packages/knowledge
       '@wankong/store':
         specifier: workspace:*
         version: link:../../packages/store
@@ -121,11 +127,37 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/evals:
+    dependencies:
+      '@wankong/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@wankong/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/knowledge:
+    dependencies:
+      '@wankong/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/store:
     dependencies:
       '@wankong/core':
         specifier: workspace:*
         version: link:../core
+      '@wankong/knowledge':
+        specifier: workspace:*
+        version: link:../knowledge
     devDependencies:
       tsx:
         specifier: ^4.19.2

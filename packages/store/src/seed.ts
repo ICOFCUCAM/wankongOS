@@ -8,6 +8,7 @@ import type {
   User,
 } from "@wankong/core";
 import { MemoryStore } from "./store.js";
+import { buildSeedDocuments, buildSeedEvalSuites } from "./seed-knowledge.js";
 
 const TS = "2026-01-01T00:00:00.000Z";
 const ORG_ID = "org_acme";
@@ -453,6 +454,8 @@ export function seedStore(store: MemoryStore): MemoryStore {
   for (const kb of data.knowledgeBases) store.knowledgeBases.insert(kb);
   for (const g of data.goals) store.goals.create(g);
   for (const t of data.tasks) store.tasks.create(t);
+  for (const doc of buildSeedDocuments()) store.documents.insert(doc);
+  for (const suite of buildSeedEvalSuites()) store.evalSuites.insert(suite);
   return store;
 }
 

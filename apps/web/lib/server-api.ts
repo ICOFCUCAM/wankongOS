@@ -4,7 +4,11 @@ import { createApp, createAppContext } from "@wankong/api";
 import type {
   Department,
   Employee,
+  EvalReport,
+  EvalSuite,
   Goal,
+  KnowledgeBase,
+  Memory,
   OrgChartNode,
   Organization,
   Task,
@@ -71,6 +75,27 @@ export const api = {
   workflow: (id: string) =>
     call<{ workflow: Workflow; runs: WorkflowRun[] }>(`/v1/workflows/${id}`),
   runs: () => call<{ data: WorkflowRun[] }>("/v1/runs").then((r) => r.data),
+  knowledgeBases: () =>
+    call<{ data: (KnowledgeBase & { documentCount: number })[] }>("/v1/knowledge-bases").then(
+      (r) => r.data,
+    ),
+  kbDocuments: (id: string) =>
+    call<{ data: DocumentMeta[] }>(`/v1/knowledge-bases/${id}/documents`).then((r) => r.data),
+  employeeMemories: (id: string) =>
+    call<{ data: (Memory & { score: number })[] }>(`/v1/employees/${id}/memories`).then(
+      (r) => r.data,
+    ),
+  employeeEvals: (id: string) =>
+    call<{ suite: EvalSuite | null; reports: EvalReport[] }>(`/v1/employees/${id}/evals`),
 };
+
+export interface DocumentMeta {
+  id: string;
+  title: string;
+  mimeType: string;
+  version: number;
+  chunkCount: number;
+  updatedAt: string;
+}
 
 export { EmbeddedApiError as ApiError };

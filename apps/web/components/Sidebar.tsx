@@ -8,6 +8,7 @@ const NAV = [
   { href: "/employees", label: "AI Employees", icon: "◈" },
   { href: "/workflows", label: "Workflows", icon: "⧉" },
   { href: "/tasks", label: "Tasks", icon: "☰" },
+  { href: "/knowledge", label: "Knowledge", icon: "◱" },
 ];
 
 export function Sidebar({ orgName }: { orgName: string }) {

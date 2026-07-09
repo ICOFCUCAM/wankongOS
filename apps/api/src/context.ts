@@ -1,4 +1,5 @@
 import { EmployeeRuntime, ProviderRegistry } from "@wankong/agents";
+import { embedderFromEnv, type Embedder } from "@wankong/knowledge";
 import {
   createSeededStore,
   MemoryStore,
@@ -25,6 +26,7 @@ export interface AppContext {
   registry: ProviderRegistry;
   runtime: EmployeeRuntime;
   workflowEngine: WorkflowEngine;
+  embedder: Embedder;
   /** The organization this API instance serves (single-tenant per instance). */
   organizationId: string;
 }
@@ -33,6 +35,7 @@ export interface AppContextOptions {
   store?: MemoryStore;
   registry?: ProviderRegistry;
   organizationId?: string;
+  embedder?: Embedder;
 }
 
 /**
@@ -46,6 +49,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
   const registry = options.registry ?? ProviderRegistry.fromEnv();
   const runtime = new EmployeeRuntime(registry);
   const organizationId = options.organizationId ?? SEED_ORG_ID;
+  const embedder = options.embedder ?? embedderFromEnv();
 
   // Seed the demo workflow here (kept out of @wankong/store so the store carries
   // no AI dependency; the API is the layer that composes store + engine).
@@ -89,7 +93,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     },
   });
 
-  return { store, registry, runtime, workflowEngine, organizationId };
+  return { store, registry, runtime, workflowEngine, embedder, organizationId };
 }
 
 /** Generate a fresh workflow-run id. */

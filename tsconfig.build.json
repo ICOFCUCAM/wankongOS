@@ -5,6 +5,8 @@
     { "path": "packages/agents" },
     { "path": "packages/store" },
     { "path": "packages/workflow" },
+    { "path": "packages/knowledge" },
+    { "path": "packages/evals" },
     { "path": "apps/api" }
   ]
 }

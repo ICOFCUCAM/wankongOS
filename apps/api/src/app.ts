@@ -16,6 +16,9 @@ import { taskRoutes } from "./routes/tasks.js";
 import { chatRoutes } from "./routes/chat.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { workflowRoutes } from "./routes/workflows.js";
+import { knowledgeRoutes } from "./routes/knowledge.js";
+import { memoryRoutes } from "./routes/memories.js";
+import { evalRoutes } from "./routes/evals.js";
 
 export interface CreateAppOptions {
   context?: AppContext;
@@ -68,6 +71,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", chatRoutes);
   v1.route("/", dashboardRoutes);
   v1.route("/", workflowRoutes);
+  v1.route("/", knowledgeRoutes);
+  v1.route("/", memoryRoutes);
+  v1.route("/", evalRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

@@ -10,6 +10,8 @@ export default defineConfig({
       "@wankong/agents": r("./packages/agents/src/index.ts"),
       "@wankong/store": r("./packages/store/src/index.ts"),
       "@wankong/workflow": r("./packages/workflow/src/index.ts"),
+      "@wankong/knowledge": r("./packages/knowledge/src/index.ts"),
+      "@wankong/evals": r("./packages/evals/src/index.ts"),
     },
   },
   test: {

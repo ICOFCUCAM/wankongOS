@@ -4,9 +4,16 @@ import { useRef, useState } from "react";
 import { PUBLIC_API_URL } from "@/lib/api";
 import { Avatar } from "./Avatar";
 
+interface TurnCitation {
+  documentId: string;
+  title: string;
+  score: number;
+}
+
 interface Turn {
   role: "user" | "assistant";
   content: string;
+  citations?: TurnCitation[];
 }
 
 export function Chat({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
@@ -57,6 +64,18 @@ export function Chat({ employeeId, employeeName }: { employeeId: string; employe
           const data = JSON.parse(dataLine);
           if (eventType === "start") {
             conversationId.current = data.conversationId;
+          } else if (eventType === "done" && Array.isArray(data.citations) && data.citations.length) {
+            setTurns((t) => {
+              const copy = [...t];
+              const last = copy[copy.length - 1];
+              if (last?.role === "assistant") {
+                const seen = new Set<string>();
+                last.citations = (data.citations as TurnCitation[]).filter((ci) =>
+                  seen.has(ci.documentId) ? false : (seen.add(ci.documentId), true),
+                );
+              }
+              return copy;
+            });
           } else if (eventType === "delta") {
             setTurns((t) => {
               const copy = [...t];
@@ -98,14 +117,26 @@ export function Chat({ employeeId, employeeName }: { employeeId: string; employe
                 You
               </div>
             )}
-            <div
-              className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                turn.role === "user"
-                  ? "bg-accent text-white"
-                  : "border border-border bg-surface-2 text-text"
-              }`}
-            >
-              {turn.content || (busy ? <span className="live-dot text-muted">▍</span> : "")}
+            <div className="max-w-[80%]">
+              <div
+                className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  turn.role === "user"
+                    ? "bg-accent text-white"
+                    : "border border-border bg-surface-2 text-text"
+                }`}
+              >
+                {turn.content || (busy ? <span className="live-dot text-muted">▍</span> : "")}
+              </div>
+              {turn.citations && turn.citations.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5 px-1">
+                  <span className="text-[11px] text-muted">Sources:</span>
+                  {turn.citations.map((ci) => (
+                    <span key={ci.documentId} className="pill text-[11px] text-muted" title={`relevance ${ci.score.toFixed(2)}`}>
+                      📄 {ci.title}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

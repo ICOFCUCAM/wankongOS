@@ -11,6 +11,8 @@
     { "path": "../../packages/core" },
     { "path": "../../packages/agents" },
     { "path": "../../packages/store" },
-    { "path": "../../packages/workflow" }
+    { "path": "../../packages/workflow" },
+    { "path": "../../packages/knowledge" },
+    { "path": "../../packages/evals" }
   ]
 }

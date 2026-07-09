@@ -5,7 +5,7 @@ import type { ChatMessage } from "@wankong/agents";
 import type { Employee } from "@wankong/core";
 import type { AppContext, Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
-import { buildEmployeePromptContext } from "../employee-context.js";
+import { buildGroundedEmployeeContext } from "../employee-context.js";
 
 const ChatInput = z.object({
   input: z.string().min(1).max(20000),
@@ -23,15 +23,19 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
 
   const conversation = await ensureConversation(ctx, employee, conversationId, c.get("actor").user.id);
   const history = await loadHistory(ctx, conversation.id);
-  const promptContext = await buildPromptContext(ctx, employee);
+  const grounded = await buildGroundedEmployeeContext(ctx.store, ctx.organizationId, employee, {
+    query: input,
+    embedder: ctx.embedder,
+  });
 
-  const result = await ctx.runtime.complete({ employee, context: promptContext, history, input });
+  const result = await ctx.runtime.complete({ employee, context: grounded.context, history, input });
 
   await recordExchange(ctx, employee, conversation.id, input, result.text, result.usage);
 
   return c.json({
     conversationId: conversation.id,
     reply: result.text,
+    citations: grounded.citations,
     usage: result.usage,
     provider: result.provider,
     model: result.model,
@@ -47,13 +51,16 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
 
   const conversation = await ensureConversation(ctx, employee, conversationId, c.get("actor").user.id);
   const history = await loadHistory(ctx, conversation.id);
-  const promptContext = await buildPromptContext(ctx, employee);
+  const grounded = await buildGroundedEmployeeContext(ctx.store, ctx.organizationId, employee, {
+    query: input,
+    embedder: ctx.embedder,
+  });
 
   return streamSSE(c, async (stream) => {
     await stream.writeSSE({ event: "start", data: JSON.stringify({ conversationId: conversation.id }) });
     let text = "";
     let usage = { inputTokens: 0, outputTokens: 0 };
-    for await (const chunk of ctx.runtime.stream({ employee, context: promptContext, history, input })) {
+    for await (const chunk of ctx.runtime.stream({ employee, context: grounded.context, history, input })) {
       if (chunk.type === "text") {
         text += chunk.delta;
         await stream.writeSSE({ event: "delta", data: JSON.stringify({ text: chunk.delta }) });
@@ -62,7 +69,10 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
       }
     }
     await recordExchange(ctx, employee, conversation.id, input, text, usage);
-    await stream.writeSSE({ event: "done", data: JSON.stringify({ usage }) });
+    await stream.writeSSE({
+      event: "done",
+      data: JSON.stringify({ usage, citations: grounded.citations }),
+    });
   });
 });
 
@@ -104,10 +114,6 @@ async function loadHistory(ctx: AppContext, conversationId: string): Promise<Cha
   return messages
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-}
-
-function buildPromptContext(ctx: AppContext, employee: Employee) {
-  return buildEmployeePromptContext(ctx.store, ctx.organizationId, employee);
 }
 
 async function recordExchange(
