@@ -7,6 +7,7 @@ import type { AppContext, Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
 import { buildGroundedEmployeeContext } from "../employee-context.js";
 import { assertActive, assertWithinBudget } from "../governance.js";
+import { composeToolRegistry } from "../mcp-tools.js";
 
 const ChatInput = z.object({
   input: z.string().min(1).max(20000),
@@ -36,7 +37,7 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
     context: grounded.context,
     history,
     input,
-    tools: toolsFor(ctx, employee),
+    tools: await toolsFor(ctx, employee),
   });
 
   await recordExchange(ctx, employee, conversation.id, input, result.text, result.usage);
@@ -77,7 +78,7 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
       context: grounded.context,
       history,
       input,
-      tools: toolsFor(ctx, employee),
+      tools: await toolsFor(ctx, employee),
     })) {
       if (chunk.type === "text") {
         text += chunk.delta;
@@ -137,10 +138,10 @@ async function loadHistory(ctx: AppContext, conversationId: string): Promise<Cha
     .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 }
 
-/** The employee's executable tools, bound to its own permissions. */
-function toolsFor(ctx: AppContext, employee: Employee) {
+/** The employee's executable tools (built-ins + connected MCP servers). */
+async function toolsFor(ctx: AppContext, employee: Employee) {
   return {
-    registry: ctx.toolRegistry,
+    registry: await composeToolRegistry(ctx.toolRegistry, ctx.store, ctx.organizationId),
     context: {
       organizationId: ctx.organizationId,
       employeeId: employee.id,

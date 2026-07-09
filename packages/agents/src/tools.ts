@@ -34,6 +34,11 @@ export class ToolRegistry {
     return this.tools.get(id);
   }
 
+  /** All registered (id, tool) pairs — lets callers compose registries. */
+  entries(): IterableIterator<[string, Tool]> {
+    return this.tools.entries();
+  }
+
   /** Definitions for a subset of tool ids (an employee's `toolIds`). */
   definitionsFor(ids: readonly string[]): ToolDefinition[] {
     return ids.map((id) => this.tools.get(id)?.definition).filter((d): d is ToolDefinition => !!d);

@@ -12,6 +12,7 @@ export default defineConfig({
       "@wankong/workflow": r("./packages/workflow/src/index.ts"),
       "@wankong/knowledge": r("./packages/knowledge/src/index.ts"),
       "@wankong/evals": r("./packages/evals/src/index.ts"),
+      "@wankong/integrations": r("./packages/integrations/src/index.ts"),
     },
   },
   test: {
