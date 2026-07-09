@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
-import { api } from "@/lib/api";
+import { api } from "@/lib/server-api";
 
 export const metadata: Metadata = {
   title: "WankongOS — AI Workforce",

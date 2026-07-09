@@ -56,12 +56,16 @@ pnpm test
 # Print the seeded org chart
 pnpm seed:print
 
-# Terminal 1 — the API (defaults to http://localhost:4000)
-pnpm api
-
-# Terminal 2 — the web console (http://localhost:3000)
+# Run everything — the console with the API embedded (http://localhost:3000)
 pnpm web
+
+# Optional: run the API standalone for API-first usage (http://localhost:4000)
+pnpm api
 ```
+
+The API is **embedded in the web app** (served at `/api`), so `pnpm web` alone is a
+complete, working system — and the app deploys to Vercel as-is (import the repo,
+set the project Root Directory to `apps/web`, done).
 
 No API keys are needed: the platform ships with a **hermetic `local` AI provider**
 so every employee is chattable, and the whole system is testable, entirely offline.

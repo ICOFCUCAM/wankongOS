@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Workflow, WorkflowRun } from "@/lib/api";
-import { api } from "@/lib/api";
+import { api } from "@/lib/server-api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 
 export const dynamic = "force-dynamic";

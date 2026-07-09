@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Workflow, WorkflowRun } from "@/lib/api";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/server-api";
 import { RunPanel } from "@/components/RunPanel";
 
 export const dynamic = "force-dynamic";
