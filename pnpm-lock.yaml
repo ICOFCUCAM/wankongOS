@@ -110,6 +110,19 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  apps/worker:
+    dependencies:
+      '@wankong/api':
+        specifier: workspace:*
+        version: link:../api
+    devDependencies:
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/agents:
     dependencies:
       '@wankong/core':

@@ -118,6 +118,7 @@ store code is tested in CI on real SQL via PGlite (ADR-0009).
 | `GET/POST` | `/v1/api-keys` · `DELETE /v1/api-keys/:id` | Scoped machine credentials *(apikey:manage)* |
 | `GET/POST` | `/v1/integrations` · `DELETE /v1/integrations/:id` | Connect MCP tool servers *(integration:manage)* |
 | `GET/POST` | `/v1/webhooks` · `DELETE /v1/webhooks/:id` | HMAC-signed event deliveries *(integration:manage)* |
+| `POST` | `/v1/worker/tick` | Idempotent scheduler tick — cron-fire scheduled workflows *(workflow:run)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 
