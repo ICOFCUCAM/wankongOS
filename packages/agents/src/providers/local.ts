@@ -22,9 +22,43 @@ export class LocalProvider implements AIProvider {
     const system = request.messages.find((m) => m.role === "system")?.content ?? "";
     const lastUser = [...request.messages].reverse().find((m) => m.role === "user");
     const persona = extractPersona(system);
-    const reply = composeReply(persona, system, lastUser?.content ?? "");
+    const input = lastUser?.content ?? "";
 
-    const inputTokens = request.messages.reduce((n, m) => n + estimateTokens(m.content), 0);
+    const inputTokensSoFar = request.messages.reduce(
+      (n, m) => n + estimateTokens(m.content),
+      0,
+    );
+
+    // Tool calling: if tools are offered, no tool has run yet this turn, and a
+    // tool's declared trigger matches the request, call it (deterministically).
+    const toolResults = request.messages.filter((m) => m.role === "tool");
+    if (request.tools?.length && toolResults.length === 0) {
+      const chosen = pickTool(request.tools, input);
+      if (chosen) {
+        yield {
+          type: "tool_call",
+          call: {
+            id: `call_${hashString(chosen.name + input).toString(16)}`,
+            name: chosen.name,
+            arguments: { text: input },
+          },
+        };
+        yield {
+          type: "done",
+          usage: { inputTokens: inputTokensSoFar, outputTokens: estimateTokens(chosen.name) },
+          finishReason: "tool_calls",
+        };
+        return;
+      }
+    }
+
+    // Compose the reply; if tools ran, ground it in their results.
+    const reply =
+      toolResults.length > 0
+        ? composeToolReply(persona, input, toolResults.map((m) => m.content))
+        : composeReply(persona, system, input);
+
+    const inputTokens = inputTokensSoFar;
     let outputTokens = 0;
 
     // Stream word-by-word so downstream streaming code is genuinely exercised.
@@ -46,6 +80,51 @@ export class LocalProvider implements AIProvider {
 interface Persona {
   name: string;
   title: string;
+}
+
+/** First offered tool whose declared trigger matches the input. */
+function pickTool(
+  tools: readonly { name: string; triggers?: string[] }[],
+  input: string,
+): { name: string } | undefined {
+  for (const tool of tools) {
+    for (const source of tool.triggers ?? []) {
+      try {
+        if (new RegExp(source, "i").test(input)) return tool;
+      } catch {
+        // Invalid trigger regexes are simply skipped.
+      }
+    }
+  }
+  return undefined;
+}
+
+/** FNV-1a for stable, deterministic call ids. */
+function hashString(s: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    hash ^= s.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+/** Reply grounded in executed tool results. */
+function composeToolReply(persona: Persona, ask: string, results: string[]): string {
+  const lines = [
+    `Done — I've handled "${summarize(ask)}" using my tools.`,
+    ``,
+    `**What I did:**`,
+    ...results.map((r) => `- ${summarizeResult(r)}`),
+    ``,
+    `Anything else you'd like me to take care of?`,
+  ];
+  return lines.join("\n");
+}
+
+function summarizeResult(result: string): string {
+  const clean = result.replace(/\s+/g, " ").trim();
+  return clean.length > 240 ? `${clean.slice(0, 237)}…` : clean;
 }
 
 function extractPersona(system: string): Persona {

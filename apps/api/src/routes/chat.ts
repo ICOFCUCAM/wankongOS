@@ -31,7 +31,13 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
     embedder: ctx.embedder,
   });
 
-  const result = await ctx.runtime.complete({ employee, context: grounded.context, history, input });
+  const result = await ctx.runtime.complete({
+    employee,
+    context: grounded.context,
+    history,
+    input,
+    tools: toolsFor(ctx, employee),
+  });
 
   await recordExchange(ctx, employee, conversation.id, input, result.text, result.usage);
 
@@ -39,6 +45,7 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
     conversationId: conversation.id,
     reply: result.text,
     citations: grounded.citations,
+    tools: result.executedTools,
     usage: result.usage,
     provider: result.provider,
     model: result.model,
@@ -64,13 +71,22 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
   return streamSSE(c, async (stream) => {
     await stream.writeSSE({ event: "start", data: JSON.stringify({ conversationId: conversation.id }) });
     let text = "";
-    let usage = { inputTokens: 0, outputTokens: 0 };
-    for await (const chunk of ctx.runtime.stream({ employee, context: grounded.context, history, input })) {
+    const usage = { inputTokens: 0, outputTokens: 0 };
+    for await (const chunk of ctx.runtime.stream({
+      employee,
+      context: grounded.context,
+      history,
+      input,
+      tools: toolsFor(ctx, employee),
+    })) {
       if (chunk.type === "text") {
         text += chunk.delta;
         await stream.writeSSE({ event: "delta", data: JSON.stringify({ text: chunk.delta }) });
+      } else if (chunk.type === "tool_result") {
+        await stream.writeSSE({ event: "tool", data: JSON.stringify(chunk.tool) });
       } else if (chunk.type === "done") {
-        usage = chunk.usage;
+        usage.inputTokens += chunk.usage.inputTokens;
+        usage.outputTokens += chunk.usage.outputTokens;
       }
     }
     await recordExchange(ctx, employee, conversation.id, input, text, usage);
@@ -119,6 +135,18 @@ async function loadHistory(ctx: AppContext, conversationId: string): Promise<Cha
   return messages
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+}
+
+/** The employee's executable tools, bound to its own permissions. */
+function toolsFor(ctx: AppContext, employee: Employee) {
+  return {
+    registry: ctx.toolRegistry,
+    context: {
+      organizationId: ctx.organizationId,
+      employeeId: employee.id,
+      permissions: employee.permissions,
+    },
+  };
 }
 
 async function recordExchange(

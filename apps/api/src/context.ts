@@ -17,6 +17,7 @@ import {
   defaultConnectors,
 } from "@wankong/workflow";
 import { buildEmployeePromptContext } from "./employee-context.js";
+import { buildToolRegistry } from "./tools.js";
 
 /** The authenticated actor for a request. */
 export interface Actor {
@@ -32,6 +33,8 @@ export interface AppContext {
   runtime: EmployeeRuntime;
   workflowEngine: WorkflowEngine;
   embedder: Embedder;
+  /** Built-in executable tools, permission-gated per employee. */
+  toolRegistry: import("@wankong/agents").ToolRegistry;
   /** The organization this API instance serves (single-tenant per instance). */
   organizationId: string;
   /** Resolves once the store is initialised (schema ensured, seeded if empty). */
@@ -69,6 +72,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     runtime,
     workflowEngine: undefined as unknown as WorkflowEngine,
     embedder,
+    toolRegistry: undefined as unknown as import("@wankong/agents").ToolRegistry,
     organizationId,
     ready: Promise.resolve(),
   };
@@ -88,6 +92,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     // Seed the demo workflow (kept out of @wankong/store so the store carries
     // no AI dependency). Fixed id → idempotent upsert on every boot.
     await context.store.workflows.insert(buildSeedWorkflow(organizationId));
+    context.toolRegistry = buildToolRegistry(context.store, organizationId, embedder);
   })();
 
   context.workflowEngine = new WorkflowEngine({

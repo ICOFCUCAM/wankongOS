@@ -10,10 +10,17 @@ interface TurnCitation {
   score: number;
 }
 
+interface TurnTool {
+  name: string;
+  result: string;
+  ok: boolean;
+}
+
 interface Turn {
   role: "user" | "assistant";
   content: string;
   citations?: TurnCitation[];
+  tools?: TurnTool[];
 }
 
 export function Chat({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
@@ -64,6 +71,15 @@ export function Chat({ employeeId, employeeName }: { employeeId: string; employe
           const data = JSON.parse(dataLine);
           if (eventType === "start") {
             conversationId.current = data.conversationId;
+          } else if (eventType === "tool") {
+            setTurns((t) => {
+              const copy = [...t];
+              const last = copy[copy.length - 1];
+              if (last?.role === "assistant") {
+                last.tools = [...(last.tools ?? []), data as TurnTool];
+              }
+              return copy;
+            });
           } else if (eventType === "done" && Array.isArray(data.citations) && data.citations.length) {
             setTurns((t) => {
               const copy = [...t];
@@ -118,6 +134,21 @@ export function Chat({ employeeId, employeeName }: { employeeId: string; employe
               </div>
             )}
             <div className="max-w-[80%]">
+              {turn.tools && turn.tools.length > 0 && (
+                <div className="mb-1.5 flex flex-wrap gap-1.5 px-1">
+                  {turn.tools.map((tool, ti) => (
+                    <span
+                      key={ti}
+                      className={`pill text-[11px] ${
+                        tool.ok ? "border-accent/40 text-accent-soft" : "border-danger/40 text-danger"
+                      }`}
+                      title={tool.result}
+                    >
+                      🔧 {tool.name} {tool.ok ? "✓" : "✗"}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div
                 className={`whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   turn.role === "user"
