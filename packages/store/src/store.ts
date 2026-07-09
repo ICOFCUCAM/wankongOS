@@ -52,6 +52,7 @@ export class MemoryStore {
   readonly workflowRuns: MemoryRepository<WorkflowRun>;
   readonly evalSuites: MemoryRepository<import("@wankong/core").EvalSuite>;
   readonly evalReports: MemoryRepository<import("@wankong/core").EvalReport>;
+  readonly employeeVersions: MemoryRepository<import("@wankong/core").EmployeeVersion>;
 
   constructor(private readonly clock: Clock = systemClock) {
     this.organizations = new MemoryRepository("organization", clock);
@@ -76,6 +77,7 @@ export class MemoryStore {
     this.workflowRuns = new MemoryRepository("workflowRun", clock);
     this.evalSuites = new MemoryRepository("evalSuite", clock);
     this.evalReports = new MemoryRepository("evalReport", clock);
+    this.employeeVersions = new MemoryRepository("employeeVersion", clock);
   }
 
   // --- cross-entity read helpers ------------------------------------------

@@ -61,6 +61,9 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     resolveEmployee: async (id) => {
       const employee = await store.employees.get(id);
       if (!employee || employee.organizationId !== organizationId) return null;
+      // Paused/training employees don't take on workflow steps (kill switch,
+      // probation): the step fails visibly rather than silently proceeding.
+      if (employee.status !== "active") return null;
       return { employee, context: await buildEmployeePromptContext(store, organizationId, employee) };
     },
     createApproval: async ({ summary, requiredPermission, runId, nodeId }) => {

@@ -6,6 +6,7 @@ import type { Employee } from "@wankong/core";
 import type { AppContext, Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
 import { buildGroundedEmployeeContext } from "../employee-context.js";
+import { assertActive, assertWithinBudget } from "../governance.js";
 
 const ChatInput = z.object({
   input: z.string().min(1).max(20000),
@@ -20,6 +21,8 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
   const ctx = c.get("ctx");
   const employee = await findScoped(c, (id) => ctx.store.employees.get(id), c.req.param("id"));
   const { input, conversationId } = await parseBody(c, ChatInput);
+  assertActive(employee);
+  await assertWithinBudget(ctx.store, employee);
 
   const conversation = await ensureConversation(ctx, employee, conversationId, c.get("actor").user.id);
   const history = await loadHistory(ctx, conversation.id);
@@ -48,6 +51,8 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
   const ctx = c.get("ctx");
   const employee = await findScoped(c, (id) => ctx.store.employees.get(id), c.req.param("id"));
   const { input, conversationId } = await parseBody(c, ChatInput);
+  assertActive(employee);
+  await assertWithinBudget(ctx.store, employee);
 
   const conversation = await ensureConversation(ctx, employee, conversationId, c.get("actor").user.id);
   const history = await loadHistory(ctx, conversation.id);

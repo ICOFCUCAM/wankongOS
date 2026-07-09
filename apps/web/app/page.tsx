@@ -2,6 +2,7 @@ import Link from "next/link";
 import { api } from "@/lib/server-api";
 import type { DashboardData } from "@/lib/api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
+import { WorkforceControls } from "@/components/WorkforceControls";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader />
+      <PageHeader workforce={data.workforce} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Metric
@@ -137,15 +138,23 @@ function Row({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function PageHeader() {
+function PageHeader({ workforce }: { workforce?: DashboardData["workforce"] }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-3">
       <div>
         <h1 className="text-2xl font-semibold">CEO Dashboard</h1>
         <p className="text-sm text-muted">A live snapshot of your AI workforce.</p>
       </div>
-      <div className="pill border-success/40 text-success">
-        <span className="live-dot h-2 w-2 rounded-full bg-success" /> Live
+      <div className="flex items-center gap-3">
+        {workforce && (
+          <WorkforceControls
+            activeCount={workforce.byStatus.active ?? 0}
+            pausedCount={workforce.byStatus.paused ?? 0}
+          />
+        )}
+        <div className="pill border-success/40 text-success">
+          <span className="live-dot h-2 w-2 rounded-full bg-success" /> Live
+        </div>
       </div>
     </div>
   );

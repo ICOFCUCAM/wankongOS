@@ -102,6 +102,12 @@ and pin an employee to that provider to use a hosted model instead.
 | `POST` | `/v1/memories/prune` | Prune memories per owner *(org:manage)* |
 | `GET`  | `/v1/employees/:id/evals` | Golden suite + recent reports *(employee:read)* |
 | `POST` | `/v1/employees/:id/evals/run` | Run the suite now *(employee:manage)* |
+| `POST` | `/v1/employees/:id/pause` · `/resume` | Individual kill switch *(employee:manage)* |
+| `POST` | `/v1/employees/:id/activate` | Graduate probation — must pass evals *(employee:manage)* |
+| `POST` | `/v1/workforce/pause` · `/resume` | Org-wide kill switch *(org:manage)* |
+| `GET`  | `/v1/employees/:id/usage` | Today's tokens vs. budget *(employee:read)* |
+| `GET`  | `/v1/employees/:id/versions` | Config version history *(employee:read)* |
+| `POST` | `/v1/employees/:id/rollback` | Restore a version (gate-checked) *(employee:manage)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 
