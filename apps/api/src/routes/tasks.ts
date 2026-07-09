@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Task } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
+import { emitEvent } from "../events.js";
 import { resumePausedRun } from "./workflows.js";
 
 const CreateTask = Task.omit({
@@ -47,6 +48,7 @@ taskRoutes.post("/tasks", async (c) => {
     organizationId: ctx.organizationId,
     createdBy: { kind: "user", id: c.get("actor").user.id },
   });
+  await emitEvent(ctx, "task.created", { taskId: task.id, title: task.title, priority: task.priority });
   return c.json(task, 201);
 });
 
@@ -94,6 +96,11 @@ taskRoutes.post("/approvals/:id/decision", async (c) => {
     metadata: {},
   });
 
+  await emitEvent(ctx, "approval.decided", {
+    approvalId: updated.id,
+    decision,
+    summary: updated.summary,
+  });
   // If this approval was gating a paused workflow run, resume it now.
   await resumePausedRun(ctx, updated.id, decision);
 

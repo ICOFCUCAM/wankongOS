@@ -4,8 +4,12 @@ import type { ProviderId } from "@wankong/core";
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
+  /** For role "assistant": structured tool calls the model made this turn. */
+  toolCalls?: ToolCall[];
   /** For role "tool": the id of the tool call this responds to. */
   toolCallId?: string;
+  /** For role "tool": the name of the tool that produced this result. */
+  toolName?: string;
   /** Display name of the speaker (e.g. the employee or human user). */
   name?: string;
 }

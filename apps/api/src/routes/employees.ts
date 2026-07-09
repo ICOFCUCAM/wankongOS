@@ -4,6 +4,7 @@ import { Employee, EmployeeStatus } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
 import { runAndRecord, suiteFor, touchesGatedFields } from "../eval-gate.js";
+import { emitEvent } from "../events.js";
 
 const CreateEmployee = Employee.omit({
   id: true,
@@ -64,6 +65,12 @@ employeeRoutes.post("/employees", async (c) => {
     targetType: "employee",
     targetId: employee.id,
     metadata: { title: employee.title, status: employee.status },
+  });
+  await emitEvent(ctx, "employee.hired", {
+    employeeId: employee.id,
+    name: employee.name,
+    title: employee.title,
+    status: employee.status,
   });
   return c.json(employee, 201);
 });

@@ -124,13 +124,18 @@ export class EmployeeRuntime {
 
       if (finish !== "tool_calls" || pendingCalls.length === 0 || !params.tools) return;
 
+      // One structured assistant turn carrying all calls, then their results —
+      // providers map this to their native tool-history wire formats.
+      messages.push({ role: "assistant", content: "", toolCalls: pendingCalls });
       for (const call of pendingCalls) {
         const executed = await this.executeCall(call, params.tools);
         yield { type: "tool_result", tool: executed };
-        messages.push(
-          { role: "assistant", content: `[tool call] ${call.name}(${JSON.stringify(call.arguments)})` },
-          { role: "tool", content: executed.result, toolCallId: call.id },
-        );
+        messages.push({
+          role: "tool",
+          content: executed.result,
+          toolCallId: call.id,
+          toolName: call.name,
+        });
       }
     }
   }

@@ -1,4 +1,10 @@
-import type { AIProvider, CompletionChunk, CompletionRequest } from "../types.js";
+import type {
+  AIProvider,
+  ChatMessage,
+  CompletionChunk,
+  CompletionRequest,
+  ToolCall,
+} from "../types.js";
 import { ProviderError } from "../types.js";
 import { parseSSE } from "./sse.js";
 
@@ -10,9 +16,9 @@ export interface AnthropicConfig {
 }
 
 /**
- * Anthropic Messages API provider (streaming), implemented with `fetch` so the
- * package carries no SDK dependency. Reads secrets from config only — never
- * from ambient globals — so callers control credential flow.
+ * Anthropic Messages API provider (streaming, native tool use), implemented
+ * with `fetch` so the package carries no SDK dependency. Reads secrets from
+ * config only — never from ambient globals — so callers control credentials.
  */
 export class AnthropicProvider implements AIProvider {
   readonly id = "anthropic" as const;
@@ -33,10 +39,6 @@ export class AnthropicProvider implements AIProvider {
       .map((m) => m.content)
       .join("\n\n");
 
-    const messages = request.messages
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role, content: m.content }));
-
     const res = await fetch(`${this.baseUrl}/v1/messages`, {
       method: "POST",
       headers: {
@@ -49,7 +51,12 @@ export class AnthropicProvider implements AIProvider {
         max_tokens: request.maxTokens ?? 1024,
         temperature: request.temperature,
         system: system || undefined,
-        messages,
+        messages: mapMessages(request.messages),
+        tools: request.tools?.map((t) => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.parameters,
+        })),
         stream: true,
       }),
       signal: request.signal,
@@ -62,6 +69,9 @@ export class AnthropicProvider implements AIProvider {
     let inputTokens = 0;
     let outputTokens = 0;
     let finishReason: "stop" | "tool_calls" | "length" = "stop";
+    // Accumulate tool_use blocks: id/name from content_block_start, args from
+    // input_json_delta chunks, emitted on content_block_stop.
+    const pendingTool = new Map<number, { id: string; name: string; json: string }>();
 
     for await (const data of parseSSE(res.body)) {
       const event = safeJson(data);
@@ -70,20 +80,80 @@ export class AnthropicProvider implements AIProvider {
         case "message_start":
           inputTokens = event.message?.usage?.input_tokens ?? 0;
           break;
+        case "content_block_start":
+          if (event.content_block?.type === "tool_use") {
+            pendingTool.set(event.index, {
+              id: event.content_block.id,
+              name: event.content_block.name,
+              json: "",
+            });
+          }
+          break;
         case "content_block_delta":
           if (event.delta?.type === "text_delta") {
             yield { type: "text", delta: event.delta.text ?? "" };
+          } else if (event.delta?.type === "input_json_delta") {
+            const pending = pendingTool.get(event.index);
+            if (pending) pending.json += event.delta.partial_json ?? "";
           }
           break;
+        case "content_block_stop": {
+          const pending = pendingTool.get(event.index);
+          if (pending) {
+            pendingTool.delete(event.index);
+            yield {
+              type: "tool_call",
+              call: {
+                id: pending.id,
+                name: pending.name,
+                arguments: safeJson(pending.json || "{}") ?? {},
+              },
+            };
+          }
+          break;
+        }
         case "message_delta":
           outputTokens = event.usage?.output_tokens ?? outputTokens;
           if (event.delta?.stop_reason === "max_tokens") finishReason = "length";
+          if (event.delta?.stop_reason === "tool_use") finishReason = "tool_calls";
           break;
       }
     }
 
     yield { type: "done", usage: { inputTokens, outputTokens }, finishReason };
   }
+}
+
+/** Map neutral messages to Anthropic content blocks, including tool history. */
+function mapMessages(messages: ChatMessage[]): unknown[] {
+  const out: unknown[] = [];
+  for (const m of messages) {
+    if (m.role === "system") continue;
+    if (m.role === "assistant" && m.toolCalls?.length) {
+      out.push({
+        role: "assistant",
+        content: [
+          ...(m.content ? [{ type: "text", text: m.content }] : []),
+          ...m.toolCalls.map((call: ToolCall) => ({
+            type: "tool_use",
+            id: call.id,
+            name: call.name,
+            input: call.arguments,
+          })),
+        ],
+      });
+    } else if (m.role === "tool") {
+      out.push({
+        role: "user",
+        content: [
+          { type: "tool_result", tool_use_id: m.toolCallId ?? "", content: m.content },
+        ],
+      });
+    } else if (m.role === "user" || m.role === "assistant") {
+      out.push({ role: m.role, content: m.content });
+    }
+  }
+  return out;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

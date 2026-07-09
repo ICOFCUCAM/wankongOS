@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Env } from "../context.js";
 import { newWorkflowRunId } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
+import { emitEvent } from "../events.js";
 
 const RunInput = z.object({ input: z.record(z.unknown()).default({}) });
 
@@ -38,7 +39,7 @@ workflowRoutes.post("/workflows/:id/run", async (c) => {
     { kind: "user", id: c.get("actor").user.id },
     newWorkflowRunId(),
   );
-  ctx.store.workflowRuns.insert(run);
+  await ctx.store.workflowRuns.insert(run);
 
   await ctx.store.audit({
     organizationId: ctx.organizationId,
@@ -47,6 +48,13 @@ workflowRoutes.post("/workflows/:id/run", async (c) => {
     targetType: "workflow",
     targetId: workflow.id,
     metadata: { runId: run.id, status: run.status },
+  });
+
+  await emitEvent(ctx, `workflow.run.${run.status}`, {
+    runId: run.id,
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    status: run.status,
   });
 
   return c.json(run, 201);
@@ -90,5 +98,11 @@ export async function resumePausedRun(
   const workflow = await ctx.store.workflows.get(run.workflowId);
   if (!workflow) throw new HTTPException(500, { message: "Workflow definition missing for run" });
   const resumed = await ctx.workflowEngine.resume(workflow, run, decision);
-  ctx.store.workflowRuns.insert(resumed);
+  await ctx.store.workflowRuns.insert(resumed);
+  await emitEvent(ctx, `workflow.run.${resumed.status}`, {
+    runId: resumed.id,
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    status: resumed.status,
+  });
 }

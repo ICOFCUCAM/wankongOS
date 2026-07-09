@@ -132,7 +132,7 @@ lifecycle. *Boundary: `packages/core` (policy), `apps/api`, `apps/web`.*
   evidence-stating narrative and rating; generated on demand from the profile.
 - ⬜ **Sandbox trials** — dry-run candidates against recorded tasks before live access.
 
-### 3.2 Evaluation & Quality — AI QA ⬜ → M2
+### 3.2 Evaluation & Quality — AI QA ✅ (suites + gate shipped in M2)
 No company promotes an untested human; same rule for AI. *Boundary: new
 `packages/evals`, wired into CI and the console.*
 - **Golden-task suites** per employee: curated input → expected-properties checks,
@@ -177,8 +177,10 @@ The audit trail and RLS design exist; package them for the compliance officer.
   them on the next request.
 - ⬜ **SCIM provisioning + SSO** — enterprise IT manages human users the way they
   already manage everything else.
-- ⬜ **Outbound event bus** — every domain event (task done, approval pending, run
-  failed) streams to webhooks/queues so companies build on top of the OS.
+- ✅ **Outbound event bus** — domain events (task.created, employee.hired,
+  approval.decided, workflow.run.*) deliver to registered webhooks with
+  HMAC-SHA256 signatures; wildcard or filtered subscriptions; failures audited,
+  never breaking the emitting operation. ⬜ queued retrying dispatcher (worker).
 
 ### 3.7 Business Continuity ⬜ → M5
 *Boundary: `packages/agents`.*
@@ -217,10 +219,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
   session-aware, JSON+SSE response framings); integrations API connects servers
   and discovers tools; MCP tools compose into the per-request registry and run
   through the agent loop under employee permissions.
-- **M4c — Connectors, worker & event bus** → credentialed SaaS connectors, OAuth,
-  SCIM, outbound webhooks (§3.6); native tool-calling wire formats for
-  Anthropic/OpenAI/Google providers; `apps/worker` for scheduled/queued jobs and
-  background workflow runs.
+- **M4c — Native cloud tool-calling + event bus** ✅ Anthropic tool_use, OpenAI
+  tool_calls, and Gemini functionCall wire formats (streaming parse + tool-history
+  mapping, fixture-tested); HMAC-signed outbound webhooks for domain events.
+- **M4d — Connectors & worker** → credentialed SaaS connectors, OAuth, SCIM;
+  `apps/worker` for scheduled/queued jobs, background runs, and the queued
+  webhook dispatcher.
 - **M5 — Observability, compliance & hardening** → tracing, cost/latency analytics,
   rate limiting, prompt-injection defenses, backups; evidence exports, retention
   policies, PII redaction (§3.4); provider failover + degraded mode (§3.7).
