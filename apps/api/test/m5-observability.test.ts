@@ -236,3 +236,30 @@ describe("command center: today ledger and value estimate", () => {
     expect(h.valueDelivered.formula).toContain("estimate");
   });
 });
+
+describe("autonomous company: the briefing", () => {
+  it("summarizes the window from records with a deterministic headline", async () => {
+    // Complete a task inside the window via the real tool.
+    await context.toolRegistry.execute(
+      "task.progress",
+      { title: "board deck", done: true, result: "Shipped." },
+      { organizationId: SEED_ORG_ID, employeeId: "emp_exec_assistant", permissions: ["task:create"] },
+    );
+    const res = await app.request("/v1/briefing");
+    expect(res.status).toBe(200);
+    const b = await res.json();
+    expect(b.completed).toBeGreaterThanOrEqual(1);
+    expect(b.blocked).toBe(1); // Zoe's vendor quote
+    expect(b.headline).toContain("completed");
+    expect(b.headline).toContain("blocker");
+    expect(b.items.some((i: { text: string }) => i.text.includes("board deck"))).toBe(true);
+    expect(typeof b.estCostUsd).toBe("number");
+  });
+
+  it("honors an explicit since parameter", async () => {
+    const res = await app.request("/v1/briefing?since=2099-01-01T00:00:00.000Z");
+    const b = await res.json();
+    expect(b.completed).toBe(0);
+    expect(b.newHires).toBe(0);
+  });
+});
