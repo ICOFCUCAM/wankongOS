@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { estimateCostUsd, type Message, type ProviderId } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize } from "../http.js";
+import { avgOf, perEmployeeUsage, round6 } from "../metrics.js";
 
 export const analyticsRoutes = new Hono<Env>();
 
@@ -16,59 +16,23 @@ analyticsRoutes.get("/analytics", async (c) => {
   const ctx = c.get("ctx");
   const orgId = ctx.organizationId;
 
-  const [employees, conversations, messages] = await Promise.all([
+  const [employees, usage] = await Promise.all([
     ctx.store.employees.list((e) => e.organizationId === orgId),
-    ctx.store.conversations.list((cv) => cv.organizationId === orgId),
-    ctx.store.messages.list(),
+    perEmployeeUsage(ctx.store, orgId),
   ]);
-
-  const employeeByConversation = new Map(conversations.map((cv) => [cv.id, cv.employeeId]));
-  const perEmployee = new Map<
-    string,
-    { requests: number; tokensIn: number; tokensOut: number; estCostUsd: number; latencies: number[] }
-  >();
-
-  const bucket = (id: string) => {
-    let b = perEmployee.get(id);
-    if (!b) {
-      b = { requests: 0, tokensIn: 0, tokensOut: 0, estCostUsd: 0, latencies: [] };
-      perEmployee.set(id, b);
-    }
-    return b;
-  };
-
-  for (const message of messages) {
-    if (message.role !== "assistant") continue;
-    const employeeId = employeeByConversation.get(message.conversationId);
-    if (!employeeId) continue;
-    const b = bucket(employeeId);
-    b.requests += 1;
-    b.tokensIn += message.tokensIn ?? 0;
-    b.tokensOut += message.tokensOut ?? 0;
-    if (typeof message.latencyMs === "number") b.latencies.push(message.latencyMs);
-    b.estCostUsd += costOf(message);
-  }
 
   const rows = employees
     .map((e) => {
-      const b = perEmployee.get(e.id) ?? {
-        requests: 0,
-        tokensIn: 0,
-        tokensOut: 0,
-        estCostUsd: 0,
-        latencies: [],
-      };
+      const b = usage.get(e.id);
       return {
         employeeId: e.id,
         name: e.name,
         title: e.title,
-        requests: b.requests,
-        tokensIn: b.tokensIn,
-        tokensOut: b.tokensOut,
-        estCostUsd: round6(b.estCostUsd),
-        avgLatencyMs: b.latencies.length
-          ? Math.round(b.latencies.reduce((n, l) => n + l, 0) / b.latencies.length)
-          : null,
+        requests: b?.requests ?? 0,
+        tokensIn: b?.tokensIn ?? 0,
+        tokensOut: b?.tokensOut ?? 0,
+        estCostUsd: round6(b?.estCostUsd ?? 0),
+        avgLatencyMs: avgOf(b?.latencies ?? []),
       };
     })
     .sort((a, b) => b.tokensOut + b.tokensIn - (a.tokensOut + a.tokensIn));
@@ -89,12 +53,3 @@ analyticsRoutes.get("/analytics", async (c) => {
     perEmployee: rows,
   });
 });
-
-function costOf(message: Message): number {
-  const provider = (message.provider ?? "local") as ProviderId;
-  return estimateCostUsd(provider, message.model, message.tokensIn ?? 0, message.tokensOut ?? 0);
-}
-
-function round6(n: number): number {
-  return Math.round(n * 1_000_000) / 1_000_000;
-}
