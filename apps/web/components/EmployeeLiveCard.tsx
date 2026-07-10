@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { EmployeeSummary } from "@/lib/server-api";
 import { activityStyle } from "@/lib/activity";
 import { Avatar } from "./Avatar";
+import { EmployeeCardActions } from "./EmployeeCardActions";
 
 /**
  * A living employee card: everything on it is derived from stored records —
@@ -14,11 +15,8 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
   const cost = summary.metrics.estCostUsd;
 
   return (
-    <Link
-      href={`/employees/${summary.employeeId}`}
-      className="group card flex flex-col gap-3 transition hover:border-accent"
-    >
-      <div className="flex items-start gap-3">
+    <div className="card flex flex-col gap-3 transition hover:border-accent/60">
+      <Link href={`/employees/${summary.employeeId}`} className="group flex items-start gap-3">
         <div className="relative">
           <Avatar name={summary.name} size={44} />
           <span
@@ -33,7 +31,7 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
           </div>
           <div className="truncate text-sm text-muted">{summary.title}</div>
         </div>
-      </div>
+      </Link>
 
       {summary.currentTask ? (
         <div>
@@ -85,7 +83,9 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
           <span className="font-mono">{Math.round(summary.confidence * 100)}%</span>
         </div>
       )}
-    </Link>
+
+      <EmployeeCardActions employeeId={summary.employeeId} status={summary.status} />
+    </div>
   );
 }
 
