@@ -126,3 +126,33 @@ describe("M5a: compliance evidence pack", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("console: employee summaries", () => {
+  it("derives status, working-on, progress, approvals, metrics, and confidence in one call", async () => {
+    // Real activity: an eval run (confidence) and a chat (usage).
+    await app.request("/v1/employees/emp_support_manager/evals/run", json({}));
+    await app.request("/v1/employees/emp_exec_assistant/chat", json({ input: "Morning briefing please." }));
+
+    const res = await app.request("/v1/employees/summaries");
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(11);
+
+    const ava = data.find((s: { employeeId: string }) => s.employeeId === "emp_exec_assistant");
+    expect(ava.activity).toBe("working"); // seeded in-progress board deck
+    expect(ava.workingOn[0]).toContain("board deck");
+    expect(ava.currentTask.progress).toBe(0.72);
+    expect(ava.metrics.requests).toBe(1);
+    expect(ava.metrics.tokensOut).toBeGreaterThan(0);
+    expect(ava.personality.decisionSpeed).toBe("fast");
+
+    const zoe = data.find((s: { employeeId: string }) => s.employeeId === "emp_procurement");
+    expect(zoe.activity).toBe("blocked"); // seeded vendor-quote block
+
+    const maya = data.find((s: { employeeId: string }) => s.employeeId === "emp_support_manager");
+    expect(maya.confidence).toBe(1); // passing eval report
+
+    const noEvals = data.find((s: { employeeId: string }) => s.employeeId === "emp_recruiter");
+    expect(noEvals.confidence).toBeNull();
+  });
+});

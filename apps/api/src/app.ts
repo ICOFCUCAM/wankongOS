@@ -27,6 +27,7 @@ import { webhookRoutes } from "./routes/webhooks.js";
 import { workerRoutes } from "./routes/worker.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { complianceRoutes } from "./routes/compliance.js";
+import { summaryRoutes } from "./routes/summaries.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
@@ -104,6 +105,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
 
   const v1 = new Hono<Env>();
   v1.route("/", organizationRoutes);
+  // Before employeeRoutes: /employees/summaries must beat /employees/:id.
+  v1.route("/", summaryRoutes);
   v1.route("/", employeeRoutes);
   v1.route("/", taskRoutes);
   v1.route("/", chatRoutes);
