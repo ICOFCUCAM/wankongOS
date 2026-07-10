@@ -18,6 +18,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "employee.update.blocked_by_evals": "had a config change blocked by failing evals",
   "employee.rollback": "was rolled back to an earlier configuration",
   "employee.delegate": "delegated work to a teammate",
+  "employee.collaborate": "consulted a teammate",
   "employee.clone": "was cloned from a proven teammate",
   "employee.pause": "was paused",
   "employee.resume": "was resumed",

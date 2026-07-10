@@ -238,6 +238,103 @@ export function buildToolRegistry(
     },
   });
 
+  registry.register("collab.ask", {
+    definition: {
+      name: "collab.ask",
+      description:
+        "Consult a colleague AI employee (by name or title) and get their answer — lighter than delegate: a recorded conversation, no task. Pass conversationId to continue an existing consultation thread.",
+      parameters: {
+        type: "object",
+        properties: {
+          colleague: { type: "string", description: "The colleague's name or title" },
+          question: { type: "string", description: "What to ask" },
+          conversationId: { type: "string", description: "Continue this consultation thread" },
+        },
+        required: ["question"],
+      },
+      triggers: ["\\b(consult|get input from|what does)\\b[^.?!]*\\b(legal|finance|marketing|engineering|colleague|teammate)\\b"],
+    },
+    requires: "employee:chat",
+    async run(args, ctx) {
+      const question = str(args.question) ?? str(args.text) ?? "";
+      const asker = await store.employees.get(ctx.employeeId);
+      if (!asker) throw new ToolError("Asking employee not found");
+
+      // Continue an existing thread, or resolve the colleague and open one.
+      let conversation = null as Awaited<ReturnType<typeof store.conversations.get>>;
+      let target: Employee | undefined;
+      const existingId = str(args.conversationId);
+      if (existingId) {
+        conversation = await store.conversations.get(existingId);
+        if (!conversation || conversation.organizationId !== ctx.organizationId) {
+          throw new ToolError("Unknown consultation thread");
+        }
+        target = (await store.employees.get(conversation.employeeId)) ?? undefined;
+      } else {
+        const hint = (str(args.colleague) ?? question).toLowerCase();
+        let bestLen = 0;
+        for (const e of await store.employees.list(
+          (e) => e.organizationId === ctx.organizationId && e.id !== ctx.employeeId,
+        )) {
+          for (const key of [e.name.toLowerCase(), e.title.toLowerCase()]) {
+            if (hint.includes(key) && key.length > bestLen) {
+              target = e;
+              bestLen = key.length;
+            }
+          }
+        }
+      }
+      if (!target) throw new ToolError("Name the colleague explicitly (e.g. \"the Legal Counsel\").");
+      if (target.status !== "active") throw new ToolError(`${target.name} is ${target.status}.`);
+
+      // History makes the thread multi-turn; the colleague answers with their
+      // own grounding but WITHOUT tools — consultation is one hop deep.
+      const history = conversation
+        ? (await store.conversationMessages(conversation.id)).map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }))
+        : [];
+      const grounded = await buildGroundedEmployeeContext(store, ctx.organizationId, target, {
+        query: question,
+        embedder,
+      });
+      const startedAt = Date.now();
+      const result = await runtime.complete({
+        employee: target,
+        context: grounded.context,
+        history,
+        input: question,
+      });
+
+      if (!conversation) {
+        conversation = await store.conversations.create({
+          organizationId: ctx.organizationId,
+          employeeId: target.id,
+          openedBy: { kind: "employee", id: asker.id },
+          title: `Consultation: ${asker.name} ↔ ${target.name}`,
+        });
+      }
+      await store.messages.create({
+        conversationId: conversation.id, role: "user", authorId: asker.id, content: question,
+      });
+      await store.messages.create({
+        conversationId: conversation.id, role: "assistant", authorId: target.id, content: result.text,
+        tokensIn: result.usage.inputTokens, tokensOut: result.usage.outputTokens,
+        provider: result.provider, model: result.model, latencyMs: Date.now() - startedAt,
+      });
+      await store.audit({
+        organizationId: ctx.organizationId,
+        actor: { kind: "employee", id: ctx.employeeId },
+        action: "employee.collaborate",
+        targetType: "conversation",
+        targetId: conversation.id,
+        metadata: { with: target.id, thread: conversation.title },
+      });
+      return `${target.name} says: ${result.text}\n\n(thread: ${conversation.id} — pass conversationId to continue)`;
+    },
+  });
+
   registry.register("delegate", {
     definition: {
       name: "delegate",
