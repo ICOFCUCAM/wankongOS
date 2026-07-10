@@ -19,7 +19,15 @@ async function orgName(): Promise<string> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const name = await orgName();
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Apply the persisted theme before paint — no flash on either theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("wk-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="font-sans">
         <div className="flex h-screen overflow-hidden">
           <Sidebar orgName={name} />

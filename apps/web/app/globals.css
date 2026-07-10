@@ -4,21 +4,54 @@
 
 :root {
   color-scheme: dark;
+  /* Elevation ladder (design review): bg < card < hover < border. */
+  --c-bg: 18 21 28; /* #12151C */
+  --c-surface: 26 31 43; /* #1A1F2B */
+  --c-surface-2: 34 40 58; /* #22283A */
+  --c-border: 48 56 74; /* #30384A */
+  --c-text: 231 233 240;
+  --c-muted: 139 144 163;
+  --c-accent: 109 94 252;
+  --c-accent-soft: 139 127 255;
+  --c-success: 51 196 129;
+  --c-warn: 245 182 75;
+  --c-danger: 242 89 127;
+  --c-info: 75 163 245;
+  --c-approval: 255 138 76;
+  --c-learning: 176 124 247;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --c-bg: 245 246 250;
+  --c-surface: 255 255 255;
+  --c-surface-2: 237 239 245;
+  --c-border: 214 219 232;
+  --c-text: 26 31 43;
+  --c-muted: 96 103 122;
+  --c-accent: 99 84 240;
+  --c-accent-soft: 88 74 220;
+  --c-success: 22 163 104;
+  --c-warn: 200 138 20;
+  --c-danger: 219 55 96;
+  --c-info: 28 122 209;
+  --c-approval: 224 105 42;
+  --c-learning: 140 84 220;
 }
 
 html,
 body {
-  background: #0a0b0f;
-  color: #e7e9f0;
+  background: rgb(var(--c-bg));
+  color: rgb(var(--c-text));
   -webkit-font-smoothing: antialiased;
 }
 
 * {
-  border-color: #242838;
+  border-color: rgb(var(--c-border));
 }
 
 ::selection {
-  background: rgba(109, 94, 252, 0.35);
+  background: rgb(var(--c-accent) / 0.35);
 }
 
 /* Thin scrollbars that match the dark shell. */
@@ -27,16 +60,16 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #242838;
+  background: rgb(var(--c-border));
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2f3448;
+  background: rgb(var(--c-surface-2));
 }
 
 @layer components {
   .card {
-    @apply rounded-xl border border-border bg-surface p-5;
+    @apply rounded-xl border border-border bg-surface p-5 transition-colors;
   }
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium;

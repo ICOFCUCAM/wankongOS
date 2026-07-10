@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NotificationBell } from "./NotificationBell";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "▤" },
@@ -55,6 +56,9 @@ export function Sidebar({ orgName }: { orgName: string }) {
       </nav>
 
       <NotificationBell />
+      <div className="px-3 pt-1">
+        <ThemeToggle />
+      </div>
 
       <div className="px-3 pt-3">
         <Link
