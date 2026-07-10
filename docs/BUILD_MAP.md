@@ -35,7 +35,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | REST API | `apps/api` | ✅ |
 | Web console | `apps/web` | ✅ |
 | Admin app | `apps/admin` | ⬜ |
-| Background worker | `apps/worker` | ⬜ |
+| Background worker | `apps/worker` | ✅ scheduler loop · ⬜ queues/retries |
 | Mobile app | `apps/mobile` | ⬜ |
 | Marketplace | `apps/web` + `packages/marketplace` | ⬜ |
 
@@ -59,8 +59,8 @@ messaging* beyond workflow delegation are next.
 Executable definitions with start / employee / decision / approval / notification /
 integration / parallel / end nodes; retries, timeouts, conditions, loops (bounded),
 parallel fan-out/join, and **human approvals that pause & resume**. Seeded
-"Inbound Lead Handling" workflow runs end-to-end. 🟡 *Visual drag-and-drop builder*
-and ⬜ *scheduled triggers* (needs `apps/worker`) remain.
+"Inbound Lead Handling" workflow runs end-to-end. ✅ *Scheduled triggers* (cron via
+the scheduler tick / `apps/worker`). 🟡 *Visual drag-and-drop builder* remains.
 
 ### Memory system ✅ (core) / ⬜ (vector recall)
 Scoped memory with salience scoring (importance × recency half-life), scored
@@ -222,9 +222,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
 - **M4c — Native cloud tool-calling + event bus** ✅ Anthropic tool_use, OpenAI
   tool_calls, and Gemini functionCall wire formats (streaming parse + tool-history
   mapping, fixture-tested); HMAC-signed outbound webhooks for domain events.
-- **M4d — Connectors & worker** → credentialed SaaS connectors, OAuth, SCIM;
-  `apps/worker` for scheduled/queued jobs, background runs, and the queued
-  webhook dispatcher.
+- **M4d — Scheduler, worker & credentialed connectors** ✅ 5-field cron matcher
+  in core; idempotent scheduler tick (POST /v1/worker/tick + `apps/worker` loop)
+  starting due scheduled workflows exactly once per minute; credentialed REST and
+  Slack connectors — connecting an integration makes workflow integration nodes
+  deliver for real (headers redacted from reads), disconnecting reverts to the
+  hermetic default. ⬜ OAuth flows, SCIM, queued retrying webhook dispatcher.
 - **M5 — Observability, compliance & hardening** → tracing, cost/latency analytics,
   rate limiting, prompt-injection defenses, backups; evidence exports, retention
   policies, PII redaction (§3.4); provider failover + degraded mode (§3.7).

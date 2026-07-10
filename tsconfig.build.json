@@ -8,6 +8,7 @@
     { "path": "packages/knowledge" },
     { "path": "packages/evals" },
     { "path": "packages/integrations" },
-    { "path": "apps/api" }
+    { "path": "apps/api" },
+    { "path": "apps/worker" }
   ]
 }

@@ -24,6 +24,7 @@ import { apiKeyRoutes } from "./routes/apikeys.js";
 import { reviewRoutes } from "./routes/reviews.js";
 import { integrationRoutes } from "./routes/integrations.js";
 import { webhookRoutes } from "./routes/webhooks.js";
+import { workerRoutes } from "./routes/worker.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 
 export interface CreateAppOptions {
@@ -108,6 +109,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", reviewRoutes);
   v1.route("/", integrationRoutes);
   v1.route("/", webhookRoutes);
+  v1.route("/", workerRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

@@ -18,6 +18,7 @@ import {
 } from "@wankong/workflow";
 import { buildEmployeePromptContext } from "./employee-context.js";
 import { buildToolRegistry } from "./tools.js";
+import { applyCredentialedConnectors } from "./connectors.js";
 
 /** The authenticated actor for a request. */
 export interface Actor {
@@ -97,7 +98,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
 
   context.workflowEngine = new WorkflowEngine({
     runtime,
-    connectors: defaultConnectors(),
+    connectors: applyCredentialedConnectors(defaultConnectors(), context),
     resolveEmployee: async (id) => {
       const employee = await context.store.employees.get(id);
       if (!employee || employee.organizationId !== organizationId) return null;
