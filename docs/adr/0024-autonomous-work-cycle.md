@@ -24,5 +24,8 @@ Everything flows through the same records the console derives from.
 - The command center now shows employees working without anyone chatting.
 - Cost control is inherited (daily budgets), and every autonomous action is
   attributable (audit + conversation transcript).
-- Long multi-step background jobs (hours-scale) need checkpointing — the
-  next iteration of this loop, not this one.
+- Long jobs (same day): a task created with checkpoint steps is worked ONE
+  step per cycle — each step is a real runtime run with the prior steps'
+  notes as context, progress and notes checkpoint onto the task record
+  (restart-safe by construction; proven by a fresh-context resume test),
+  each step is audited, and the final result is the joined step notes.

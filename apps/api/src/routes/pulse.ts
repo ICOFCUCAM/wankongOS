@@ -55,7 +55,7 @@ const AUDIT_PHRASES: Record<string, string> = {
 };
 
 /** Audit actions whose story is already told by the task items themselves. */
-const AUDIT_SKIP = new Set(["tool.task.progress", "tool.task.complete"]);
+const AUDIT_SKIP = new Set(["tool.task.progress", "tool.task.complete", "autonomy.task.checkpoint"]);
 
 export const pulseRoutes = new Hono<Env>();
 

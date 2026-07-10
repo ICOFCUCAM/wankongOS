@@ -239,6 +239,18 @@ export const Task = z.object({
   labels: z.array(z.string().max(40)).default([]),
   /** Visible completion of an in-progress task, 0..1 (Problem 4: live cards). */
   progress: z.number().min(0).max(1).optional(),
+  /**
+   * Long-job checkpoint (ADR-0024): planned steps, how many are done, and
+   * the per-step notes. State lives on the record, so multi-cycle work
+   * survives restarts and every step is attributable.
+   */
+  checkpoint: z
+    .object({
+      steps: z.array(z.string().min(1).max(500)).min(1).max(20),
+      completed: z.number().int().nonnegative().default(0),
+      notes: z.array(z.string().max(4000)).default([]),
+    })
+    .optional(),
   result: z.string().max(20000).optional(),
 });
 export type Task = z.infer<typeof Task>;

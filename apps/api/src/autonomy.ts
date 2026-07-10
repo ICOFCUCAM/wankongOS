@@ -35,7 +35,12 @@ export async function runWorkCycle(
 
   const [employees, tasks, approvals] = await Promise.all([
     ctx.store.employees.list((e) => e.organizationId === ctx.organizationId && e.status === "active"),
-    ctx.store.tasks.list((t) => t.organizationId === ctx.organizationId && t.status === "todo"),
+    ctx.store.tasks.listByOrg(
+      ctx.organizationId,
+      (t) =>
+        t.status === "todo" ||
+        (t.status === "in_progress" && !!t.checkpoint && t.checkpoint.completed < t.checkpoint.steps.length),
+    ),
     ctx.store.approvals.list((a) => a.organizationId === ctx.organizationId),
   ]);
 
@@ -100,6 +105,46 @@ export async function runWorkCycle(
         result.skipped.push({ employeeId: employee.id, taskId: task.id, reason: "budget_exhausted" });
         continue;
       }
+    }
+
+    // Long jobs: one CHECKPOINTED step per cycle — interruptible, resumable,
+    // budget-checked per step, with state on the task record itself.
+    if (task.checkpoint && task.checkpoint.completed < task.checkpoint.steps.length) {
+      const cp = task.checkpoint;
+      const step = cp.steps[cp.completed]!;
+      const grounded = await buildGroundedEmployeeContext(ctx.store, ctx.organizationId, employee, {
+        query: step,
+        embedder: ctx.embedder,
+      });
+      const run = await ctx.runtime.complete({
+        employee,
+        context: grounded.context,
+        input: `You are working the long-running task “${task.title}” step by step.\nCompleted so far:\n${cp.notes.map((n, i) => `${i + 1}. ${n.slice(0, 200)}`).join("\n") || "(nothing yet)"}\n\nCurrent step (${cp.completed + 1}/${cp.steps.length}): ${step}\nComplete ONLY this step and reply with its deliverable.`,
+        tools: {
+          registry: await composeToolRegistry(ctx.toolRegistry, ctx.store, ctx.organizationId),
+          context: { organizationId: ctx.organizationId, employeeId: employee.id, permissions: employee.permissions },
+        },
+      });
+      const completed = cp.completed + 1;
+      const notes = [...cp.notes, `[${step}] ${run.text.slice(0, 2000)}`];
+      const finished = completed >= cp.steps.length;
+      await ctx.store.tasks.update(task.id, {
+        status: finished ? "done" : "in_progress",
+        progress: Math.round((completed / cp.steps.length) * 100) / 100,
+        checkpoint: { steps: cp.steps, completed, notes },
+        ...(finished ? { result: notes.join("\n\n").slice(0, 20000) } : {}),
+      });
+      await ctx.store.audit({
+        organizationId: ctx.organizationId,
+        actor: { kind: "employee", id: employee.id },
+        action: finished ? "autonomy.task.complete" : "autonomy.task.checkpoint",
+        targetType: "task",
+        targetId: task.id,
+        metadata: { title: task.title, step: completed, of: cp.steps.length },
+      });
+      if (finished) result.completed.push({ employeeId: employee.id, taskId: task.id, title: task.title });
+      else result.skipped.push({ employeeId: employee.id, taskId: task.id, reason: `checkpointed_${completed}/${cp.steps.length}` });
+      continue;
     }
 
     // Claim.

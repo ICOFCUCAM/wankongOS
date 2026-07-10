@@ -136,3 +136,71 @@ describe("cron tick (GET)", () => {
     }
   });
 });
+
+describe("long-job checkpointing (one step per cycle)", () => {
+  it("works a 3-step task across cycles, checkpointing state on the record", async () => {
+    // Clear the seeded queue so the sales director works only this job.
+    const seeded = await ctx.store.tasks.list((t) => t.status === "todo");
+    for (const t of seeded) await ctx.store.tasks.update(t.id, { status: "cancelled" });
+
+    const job = await ctx.store.tasks.create({
+      organizationId: SEED_ORG_ID,
+      title: "Quarterly territory analysis",
+      description: "Deep analysis across three regions.",
+      status: "todo",
+      priority: "high",
+      assignee: { kind: "employee", id: "emp_sales_director" },
+      createdBy: { kind: "user", id: "usr_ceo" },
+      labels: [],
+      checkpoint: { steps: ["Analyze EMEA pipeline", "Analyze AMER pipeline", "Write the summary"], completed: 0, notes: [] },
+    });
+
+    const c1 = await runWorkCycle(ctx, { maxTasks: 5 });
+    expect(c1.skipped.some((s) => s.reason === "checkpointed_1/3")).toBe(true);
+    let t = (await ctx.store.tasks.get(job.id))!;
+    expect(t.status).toBe("in_progress");
+    expect(t.progress).toBeCloseTo(1 / 3, 2);
+    expect(t.checkpoint!.notes).toHaveLength(1);
+    expect(t.checkpoint!.notes[0]).toContain("EMEA");
+
+    await runWorkCycle(ctx, { maxTasks: 5 });
+    const c3 = await runWorkCycle(ctx, { maxTasks: 5 });
+    expect(c3.completed.some((x) => x.taskId === job.id)).toBe(true);
+    t = (await ctx.store.tasks.get(job.id))!;
+    expect(t.status).toBe("done");
+    expect(t.progress).toBe(1);
+    expect(t.checkpoint!.notes).toHaveLength(3);
+    expect(t.result).toContain("summary");
+
+    // Each step is attributable in the audit trail.
+    const checkpoints = await ctx.store.auditEvents.list((a) => a.action === "autonomy.task.checkpoint");
+    expect(checkpoints.length).toBe(2); // steps 1 and 2; step 3 logs complete
+  });
+
+  it("checkpointed tasks survive interruption — a fresh context resumes from the record", async () => {
+    const seeded = await ctx.store.tasks.list((t) => t.status === "todo");
+    for (const t of seeded) await ctx.store.tasks.update(t.id, { status: "cancelled" });
+    const job = await ctx.store.tasks.create({
+      organizationId: SEED_ORG_ID,
+      title: "Two-step brief",
+      description: "",
+      status: "todo",
+      priority: "normal",
+      assignee: { kind: "employee", id: "emp_sales_director" },
+      createdBy: { kind: "user", id: "usr_ceo" },
+      labels: [],
+      checkpoint: { steps: ["Collect inputs", "Write brief"], completed: 0, notes: [] },
+    });
+    await runWorkCycle(ctx, { maxTasks: 5 });
+
+    // "Restart": a brand-new context over the SAME store picks up mid-job.
+    const { createAppContext: fresh } = await import("../src/context.js");
+    const { ProviderRegistry: PR } = await import("@wankong/agents");
+    const { LocalEmbedder: LE } = await import("@wankong/knowledge");
+    const ctx2 = fresh({ store: ctx.store, registry: new PR(), embedder: new LE(), organizationId: SEED_ORG_ID });
+    await ctx2.ready;
+    const resumed = await runWorkCycle(ctx2, { maxTasks: 5 });
+    expect(resumed.completed.some((x) => x.taskId === job.id)).toBe(true);
+    expect((await ctx.store.tasks.get(job.id))!.checkpoint!.completed).toBe(2);
+  });
+});
