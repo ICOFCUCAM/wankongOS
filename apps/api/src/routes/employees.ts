@@ -53,6 +53,9 @@ employeeRoutes.post("/employees", async (c) => {
   authorize(c, "employee:create");
   const ctx = c.get("ctx");
   const input = await parseBody(c, CreateEmployee);
+  const { assertWithinPlan } = await import("../plan-limits.js");
+  const limit = await assertWithinPlan(ctx, 1);
+  if (limit) return c.json({ error: limit }, 402);
   const employee = await ctx.store.employees.create({
     ...input,
     status: input.status ?? "training",
