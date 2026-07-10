@@ -52,7 +52,7 @@ export default async function EmployeesPage() {
         </div>
 
         <div className="lg:sticky lg:top-8 lg:self-start">
-          <OrgChart roots={roots} />
+          <OrgChart roots={roots} summaries={summaries} />
         </div>
       </div>
     </div>

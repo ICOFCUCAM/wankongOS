@@ -1,25 +1,63 @@
 import Link from "next/link";
 import type { OrgChartNode } from "@wankong/core";
+import type { EmployeeSummary } from "@/lib/server-api";
+import { activityStyle } from "@/lib/activity";
 import { Avatar } from "./Avatar";
 
-function Node({ node, depth }: { node: OrgChartNode; depth: number }) {
+/**
+ * The reporting structure as a living chart: every node carries its
+ * employee's derived status dot and, while working, the task in flight —
+ * so the hierarchy shows not just who reports to whom, but who is doing
+ * what right now. Nodes link straight into the employee workspace.
+ */
+function Node({
+  node,
+  byId,
+}: {
+  node: OrgChartNode;
+  byId: Map<string, EmployeeSummary>;
+}) {
   const e = node.employee;
+  const summary = byId.get(e.id);
+  const style = summary ? activityStyle(summary.activity) : null;
+
   return (
     <li className="relative">
       <Link
         href={`/employees/${e.id}`}
         className="group flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 transition hover:border-accent"
+        title={
+          summary?.currentTask
+            ? `${style?.label ?? ""}: ${summary.currentTask.title}`
+            : style?.label
+        }
       >
-        <Avatar name={e.name} size={32} />
+        <div className="relative shrink-0">
+          <Avatar name={e.name} size={32} />
+          {style && (
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface-2 ${style.dot} ${style.live ? "live-dot" : ""}`}
+            />
+          )}
+        </div>
         <div className="min-w-0">
           <div className="truncate text-sm font-medium group-hover:text-accent-soft">{e.name}</div>
-          <div className="truncate text-xs text-muted">{e.title}</div>
+          <div className="truncate text-xs text-muted">
+            {summary?.activity === "working" && summary.currentTask
+              ? summary.currentTask.title
+              : e.title}
+          </div>
         </div>
+        {summary && summary.waitingApprovals > 0 && (
+          <span className="ml-auto shrink-0 rounded-full bg-warn/15 px-1.5 py-0.5 text-[10px] font-medium text-warn">
+            {summary.waitingApprovals}
+          </span>
+        )}
       </Link>
       {node.reports.length > 0 && (
         <ul className="ml-5 mt-2 space-y-2 border-l border-border pl-4">
           {node.reports.map((child) => (
-            <Node key={child.employee.id} node={child} depth={depth + 1} />
+            <Node key={child.employee.id} node={child} byId={byId} />
           ))}
         </ul>
       )}
@@ -27,7 +65,14 @@ function Node({ node, depth }: { node: OrgChartNode; depth: number }) {
   );
 }
 
-export function OrgChart({ roots }: { roots: OrgChartNode[] }) {
+export function OrgChart({
+  roots,
+  summaries = [],
+}: {
+  roots: OrgChartNode[];
+  summaries?: EmployeeSummary[];
+}) {
+  const byId = new Map(summaries.map((s) => [s.employeeId, s]));
   return (
     <div className="card">
       <div className="mb-4 flex items-center gap-3">
@@ -38,7 +83,7 @@ export function OrgChart({ roots }: { roots: OrgChartNode[] }) {
       </div>
       <ul className="ml-5 space-y-2 border-l border-border pl-4">
         {roots.map((root) => (
-          <Node key={root.employee.id} node={root} depth={0} />
+          <Node key={root.employee.id} node={root} byId={byId} />
         ))}
       </ul>
     </div>
