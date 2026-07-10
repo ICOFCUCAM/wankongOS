@@ -25,9 +25,12 @@ function relativeTime(iso: string, now: number): string {
 export function CompanyPulse({
   items,
   showAllLink = false,
+  clock = false,
 }: {
   items: PulseItem[];
   showAllLink?: boolean;
+  /** Show wall-clock HH:MM instead of relative times (timeline mode). */
+  clock?: boolean;
 }) {
   const now = Date.now();
   return (
@@ -52,7 +55,11 @@ export function CompanyPulse({
                   className={`mt-1 h-1.5 w-1.5 shrink-0 self-center rounded-full ${KIND_DOT[item.kind]}`}
                 />
                 <span className="min-w-0 flex-1 truncate text-sm text-text/90">{item.text}</span>
-                <span className="shrink-0 text-xs text-muted">{relativeTime(item.at, now)}</span>
+                <span className="shrink-0 font-mono text-xs text-muted">
+                  {clock
+                    ? new Date(item.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : relativeTime(item.at, now)}
+                </span>
               </span>
             );
             return (

@@ -54,7 +54,7 @@ export default async function PulsePage({
         ))}
       </div>
 
-      <CompanyPulse items={filtered} />
+      <CompanyPulse items={filtered} clock />
     </div>
   );
 }
