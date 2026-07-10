@@ -22,6 +22,7 @@ import {
   type EvalSuite,
   type Goal,
   type HealthSnapshot,
+  type CompanyDna,
   type Integration,
   type KnowledgeBase,
   type Memory,
@@ -78,6 +79,7 @@ export interface StoreRepositories {
   readonly brandKits: Repository<BrandKit>;
   readonly employeeVersions: Repository<EmployeeVersion>;
   readonly healthSnapshots: Repository<HealthSnapshot>;
+  readonly companyDnas: Repository<CompanyDna>;
 }
 
 /** Entity kind ids in repository order — shared by every store implementation. */
@@ -116,6 +118,7 @@ export const STORE_ENTITY_KINDS = [
   "brand",
   "employeeVersion",
   "healthSnapshot",
+  "companyDna",
 ] as const satisfies readonly EntityKind[];
 
 const REPO_FIELDS = [
@@ -153,6 +156,7 @@ const REPO_FIELDS = [
   "brandKits",
   "employeeVersions",
   "healthSnapshots",
+  "companyDnas",
 ] as const;
 
 /** Field name ↔ entity kind pairs, for implementations that build repos generically. */
@@ -201,6 +205,7 @@ export abstract class BaseStore implements StoreRepositories {
   abstract readonly brandKits: Repository<BrandKit>;
   abstract readonly employeeVersions: Repository<EmployeeVersion>;
   abstract readonly healthSnapshots: Repository<HealthSnapshot>;
+  abstract readonly companyDnas: Repository<CompanyDna>;
 
   // --- cross-entity read helpers ------------------------------------------
 
@@ -275,6 +280,7 @@ export class MemoryStore extends BaseStore {
   readonly brandKits: MemoryRepository<BrandKit>;
   readonly employeeVersions: MemoryRepository<EmployeeVersion>;
   readonly healthSnapshots: MemoryRepository<HealthSnapshot>;
+  readonly companyDnas: MemoryRepository<CompanyDna>;
 
   constructor(clock: Clock = systemClock) {
     super();
@@ -312,5 +318,6 @@ export class MemoryStore extends BaseStore {
     this.brandKits = new MemoryRepository("brand", clock);
     this.employeeVersions = new MemoryRepository("employeeVersion", clock);
     this.healthSnapshots = new MemoryRepository("healthSnapshot", clock);
+    this.companyDnas = new MemoryRepository("companyDna", clock);
   }
 }

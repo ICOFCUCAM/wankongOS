@@ -41,6 +41,7 @@ export const ID_PREFIXES = {
   brand: "brd",
   employeeVersion: "empv",
   healthSnapshot: "hsn",
+  companyDna: "dna",
 } as const;
 
 export type EntityKind = keyof typeof ID_PREFIXES;
