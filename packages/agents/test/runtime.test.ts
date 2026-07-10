@@ -45,6 +45,25 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("discount exceeds 20%");
     expect(prompt).toContain("Reports to: Root CEO");
   });
+
+  it("personality shapes the prompt", () => {
+    const prompt = buildSystemPrompt(
+      {
+        ...employee,
+        personality: {
+          communicationStyle: "concise",
+          decisionSpeed: "fast",
+          autonomy: "low",
+          reasoningDepth: "advanced",
+        },
+      },
+      { organizationName: "Acme" },
+    );
+    expect(prompt).toContain("Working personality:");
+    expect(prompt).toContain("tersely");
+    expect(prompt).toContain("Autonomy is LOW");
+    expect(prompt).toContain("step-by-step");
+  });
 });
 
 describe("LocalProvider", () => {

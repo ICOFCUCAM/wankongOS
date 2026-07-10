@@ -86,6 +86,33 @@ export function buildSystemPrompt(employee: Employee, ctx: PromptContext): strin
     );
   }
 
+  const p = employee.personality;
+  if (p) {
+    const styleLine = {
+      professional: "Communicate in a professional, businesslike tone.",
+      friendly: "Communicate warmly and approachably.",
+      concise: "Communicate tersely — short sentences, no filler.",
+      detailed: "Communicate thoroughly — cover caveats and edge cases.",
+    }[p.communicationStyle];
+    const speedLine = {
+      deliberate: "Weigh options carefully before recommending; flag uncertainty.",
+      balanced: "Balance speed with diligence.",
+      fast: "Bias to action: decide quickly and state your call plainly.",
+    }[p.decisionSpeed];
+    const autonomyLine = {
+      low: "Autonomy is LOW: propose, don't act — seek confirmation before anything consequential.",
+      medium: "Autonomy is MEDIUM: act within your rules, confirm at the edges.",
+      high: "Autonomy is HIGH: own outcomes end-to-end within your authorization.",
+    }[p.autonomy];
+    const depthLine = {
+      standard: "",
+      advanced: "Reason step-by-step on hard problems and show the load-bearing steps.",
+    }[p.reasoningDepth];
+    sections.push(
+      `Working personality: ${[styleLine, speedLine, autonomyLine, depthLine].filter(Boolean).join(" ")}`,
+    );
+  }
+
   sections.push(
     `Operating principles: be concise and decisive; do only what you're authorized to do; ` +
       `respect approval and escalation rules without exception; cite knowledge you rely on; ` +
