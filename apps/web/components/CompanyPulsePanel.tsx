@@ -35,10 +35,15 @@ export function CompanyPulsePanel({ health }: { health: WorkforceHealth }) {
     <div className="card space-y-5">
       <div>
         <h2 className="mb-3 font-medium">Today</h2>
-        <div className="grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-surface-2/60">
-          <Ledger label="Done" value={health.tasksToday.completed} tone="text-success" />
+        <div className="grid grid-cols-5 divide-x divide-border rounded-lg border border-border bg-surface-2/60">
+          <Ledger label="Completed" value={health.tasksToday.completed} tone="text-success" />
           <Ledger label="Running" value={health.tasksToday.running} />
-          <Ledger label="Queued" value={health.tasksToday.queued} />
+          <Ledger label="Waiting" value={health.tasksToday.queued} />
+          <Ledger
+            label="Approval"
+            value={health.liveQueue.needsApproval}
+            tone={health.liveQueue.needsApproval > 0 ? "text-approval" : undefined}
+          />
           <Ledger
             label="Blocked"
             value={health.tasksToday.blocked}

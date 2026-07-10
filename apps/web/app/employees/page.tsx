@@ -15,6 +15,7 @@ import { GoalsPanel } from "@/components/GoalsPanel";
 import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { WorkforceControls } from "@/components/WorkforceControls";
+import { CompanyStatusBanner } from "@/components/CompanyStatusBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,12 @@ export const dynamic = "force-dynamic";
  * (card actions, hire tiles, attention cues). Every value derives from
  * stored records — ADR-0018.
  */
-export default async function EmployeesPage() {
+export default async function EmployeesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   let summaries: EmployeeSummary[];
   let departments: Department[];
   let health: WorkforceHealth;
@@ -50,6 +56,20 @@ export default async function EmployeesPage() {
 
   const deptById = new Map(departments.map((d) => [d.id, d]));
   const nameOf = new Map(summaries.map((s) => [s.employeeId, s.name]));
+  const needle = q?.trim().toLowerCase();
+  const visible = needle
+    ? summaries.filter(
+        (s) =>
+          s.name.toLowerCase().includes(needle) ||
+          s.title.toLowerCase().includes(needle) ||
+          (deptById.get(s.departmentId)?.name.toLowerCase().includes(needle) ?? false),
+      )
+    : summaries;
+  const nextDue =
+    summaries
+      .filter((s) => s.currentTask?.dueAt)
+      .map((s) => ({ title: s.currentTask!.title, dueAt: s.currentTask!.dueAt! }))
+      .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -63,13 +83,26 @@ export default async function EmployeesPage() {
         }
       />
 
+      <CompanyStatusBanner health={health} nextDue={nextDue} />
+
       <WorkforceHealthBar health={health} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+      <form method="get" className="max-w-sm">
+        <input
+          className="input"
+          type="search"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Search employees, roles, departments…"
+        />
+      </form>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_364px]">
         <div className="space-y-5">
           {health.departmentsDetail.map((pulse) => {
             const dept = deptById.get(pulse.departmentId);
-            const people = summaries.filter((s) => s.departmentId === pulse.departmentId);
+            const people = visible.filter((s) => s.departmentId === pulse.departmentId);
+            if (needle && people.length === 0) return null;
             return (
               <DepartmentSection
                 key={pulse.departmentId}
@@ -93,7 +126,7 @@ export default async function EmployeesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_364px]">
         <CompanyPulse items={activity} showAllLink />
         <div className="card self-start">
           <h3 className="mb-2 text-xs uppercase tracking-wide text-muted">Structure</h3>

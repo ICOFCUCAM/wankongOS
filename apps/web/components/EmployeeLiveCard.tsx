@@ -8,6 +8,14 @@ function money(n: number): string {
   return n === 0 ? "$0" : `$${n.toFixed(n < 0.1 ? 4 : 2)}`;
 }
 
+function ago(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const h = Math.round(mins / 60);
+  return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+}
+
 function eta(dueAt: string): string {
   const delta = Date.parse(dueAt) - Date.now();
   if (delta < 0) return "overdue";
@@ -74,6 +82,14 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
               />
             </div>
           )}
+          {summary.currentStep && (
+            <div className="mt-1 truncate text-[11px] text-info">↻ {summary.currentStep}…</div>
+          )}
+          {summary.nextUp && (
+            <div className="mt-0.5 truncate text-[11px] text-muted">
+              Next: {summary.nextUp}
+            </div>
+          )}
         </div>
       ) : (
         <div className="truncate text-xs text-muted">
@@ -82,13 +98,19 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
             : summary.activity === "waiting"
               ? `${summary.openTasks} task${summary.openTasks === 1 ? "" : "s"} queued.`
               : summary.lastDelivered
-                ? `Last delivered: ${summary.lastDelivered.title}`
-                : "No task in progress."}
+                ? `Last: ${summary.lastDelivered.title} · ${ago(summary.lastDelivered.at)}`
+                : summary.nextUp
+                  ? `Next: ${summary.nextUp}`
+                  : "Awaiting first task."}
         </div>
       )}
 
       <div className="grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-surface-2/60">
-        <MiniStat label="Output" value={String(summary.completedToday)} sub="today" />
+        <MiniStat
+          label="Output"
+          value={summary.completedToday > 0 ? String(summary.completedToday) : "—"}
+          sub={summary.completedToday > 0 ? "today" : "none yet"}
+        />
         <MiniStat
           label="Avg time"
           value={avgMs === null ? "—" : avgMs < 1000 ? `${avgMs}ms` : `${(avgMs / 1000).toFixed(1)}s`}
@@ -108,13 +130,23 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
                   : "text-danger"
           }
         />
-        <MiniStat label="Cost" value={money(m.costTodayUsd)} sub="today" />
+        <MiniStat
+          label="Cost"
+          value={m.costTodayUsd > 0 ? money(m.costTodayUsd) : "—"}
+          sub={m.costTodayUsd > 0 ? "today" : "no spend yet"}
+        />
       </div>
 
       <div className="flex items-center justify-between gap-2 text-xs text-muted">
         <span className="truncate">
           Reports to <span className="text-text/90">{summary.reportsTo ?? "you (CEO)"}</span>
           <span className="ml-2 text-muted/80">· autonomy {summary.personality.autonomy}</span>
+          {summary.personality.reasoningDepth === "advanced" && (
+            <span className="ml-2 text-learning">· advanced reasoning</span>
+          )}
+          {summary.knowledgeBases > 0 && (
+            <span className="ml-2 text-muted/80">· {summary.knowledgeBases} KB</span>
+          )}
         </span>
         {summary.waitingApprovals > 0 && (
           <span className="shrink-0 text-approval">

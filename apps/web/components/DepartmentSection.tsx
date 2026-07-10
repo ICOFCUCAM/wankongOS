@@ -50,13 +50,28 @@ export function DepartmentSection({
         <span className={`pill ${badge.className}`}>{badge.label}</span>
         <span className="text-xs text-muted">
           {pulse.employees} employee{pulse.employees === 1 ? "" : "s"}
+          {(pulse.byActivity.working ?? 0) + (pulse.byActivity.thinking ?? 0) > 0
+            ? ` · ${(pulse.byActivity.working ?? 0) + (pulse.byActivity.thinking ?? 0)} active`
+            : ""}
           {leadName ? ` · led by ${leadName}` : ""}
           {pulse.completedToday > 0 ? ` · ${pulse.completedToday} done today` : ""}
           {pulse.openTasks > 0 ? ` · ${pulse.openTasks} open` : ""}
           {pulse.costTodayUsd > 0 ? ` · ${money(pulse.costTodayUsd)} today` : ""}
         </span>
+        <span
+          className="ml-auto flex items-center gap-1.5 text-[11px] text-muted"
+          title="Capacity = open tasks ÷ (employees × 3 slots) — a staffing heuristic"
+        >
+          <span className="h-1 w-14 overflow-hidden rounded-full bg-surface-2">
+            <span
+              className={`bar-fill block h-full rounded-full ${pulse.capacityPct >= 80 ? "bg-danger" : pulse.capacityPct >= 50 ? "bg-warn" : "bg-success"}`}
+              style={{ width: `${Math.max(4, pulse.capacityPct)}%` }}
+            />
+          </span>
+          {pulse.capacityPct}%{pulse.capacityPct >= 80 ? " — consider hiring" : ""}
+        </span>
         <button
-          className="ml-auto px-1 text-xs text-muted hover:text-text"
+          className="px-1 text-xs text-muted hover:text-text"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
         >
