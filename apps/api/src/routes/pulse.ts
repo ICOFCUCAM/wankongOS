@@ -53,6 +53,8 @@ const AUDIT_PHRASES: Record<string, string> = {
   "marketplace.hire": "was hired from a marketplace template",
   "marketplace.install_pack": "installed an entire department from the marketplace",
   "meeting.executive": "held an executive meeting — minutes filed",
+  "intelligence.ask": "answered an executive question from the evidence pack",
+  "intelligence.plan": "drafted a strategy plan as disclosed scenario math",
   "recruiting.interview.complete": "completed an interview and filed the report",
   "autonomy.task.complete": "autonomously completed an assigned task",
   "accounting.revenue.recorded": "recorded a Stripe-confirmed subscription payment in the ledger",

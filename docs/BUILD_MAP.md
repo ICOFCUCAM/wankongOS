@@ -149,8 +149,10 @@ guardrails · the digital office floor · computer-use registered
 connector-tier. ✅ Billing↔accounting bridge (Stripe-confirmed payments
 posted as real revenue journal entries, retry-safe, closed-period aware) ·
 health-history snapshots with an honest dashboard trend (no history → no
-arrow). ✅ Visual workflow builder (ADR-0028). ⬜ SSO/OIDC, object storage,
-human-utilization split.
+arrow). ✅ Visual workflow builder (ADR-0028). ✅ BI + Strategy departments
+(ADR-0029): evidence-pack grounded Q&A and scenario plans, marketplace
+packs, honestly gated, briefs filed as searchable assets. ⬜ SSO/OIDC,
+object storage, human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
 Permission-based least-privilege access on every route; per-tenant scoping (404 on

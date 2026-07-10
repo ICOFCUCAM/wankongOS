@@ -211,6 +211,18 @@ export const api = {
         lastMessage: string | null;
       }[];
     }>(`/v1/employees/${id}/conversations`).then((r) => r.data),
+  intelligenceMetrics: () =>
+    call<{
+      generatedAt: string;
+      revenueByMonth: { month: string; recordedUsd: number; entries: number }[];
+      expensesByMonth: { month: string; recordedUsd: number }[];
+      departments: { name: string; employees: number; openTasks: number; completedLast14d: number; completedPrior14d: number; deltaPct: number | null }[];
+      companyHealth: { score: number; inputs: Record<string, number> };
+      pendingApprovals: number;
+      aiCostTodayUsd: number;
+      formulas: string[];
+      limits: string;
+    }>("/v1/intelligence/metrics"),
   employeeUsage: (id: string) =>
     call<{ todayTokens: number; dailyTokenBudget: number | null; remaining: number | null }>(
       `/v1/employees/${id}/usage`,
