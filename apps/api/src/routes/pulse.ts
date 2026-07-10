@@ -22,6 +22,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "employee.pause": "was paused",
   "employee.resume": "was resumed",
   "employee.activate": "passed evals and was activated",
+  "employee.offboard": "was offboarded",
   "employee.activation.blocked_by_evals": "failed activation evals",
   "evals.run": "ran their eval suite",
   "review.generate": "received a performance review",

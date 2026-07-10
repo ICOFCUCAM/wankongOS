@@ -4,7 +4,12 @@ import { HireForm } from "@/components/HireForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function HirePage() {
+export default async function HirePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ departmentId?: string }>;
+}) {
+  const { departmentId } = await searchParams;
   let departments;
   let employees;
   let tools;
@@ -30,6 +35,7 @@ export default async function HirePage() {
         departments={departments.map((d) => ({ id: d.id, label: d.name }))}
         managers={employees.map((e) => ({ id: e.id, label: `${e.name} — ${e.title}` }))}
         tools={tools}
+        initialDepartmentId={departmentId}
       />
     </div>
   );

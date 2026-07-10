@@ -26,10 +26,12 @@ export function HireForm({
   departments,
   managers,
   tools = [],
+  initialDepartmentId,
 }: {
   departments: Option[];
   managers: Option[];
   tools?: ToolOption[];
+  initialDepartmentId?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,11 @@ export function HireForm({
 
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
-  const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? "");
+  const [departmentId, setDepartmentId] = useState(
+    initialDepartmentId && departments.some((d) => d.id === initialDepartmentId)
+      ? initialDepartmentId
+      : (departments[0]?.id ?? ""),
+  );
   const [responsibilities, setResponsibilities] = useState("");
   const [managerId, setManagerId] = useState("");
   const [communicationStyle, setCommunicationStyle] = useState("professional");

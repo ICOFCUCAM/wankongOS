@@ -83,6 +83,21 @@ lifecycleRoutes.post("/employees/:id/clone", async (c) => {
   return c.json(clone, 201);
 });
 
+/**
+ * Offboard an employee: they stop working immediately and permanently, but
+ * the record — conversations, audit trail, versions — is retained. Nothing
+ * is deleted, because the history is compliance evidence.
+ */
+lifecycleRoutes.post("/employees/:id/offboard", async (c) => {
+  authorize(c, "employee:manage");
+  const ctx = c.get("ctx");
+  const employee = await findScoped(c, (id) => ctx.store.employees.get(id), c.req.param("id"));
+  if (employee.status === "offboarded") return c.json(employee);
+  const updated = await ctx.store.employees.update(employee.id, { status: "offboarded" });
+  await audit(c, "employee.offboard", employee.id);
+  return c.json(updated);
+});
+
 /** Org-wide kill switch: pause every active employee at once. */
 lifecycleRoutes.post("/workforce/pause", async (c) => {
   authorize(c, "org:manage");

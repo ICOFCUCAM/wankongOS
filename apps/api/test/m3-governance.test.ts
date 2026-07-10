@@ -229,3 +229,27 @@ describe("clone: same configuration, fresh trust", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("offboard: stop working, keep the record", () => {
+  it("sets status offboarded, audits it, and derives offline presence", async () => {
+    const res = await app.request("/v1/employees/emp_recruiter/offboard", json({}));
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("offboarded");
+
+    const audit = await (await app.request("/v1/audit")).json();
+    expect(audit.data.some((e: { action: string }) => e.action === "employee.offboard")).toBe(true);
+
+    // Record retained, presence reads offline.
+    const summaries = await (await app.request("/v1/employees/summaries")).json();
+    const gone = summaries.data.find(
+      (s: { employeeId: string }) => s.employeeId === "emp_recruiter",
+    );
+    expect(gone.activity).toBe("offline");
+  });
+
+  it("is idempotent", async () => {
+    await app.request("/v1/employees/emp_recruiter/offboard", json({}));
+    const res = await app.request("/v1/employees/emp_recruiter/offboard", json({}));
+    expect(res.status).toBe(200);
+  });
+});

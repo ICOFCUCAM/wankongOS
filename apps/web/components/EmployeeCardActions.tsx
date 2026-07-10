@@ -54,8 +54,15 @@ export function EmployeeCardActions({
     }
   }
 
-  async function lifecycle(action: "pause" | "resume" | "activate" | "clone") {
+  async function lifecycle(action: "pause" | "resume" | "activate" | "clone" | "offboard") {
     if (busy) return;
+    if (
+      action === "offboard" &&
+      !window.confirm("Offboard this employee? They stop working immediately; the record is kept.")
+    ) {
+      setMenuOpen(false);
+      return;
+    }
     setBusy(true);
     setNotice(null);
     setMenuOpen(false);
@@ -169,6 +176,14 @@ export function EmployeeCardActions({
             <MenuItem onClick={() => void lifecycle("clone")}>Duplicate (clone)</MenuItem>
             <MenuLink href={`/employees/${employeeId}#memory`}>View memory</MenuLink>
             <MenuLink href="/analytics">Analytics</MenuLink>
+            {status !== "offboarded" && (
+              <button
+                className="block w-full px-3 py-1.5 text-left text-xs text-danger/90 transition hover:bg-surface hover:text-danger"
+                onClick={() => void lifecycle("offboard")}
+              >
+                Offboard…
+              </button>
+            )}
             <MenuItem onClick={() => setMenuOpen(false)}>Close</MenuItem>
           </div>
         )}
