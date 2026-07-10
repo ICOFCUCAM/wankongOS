@@ -75,3 +75,23 @@ describe("role marketplace", () => {
     expect((await app.request("/v1/marketplace/hire", json({ templateId: "sdr", name: "Y" }))).status).toBe(402);
   });
 });
+
+describe("eval drift detection", () => {
+  it("flags a 15+ point decline against the best baseline and notifies", async () => {
+    // Two synthetic reports: strong baseline, weak latest.
+    await ctx.store.evalReports.create({
+      organizationId: SEED_ORG_ID, employeeId: "emp_support_manager", suiteId: "evs_x",
+      pass: true, passedTasks: 10, totalTasks: 10, results: [], trigger: "manual",
+    } as never);
+    await ctx.store.evalReports.create({
+      organizationId: SEED_ORG_ID, employeeId: "emp_support_manager", suiteId: "evs_x",
+      pass: false, passedTasks: 6, totalTasks: 10, results: [], trigger: "manual",
+    } as never);
+    const d = await (await app.request("/v1/employees/emp_support_manager/drift")).json();
+    expect(d.drifting).toBe(true);
+    expect(d.baseline).toBe(100);
+    expect(d.recent).toBe(60);
+    const inbox = await (await app.request("/v1/notifications")).json();
+    expect(inbox.data.some((n: { kind: string }) => n.kind === "eval.drift")).toBe(true);
+  });
+});
