@@ -1,5 +1,5 @@
 import type { PromptContext } from "@wankong/agents";
-import { rankMemories, type Employee } from "@wankong/core";
+import { dnaPromptSection, rankMemories, type Employee } from "@wankong/core";
 import type { Citation, Embedder } from "@wankong/knowledge";
 import type { Store } from "@wankong/store";
 import { searchKnowledge } from "./retrieval.js";
@@ -31,13 +31,14 @@ export async function buildGroundedEmployeeContext(
   employee: Employee,
   options: GroundingOptions = {},
 ): Promise<GroundedContext> {
-  const [org, department, manager, brandKits, myTasks, myApprovals] = await Promise.all([
+  const [org, department, manager, brandKits, myTasks, myApprovals, dna] = await Promise.all([
     store.organizations.get(organizationId),
     store.departments.get(employee.departmentId),
     employee.managerId ? store.employees.get(employee.managerId) : Promise.resolve(null),
     store.brandKits.list((b) => b.organizationId === organizationId),
     store.tasks.listByOrg(organizationId, (t) => t.assignee?.kind === "employee" && t.assignee.id === employee.id),
     store.approvals.listByOrg(organizationId, (a) => a.requestedBy.kind === "employee" && a.requestedBy.id === employee.id),
+    store.companyDnas.listByOrg(organizationId).then((d) => d[0] ?? null),
   ]);
 
   // Evidence for explainability: the employee's own recent, timestamped acts.
@@ -90,6 +91,7 @@ export async function buildGroundedEmployeeContext(
       knowledge,
       toolNames: employee.toolIds,
       brandVoice: brandKits[0]?.toneOfVoice,
+      companyDna: dna ? dnaPromptSection(dna) : undefined,
       activityLog,
     },
   };

@@ -14,6 +14,8 @@ export interface PromptContext {
   brandVoice?: string;
   /** Timestamped recent-activity lines — lets the employee answer "why?" with evidence. */
   activityLog?: string[];
+  /** Company DNA — the org's persistent operating context (mission, style, risk, policies). */
+  companyDna?: string;
 }
 
 /**
@@ -76,6 +78,9 @@ export function buildSystemPrompt(employee: Employee, ctx: PromptContext): strin
   }
   if (ctx.brandVoice) {
     sections.push(`Brand voice (apply to all external communication): ${ctx.brandVoice}`);
+  }
+  if (ctx.companyDna) {
+    sections.push(`## Company DNA (consult before every piece of work)\n${ctx.companyDna}`);
   }
   if (ctx.toolNames?.length) {
     sections.push(`Tools available to you: ${ctx.toolNames.join(", ")}.`);

@@ -1,5 +1,5 @@
 import { ToolError, ToolRegistry, type EmployeeRuntime } from "@wankong/agents";
-import { redactPii, type Employee } from "@wankong/core";
+import { findPolicies, redactPii, type Employee } from "@wankong/core";
 import type { Embedder } from "@wankong/knowledge";
 import type { Store } from "@wankong/store";
 import { searchKnowledge } from "./retrieval.js";
@@ -179,6 +179,33 @@ export function buildToolRegistry(
         if (e instanceof StudioError) return e.message;
         throw e;
       }
+    },
+  });
+
+  registry.register("policy.lookup", {
+    definition: {
+      name: "policy.lookup",
+      description: "Look up company policies from the Company DNA (the central policy store).",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+      triggers: ["\\b(policy|policies|allowed|permitted|company rule)\\b"],
+    },
+    requires: "org:read",
+    async run(args, ctx) {
+      const query = str(args.query) ?? "";
+      const dna = (await store.companyDnas.listByOrg(ctx.organizationId))[0];
+      if (!dna || dna.policies.length === 0) {
+        return "No company policies are recorded in the Company DNA yet.";
+      }
+      const hits = findPolicies(dna, query);
+      const chosen = hits.length > 0 ? hits : dna.policies;
+      return chosen
+        .slice(0, 3)
+        .map((p) => `${p.name} v${p.version} (${p.kind}): ${p.rules.join(" · ")}`)
+        .join(" | ");
     },
   });
 
