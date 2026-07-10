@@ -166,13 +166,26 @@ export function EmployeeCardActions({
                 Promote to active (runs evals)
               </MenuItem>
             )}
-            <MenuItem onClick={() => void lifecycle("clone")}>Clone this employee</MenuItem>
+            <MenuItem onClick={() => void lifecycle("clone")}>Duplicate (clone)</MenuItem>
+            <MenuLink href={`/employees/${employeeId}#memory`}>View memory</MenuLink>
+            <MenuLink href="/analytics">Analytics</MenuLink>
             <MenuItem onClick={() => setMenuOpen(false)}>Close</MenuItem>
           </div>
         )}
       </div>
       {notice && <span className="text-warn">{notice}</span>}
     </div>
+  );
+}
+
+function MenuLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="block w-full px-3 py-1.5 text-left text-xs text-text/90 transition hover:bg-surface hover:text-accent-soft"
+    >
+      {children}
+    </Link>
   );
 }
 

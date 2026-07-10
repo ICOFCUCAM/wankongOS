@@ -162,7 +162,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
 
           <ReviewPanel employeeId={employee.id} initialReviews={reviews} />
 
-          <div className="card">
+          <div className="card scroll-mt-6" id="memory">
             <h3 className="mb-3 text-xs uppercase tracking-wide text-muted">Memory timeline</h3>
             {memories.length === 0 ? (
               <p className="text-sm text-muted">
