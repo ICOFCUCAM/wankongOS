@@ -174,6 +174,12 @@ export const api = {
     call<{ suite: EvalSuite | null; reports: EvalReport[] }>(`/v1/employees/${id}/evals`),
   employeeReviews: (id: string) =>
     call<{ data: Report[] }>(`/v1/employees/${id}/reviews`).then((r) => r.data),
+  search: (q: string) =>
+    call<{
+      query: string;
+      total: number;
+      groups: Record<string, { type: string; id: string; title: string; snippet: string; at: string; link: string }[]>;
+    }>(`/v1/search?q=${encodeURIComponent(q)}`),
   collaboration: () =>
     call<{ data: { id: string; title: string; from: string; to: string; turns: number; at: string; lastLine: string | null }[] }>(
       "/v1/collaboration",

@@ -35,6 +35,15 @@ export function Sidebar({ orgName }: { orgName: string }) {
         </div>
       </div>
 
+      <form method="get" action="/search" className="px-3 pb-1">
+        <input
+          className="input !py-1.5 text-xs"
+          type="search"
+          name="q"
+          placeholder="Search everything…"
+        />
+      </form>
+
       <nav className="flex flex-col gap-1 px-3 py-2">
         {NAV.map((item) => {
           const active =
