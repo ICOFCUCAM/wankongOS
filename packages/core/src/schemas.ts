@@ -170,6 +170,28 @@ export const Employee = z.object({
    */
   dailyTokenBudget: z.number().int().positive().optional(),
 
+  /**
+   * Working personality. Not cosmetic: these feed the system prompt, so a
+   * "concise/fast/high-autonomy" employee genuinely behaves differently from
+   * a "thorough/deliberate/low-autonomy" one. Confidence is NOT stored here —
+   * it is derived from eval evidence, never self-declared.
+   */
+  personality: z
+    .object({
+      communicationStyle: z
+        .enum(["professional", "friendly", "concise", "detailed"])
+        .default("professional"),
+      decisionSpeed: z.enum(["deliberate", "balanced", "fast"]).default("balanced"),
+      autonomy: z.enum(["low", "medium", "high"]).default("medium"),
+      reasoningDepth: z.enum(["standard", "advanced"]).default("standard"),
+    })
+    .default({
+      communicationStyle: "professional",
+      decisionSpeed: "balanced",
+      autonomy: "medium",
+      reasoningDepth: "standard",
+    }),
+
   // Capabilities & governance
   toolIds: z.array(ToolId).default([]),
   permissions: z.array(Permission).default([]),
