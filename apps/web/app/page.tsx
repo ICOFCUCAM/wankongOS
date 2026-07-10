@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { api } from "@/lib/server-api";
+import { api, type EmployeeSummary } from "@/lib/server-api";
 import type { DashboardData } from "@/lib/api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { WorkforceControls } from "@/components/WorkforceControls";
+import { AttentionBanner } from "@/components/AttentionBanner";
+import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +47,9 @@ function Bar({ label, value, total }: { label: string; value: number; total: num
 
 export default async function DashboardPage() {
   let data: DashboardData;
+  let summaries: EmployeeSummary[];
   try {
-    data = await api.dashboard();
+    [data, summaries] = await Promise.all([api.dashboard(), api.employeeSummaries()]);
   } catch {
     return (
       <div className="space-y-6">
@@ -61,6 +64,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader workforce={data.workforce} />
+
+      <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Metric
@@ -86,6 +91,8 @@ export default async function DashboardPage() {
           accent
         />
       </div>
+
+      <LiveWorkforceRow summaries={summaries} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card lg:col-span-2">
