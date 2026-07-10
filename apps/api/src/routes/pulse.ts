@@ -49,6 +49,8 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.asset.register": "registered a fixed asset",
   "accounting.depreciation.run": "ran depreciation for the period",
   "accounting.invoice.ingest": "ingested an invoice into the books",
+  "accounting.export.saf_t": "exported a SAF-T audit file from the ledger",
+  "accounting.export.fec": "exported the French FEC audit file from the ledger",
   "recruiting.interview.schedule": "scheduled a candidate interview",
   "marketplace.hire": "was hired from a marketplace template",
   "marketplace.install_pack": "installed an entire department from the marketplace",

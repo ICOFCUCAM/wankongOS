@@ -125,7 +125,10 @@ audit package. ✅ Bank-feed import + deterministic reconciliation (drafts, neve
 auto-posted). ✅ Payroll runs (per-jurisdiction employer contributions, one balanced
 entry + register asset per period, simplifications disclosed).
 ⬜ More jurisdictions,
-e-filing connectors. ✅ Multi-company ledgers + consolidation with optional presentation-currency
+e-filing connectors. ✅ Structured tax exports: simplified-subset SAF-T
+Financial XML (jurisdiction-gated, balanced control totals) and the French
+FEC (18 mandatory columns, one row per journal line) straight from the
+ledger — validate-before-submission disclosed; the system never submits. ✅ Multi-company ledgers + consolidation with optional presentation-currency
 translation from recorded FX rates (closing-rate method, limits disclosed;
 intercompany eliminations applied to flagged entries — unflagged activity
 is explicitly not detected). ✅ Fixed-asset register + straight-line
@@ -140,7 +143,9 @@ indexed tenant queries · live SSE event stream with event-driven console
 refresh · real Slack/GitHub connectors · billing plans with enforcement ·
 role marketplace with CI-enforced benchmark · eval drift detection ·
 retention runs + full-org export (M5c) · dependency-free PDF rendering
-(ADR-0026). ✅ Stripe payment rails (checkout + signature-verified
+with branded letterhead/footer/company-stamp on every page (doc no. = asset
+id) · graded rubric evals (LLM-as-judge with labelled deterministic
+fallback) (ADR-0026). ✅ Stripe payment rails (checkout + signature-verified
 webhooks), session revocation via token versioning, long-job
 checkpointing. ✅ Company memory search · collaboration threads + feed ·
 executive meetings with filed minutes · evidence-cited employee memory

@@ -43,6 +43,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { timelineRoutes } from "./routes/timeline.js";
 import { meetingRoutes } from "./routes/meetings.js";
 import { intelligenceRoutes } from "./routes/intelligence.js";
+import { accountingExportRoutes } from "./routes/accounting-exports.js";
 import { collaborationRoutes } from "./routes/collaboration.js";
 import { searchRoutes } from "./routes/search.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
@@ -184,6 +185,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", timelineRoutes);
   v1.route("/", meetingRoutes);
   v1.route("/", intelligenceRoutes);
+  v1.route("/", accountingExportRoutes);
   v1.route("/", collaborationRoutes);
   v1.route("/", searchRoutes);
   app.route("/v1", v1);

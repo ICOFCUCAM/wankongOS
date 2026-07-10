@@ -47,3 +47,31 @@ snapshot within 24 hours that is at least an hour old — two stored
 measurements, nothing inferred. No history → no arrow, by design: the
 console never invents a direction (same rule that kept fake "+2%"
 trends out of the health hero).
+
+## Addendum: raising the ceiling — branding, rubric grading, tax exports
+
+Three answers to "the documents look local and the benchmarks are only a
+floor":
+
+**Branded documents.** `buildBrandedPdf` puts a letterhead on every page —
+monogram tile in the brand kit's primary color, bold company name, tagline,
+document number (the asset id, so every paper traces to a record), date,
+and brand rule — plus a legal footer with page numbers and a COMPANY RECORD
+stamp on the last page. Deliberately a company stamp, never a government
+seal. Raster logo embedding arrives with object storage.
+
+**Rubric evals.** The `rubric` check kind scores replies 1–5 per criterion
+via LLM-as-judge (the org's own model, temperature 0, strict JSON). When
+the judge is unparsable — the local CI provider always is — grading falls
+back to a deterministic heuristic whose formula is disclosed in core, and
+the result is labelled `gradingMode: "heuristic"` so a coverage measure is
+never mistaken for a quality judgement. Guardrail benchmarks remain the
+floor; rubrics grade what "good" looks like above it.
+
+**Tax exports.** `GET /v1/accounting/exports/saf-t` (simplified-subset
+SAF-T Financial XML, gated to jurisdictions whose rules package files it,
+balanced control totals) and `GET /v1/accounting/exports/fec` (France's 18
+mandatory pipe-separated columns, YYYYMMDD dates, decimal commas) generate
+straight from recorded journal entries. Both say in the file itself:
+validate with the authority's tools before submission — the system never
+submits. Auxiliary accounts and lettering are disclosed as not modelled.
