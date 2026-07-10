@@ -26,6 +26,12 @@ const ConnectInput = z.discriminatedUnion("kind", [
     config: z.object({ webhookUrl: z.string().url() }),
   }),
   z.object({
+    kind: z.literal("stripe"),
+    name: z.string().min(1).max(120),
+    /** Secret key + webhook signing secret; both redacted from reads. */
+    config: z.object({ secretKey: z.string().min(4), webhookSecret: z.string().min(4) }),
+  }),
+  z.object({
     kind: z.literal("github"),
     name: z.string().min(1).max(120),
     /** Personal-access or app installation token; redacted from reads. */
@@ -44,7 +50,7 @@ integrationRoutes.get("/integrations", async (c) => {
   );
   return c.json({
     data: integrations.map((i) => {
-      const { headers: _h, token: _t, ...config } = i.config as Record<string, unknown>;
+      const { headers: _h, token: _t, secretKey: _sk, webhookSecret: _ws, ...config } = i.config as Record<string, unknown>;
       return { ...i, config };
     }),
   });

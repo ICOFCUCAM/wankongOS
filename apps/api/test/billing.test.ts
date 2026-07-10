@@ -46,7 +46,7 @@ describe("platform billing (M6)", () => {
   it("refuses downgrades below headcount and gates checkout on Stripe", async () => {
     const down = await app.request("/v1/billing/plan", json({ plan: "starter" }));
     expect(down.status).toBe(409);
-    const checkout = await app.request("/v1/billing/checkout", json({}));
+    const checkout = await app.request("/v1/billing/checkout", json({ plan: "starter" }));
     expect(checkout.status).toBe(422);
     expect((await checkout.json()).error).toContain("Stripe");
   });
@@ -93,5 +93,50 @@ describe("eval drift detection", () => {
     expect(d.recent).toBe(60);
     const inbox = await (await app.request("/v1/notifications")).json();
     expect(inbox.data.some((n: { kind: string }) => n.kind === "eval.drift")).toBe(true);
+  });
+});
+
+describe("Stripe payment rails", () => {
+  it("creates a checkout session and applies the plan only via the signed webhook", async () => {
+    const { createHmac } = await import("node:crypto");
+    await ctx.store.organizations.update(SEED_ORG_ID, { plan: "trial" });
+    // Trial → checkout gated until Stripe is connected.
+    expect((await app.request("/v1/billing/checkout", json({ plan: "growth" }))).status).toBe(422);
+
+    await app.request("/v1/integrations", json({
+      kind: "stripe", name: "Payments", config: { secretKey: "sk_test_x", webhookSecret: "whsec_y" },
+    }));
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toBe("https://api.stripe.com/v1/checkout/sessions");
+      expect(String(init?.body)).toContain("unit_amount%5D=49900");
+      return new Response(JSON.stringify({ id: "cs_1", url: "https://checkout.stripe.com/cs_1" }), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const co = await (await app.request("/v1/billing/checkout", json({ plan: "growth" }))).json();
+      expect(co.url).toContain("checkout.stripe.com");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    // Redirect alone changed nothing.
+    expect((await (await app.request("/v1/billing")).json()).plan.id).toBe("trial");
+
+    const payload = JSON.stringify({
+      type: "checkout.session.completed",
+      data: { object: { metadata: { organizationId: SEED_ORG_ID, plan: "growth" } } },
+    });
+    const t = String(Math.floor(Date.now() / 1000));
+    const v1 = createHmac("sha256", "whsec_y").update(`${t}.${payload}`).digest("hex");
+
+    const forged = await app.request("/v1/billing/stripe/webhook", {
+      method: "POST", headers: { "stripe-signature": `t=${t},v1=${"0".repeat(64)}` }, body: payload,
+    });
+    expect(forged.status).toBe(401);
+
+    const ok = await app.request("/v1/billing/stripe/webhook", {
+      method: "POST", headers: { "stripe-signature": `t=${t},v1=${v1}` }, body: payload,
+    });
+    expect(ok.status).toBe(200);
+    expect((await (await app.request("/v1/billing")).json()).plan.id).toBe("growth");
   });
 });

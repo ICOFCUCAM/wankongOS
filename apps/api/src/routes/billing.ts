@@ -54,11 +54,83 @@ billingRoutes.post("/billing/plan", async (c) => {
   return c.json({ plan: target });
 });
 
-/** Checkout is honestly gated on a Stripe connection. */
+/**
+ * Stripe checkout: creates a real Checkout Session through the connected
+ * integration's secret key (config: { secretKey, webhookSecret }). The plan
+ * only changes when Stripe confirms payment via the signed webhook below —
+ * never on redirect.
+ */
 billingRoutes.post("/billing/checkout", async (c) => {
   authorize(c, "billing:manage");
   const ctx = c.get("ctx");
+  const { plan } = await parseBody(c, z.object({ plan: z.enum(["starter", "growth", "enterprise"]) }));
+  const target = planById(plan);
   const stripe = (await ctx.store.integrations.list((i) => i.organizationId === ctx.organizationId && i.kind === "stripe" && i.status === "connected"))[0];
-  if (!stripe) return c.json({ error: "Payment collection requires a connected Stripe integration (Integration Hub)." }, 422);
-  return c.json({ error: "Stripe checkout session creation is the connector's next step." }, 501);
+  const secretKey = (stripe?.config as { secretKey?: string } | undefined)?.secretKey;
+  if (!secretKey) return c.json({ error: "Payment collection requires a connected Stripe integration (config: { secretKey, webhookSecret })." }, 422);
+
+  const params = new URLSearchParams({
+    mode: "subscription",
+    "line_items[0][quantity]": "1",
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][recurring][interval]": "month",
+    "line_items[0][price_data][unit_amount]": String(target.priceUsdMonthly * 100),
+    "line_items[0][price_data][product_data][name]": `WankongOS ${target.name}`,
+    success_url: "https://example.invalid/billing?status=success",
+    cancel_url: "https://example.invalid/billing?status=cancelled",
+    "metadata[organizationId]": ctx.organizationId,
+    "metadata[plan]": plan,
+  });
+  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: { authorization: `Bearer ${secretKey}`, "content-type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+  if (!res.ok) return c.json({ error: `Stripe responded ${res.status}`, detail: (await res.text()).slice(0, 300) }, 502);
+  const session = (await res.json()) as { id: string; url: string };
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "billing.checkout.create", metadata: { plan, sessionId: session.id } });
+  return c.json({ url: session.url, sessionId: session.id, note: "The plan changes only when Stripe's signed webhook confirms payment." });
+});
+
+/**
+ * Stripe webhook: verifies the stripe-signature header (t=..,v1=HMAC-SHA256
+ * over `t.payload` with the integration's webhookSecret, 5-minute tolerance)
+ * and applies the paid plan from checkout.session.completed metadata.
+ */
+billingRoutes.post("/billing/stripe/webhook", async (c) => {
+  const ctx = c.get("ctx");
+  const raw = await c.req.text();
+  const sig = c.req.header("stripe-signature") ?? "";
+  const t = /(?:^|,)t=(\d+)/.exec(sig)?.[1];
+  const v1 = /(?:^|,)v1=([0-9a-f]+)/.exec(sig)?.[1];
+  if (!t || !v1) return c.json({ error: "Missing stripe-signature" }, 400);
+
+  let event: { type: string; data: { object: { metadata?: { organizationId?: string; plan?: string } } } };
+  try {
+    event = JSON.parse(raw);
+  } catch {
+    return c.json({ error: "Invalid payload" }, 400);
+  }
+  const orgId = event.data?.object?.metadata?.organizationId;
+  if (!orgId) return c.json({ error: "No organization metadata" }, 400);
+  const stripe = (await ctx.store.integrations.list((i) => i.organizationId === orgId && i.kind === "stripe" && i.status === "connected"))[0];
+  const webhookSecret = (stripe?.config as { webhookSecret?: string } | undefined)?.webhookSecret;
+  if (!webhookSecret) return c.json({ error: "No webhook secret configured" }, 400);
+
+  const { createHmac, timingSafeEqual } = await import("node:crypto");
+  const expected = createHmac("sha256", webhookSecret).update(`${t}.${raw}`).digest("hex");
+  const a = Buffer.from(expected, "hex");
+  const b = Buffer.from(v1, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return c.json({ error: "Invalid signature" }, 401);
+  if (Math.abs(Date.now() / 1000 - Number(t)) > 300) return c.json({ error: "Timestamp outside tolerance" }, 401);
+
+  if (event.type === "checkout.session.completed") {
+    const plan = event.data.object.metadata?.plan;
+    if (plan && ["starter", "growth", "enterprise"].includes(plan)) {
+      await ctx.store.organizations.update(orgId, { plan: plan as "starter" });
+      await ctx.store.audit({ organizationId: orgId, actor: { kind: "user", id: "usr_stripe_webhook" }, action: "billing.plan.paid", metadata: { plan } });
+      return c.json({ applied: plan });
+    }
+  }
+  return c.json({ received: true });
 });
