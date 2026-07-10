@@ -8,6 +8,15 @@ function money(n: number): string {
   return n === 0 ? "$0" : `$${n.toFixed(n < 0.1 ? 4 : 2)}`;
 }
 
+function eta(dueAt: string): string {
+  const delta = Date.parse(dueAt) - Date.now();
+  if (delta < 0) return "overdue";
+  const mins = Math.round(delta / 60_000);
+  if (mins < 60) return `ETA ${mins}m`;
+  if (mins < 60 * 24) return `ETA ${Math.round(mins / 60)}h`;
+  return `ETA ${Math.round(mins / (60 * 24))}d`;
+}
+
 /**
  * A mini dashboard per employee: presence, the task in flight with real
  * progress, today's output / speed / success / cost, and who they report
@@ -44,11 +53,18 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
         <div>
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="truncate text-text/90">▸ {summary.currentTask.title}</span>
-            {summary.currentTask.progress !== null && (
-              <span className="shrink-0 font-mono text-muted">
-                {Math.round(summary.currentTask.progress * 100)}%
-              </span>
-            )}
+            <span className="flex shrink-0 items-center gap-2 font-mono text-muted">
+              {summary.currentTask.dueAt && (
+                <span
+                  className={eta(summary.currentTask.dueAt) === "overdue" ? "text-danger" : ""}
+                >
+                  {eta(summary.currentTask.dueAt)}
+                </span>
+              )}
+              {summary.currentTask.progress !== null && (
+                <span>{Math.round(summary.currentTask.progress * 100)}%</span>
+              )}
+            </span>
           </div>
           {summary.currentTask.progress !== null && (
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
@@ -60,12 +76,14 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
           )}
         </div>
       ) : (
-        <div className="text-xs text-muted">
+        <div className="truncate text-xs text-muted">
           {summary.activity === "offline"
             ? "Not on shift."
             : summary.activity === "waiting"
               ? `${summary.openTasks} task${summary.openTasks === 1 ? "" : "s"} queued.`
-              : "No task in progress."}
+              : summary.lastDelivered
+                ? `Last delivered: ${summary.lastDelivered.title}`
+                : "No task in progress."}
         </div>
       )}
 
@@ -96,6 +114,7 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
       <div className="flex items-center justify-between gap-2 text-xs text-muted">
         <span className="truncate">
           Reports to <span className="text-text/90">{summary.reportsTo ?? "you (CEO)"}</span>
+          <span className="ml-2 text-muted/80">· autonomy {summary.personality.autonomy}</span>
         </span>
         {summary.waitingApprovals > 0 && (
           <span className="shrink-0 text-approval">

@@ -14,7 +14,9 @@ export interface EmployeeSummary {
   activity: ActivityStatus;
   /** In-progress task titles, most recently touched first (max 3). */
   workingOn: string[];
-  currentTask: { title: string; progress: number | null } | null;
+  currentTask: { title: string; progress: number | null; dueAt: string | null } | null;
+  /** Most recent completed task — proof of life when nothing is in flight. */
+  lastDelivered: { title: string; at: string } | null;
   completedToday: number;
   waitingApprovals: number;
   openTasks: number;
@@ -76,8 +78,18 @@ summaryRoutes.get("/employees/summaries", async (c) => {
       activity: p.activity,
       workingOn: inProgress.slice(0, 3).map((t: Task) => t.title),
       currentTask: current
-        ? { title: current.title, progress: current.progress ?? null }
+        ? {
+            title: current.title,
+            progress: current.progress ?? null,
+            dueAt: current.dueDate ?? null,
+          }
         : null,
+      lastDelivered: (() => {
+        const done = p.tasks
+          .filter((t) => t.status === "done")
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+        return done ? { title: done.title, at: done.updatedAt } : null;
+      })(),
       completedToday: p.tasks.filter((t) => t.status === "done" && t.updatedAt.startsWith(today))
         .length,
       waitingApprovals: p.pendingApprovals.length,
