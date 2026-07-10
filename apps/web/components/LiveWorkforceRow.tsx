@@ -28,17 +28,53 @@ export function LiveWorkforceRow({ summaries }: { summaries: EmployeeSummary[] }
         {ordered.map((s) => {
           const style = activityStyle(s.activity);
           return (
-            <Link
-              key={s.employeeId}
-              href={`/employees/${s.employeeId}`}
-              title={`${s.name} — ${style.label}${s.currentTask ? `: ${s.currentTask.title}` : ""}`}
-              className="relative transition hover:scale-105"
-            >
-              <Avatar name={s.name} size={36} role={s.title} />
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface ${style.dot} ${style.live ? "live-dot" : ""}`}
-              />
-            </Link>
+            <div key={s.employeeId} className="group relative">
+              <Link
+                href={`/employees/${s.employeeId}`}
+                className="block transition group-hover:scale-105"
+              >
+                <Avatar name={s.name} size={36} role={s.title} />
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface ${style.dot} ${style.live ? "live-dot" : ""}`}
+                />
+              </Link>
+              {/* Hover card: who, what, how far — with the workspace one click away. */}
+              <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-56 -translate-x-1/2 rounded-xl border border-border bg-surface-2 p-3 opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-medium">{s.name}</span>
+                  <span className={`shrink-0 text-xs font-medium ${style.text}`}>{style.label}</span>
+                </div>
+                <div className="truncate text-xs text-muted">{s.title}</div>
+                {s.currentTask ? (
+                  <div className="mt-2">
+                    <div className="truncate text-xs text-text/90">▸ {s.currentTask.title}</div>
+                    {s.currentTask.progress !== null && (
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="h-1 flex-1 overflow-hidden rounded-full bg-surface">
+                          <span
+                            className="bar-fill block h-full rounded-full bg-accent"
+                            style={{ width: `${Math.round(s.currentTask.progress * 100)}%` }}
+                          />
+                        </span>
+                        <span className="font-mono text-[10px] text-muted">
+                          {Math.round(s.currentTask.progress * 100)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-muted">
+                    {s.openTasks > 0 ? `${s.openTasks} task(s) queued` : "Nothing in flight"}
+                  </div>
+                )}
+                <Link
+                  href={`/employees/${s.employeeId}`}
+                  className="mt-2 block text-xs font-medium text-accent-soft hover:underline"
+                >
+                  Open workspace →
+                </Link>
+              </div>
+            </div>
           );
         })}
       </div>
