@@ -83,6 +83,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
           name: `API key: ${resolved.key.name}`,
           role: "member",
           status: "active",
+          tokenVersion: 0,
           createdAt: resolved.key.createdAt,
           updatedAt: resolved.key.updatedAt,
         },

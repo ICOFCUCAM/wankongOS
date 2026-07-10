@@ -444,6 +444,8 @@ export function buildSeedData(): SeedData {
     name: "Jordan Blake",
     role: "owner",
     status: "active",
+    tokenVersion: 0,
+    tokenVersion: 0,
     createdAt: TS,
     updatedAt: TS,
   };
