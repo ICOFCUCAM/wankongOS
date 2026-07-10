@@ -13,11 +13,13 @@ export default async function HirePage({
   let departments;
   let employees;
   let tools;
+  let kbs;
   try {
-    [departments, employees, tools] = await Promise.all([
+    [departments, employees, tools, kbs] = await Promise.all([
       api.departments(),
       api.employees(),
       api.tools(),
+      api.knowledgeBases(),
     ]);
   } catch {
     return (
@@ -35,6 +37,7 @@ export default async function HirePage({
         departments={departments.map((d) => ({ id: d.id, label: d.name }))}
         managers={employees.map((e) => ({ id: e.id, label: `${e.name} — ${e.title}` }))}
         tools={tools}
+        knowledgeBases={kbs.map((kb) => ({ id: kb.id, label: `${kb.name} (${kb.documentCount} docs)` }))}
         initialDepartmentId={departmentId}
       />
     </div>
