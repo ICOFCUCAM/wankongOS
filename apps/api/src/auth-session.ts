@@ -28,6 +28,8 @@ export interface SessionClaims {
   userId: string;
   organizationId: string;
   exp: number;
+  /** Must match the user's current tokenVersion; bumping it revokes all sessions. */
+  v: number;
 }
 
 const b64u = (buf: Buffer) => buf.toString("base64url");

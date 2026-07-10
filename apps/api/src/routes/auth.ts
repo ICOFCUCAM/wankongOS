@@ -78,7 +78,7 @@ authRoutes.post("/auth/register", async (c) => {
       starterHires += 1;
     }
   }
-  const token = signSession({ userId: user.id, organizationId: org.id, exp: Math.floor(Date.now() / 1000) + WEEK });
+  const token = signSession({ userId: user.id, organizationId: org.id, exp: Math.floor(Date.now() / 1000) + WEEK, v: user.tokenVersion });
   return c.json({ token, organization: org, starterHires, user: { id: user.id, email: user.email, name: user.name, role: user.role } }, 201);
 });
 
@@ -89,7 +89,7 @@ authRoutes.post("/auth/login", async (c) => {
   if (!user?.passwordHash || !verifyPassword(input.password, user.passwordHash) || user.status !== "active") {
     return c.json({ error: "Invalid credentials" }, 401);
   }
-  const token = signSession({ userId: user.id, organizationId: user.organizationId, exp: Math.floor(Date.now() / 1000) + WEEK });
+  const token = signSession({ userId: user.id, organizationId: user.organizationId, exp: Math.floor(Date.now() / 1000) + WEEK, v: user.tokenVersion });
   return c.json({ token, organizationId: user.organizationId, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 });
 
@@ -98,4 +98,20 @@ authRoutes.get("/auth/me", (c) => {
   const ctx = c.get("ctx");
   const { passwordHash: _p, ...user } = actor.user as typeof actor.user & { passwordHash?: string };
   return c.json({ user, organizationId: ctx.organizationId, permissions: actor.permissions ?? null });
+});
+
+/** Log out everywhere: bumps tokenVersion, invalidating every outstanding session. */
+authRoutes.post("/auth/logout-all", async (c) => {
+  const ctx = c.get("ctx");
+  const actor = c.get("actor");
+  const user = await ctx.store.users.get(actor.user.id);
+  if (!user) return c.json({ error: "No session user" }, 401);
+  await ctx.store.users.update(user.id, { tokenVersion: user.tokenVersion + 1 });
+  await ctx.store.audit({
+    organizationId: ctx.organizationId,
+    actor: { kind: "user", id: user.id },
+    action: "auth.logout_all",
+    metadata: {},
+  });
+  return c.json({ revoked: true });
 });

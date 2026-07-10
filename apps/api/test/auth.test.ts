@@ -94,3 +94,19 @@ describe("onboarding: the starter pack", () => {
     expect(overflow.status).toBe(402);
   });
 });
+
+describe("session revocation", () => {
+  it("logout-all invalidates every outstanding token", async () => {
+    const reg = await (await app.request("/v1/auth/register", json({
+      organizationName: "Revoke Co", name: "R", email: "r@revoke.io", password: "password-of-ten+",
+    }))).json();
+    expect((await app.request("/v1/auth/me", auth(reg.token))).status).toBe(200);
+
+    await app.request("/v1/auth/logout-all", { method: "POST", ...auth(reg.token) });
+    const dead = await app.request("/v1/employees", auth(reg.token));
+    expect(dead.status).toBe(401);
+
+    const relog = await (await app.request("/v1/auth/login", json({ email: "r@revoke.io", password: "password-of-ten+" }))).json();
+    expect((await app.request("/v1/auth/me", auth(relog.token))).status).toBe(200);
+  });
+});

@@ -77,6 +77,8 @@ export const User = z.object({
   status: z.enum(["active", "invited", "suspended"]).default("active"),
   /** scrypt hash (see api auth-session); absent for SSO/demo users. */
   passwordHash: z.string().max(300).optional(),
+  /** Bumped to revoke all outstanding sessions ("log out everywhere"). */
+  tokenVersion: z.number().int().nonnegative().default(0),
 });
 export type User = z.infer<typeof User>;
 

@@ -99,7 +99,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
       const claims = verifySession(bearer);
       if (!claims) return c.json({ error: "Invalid or expired session" }, 401);
       const user = await context.store.users.get(claims.userId);
-      if (!user || user.status !== "active" || user.organizationId !== claims.organizationId) {
+      if (
+        !user ||
+        user.status !== "active" ||
+        user.organizationId !== claims.organizationId ||
+        user.tokenVersion !== claims.v
+      ) {
         return c.json({ error: "Invalid or expired session" }, 401);
       }
       c.set("ctx", { ...context, organizationId: claims.organizationId });
