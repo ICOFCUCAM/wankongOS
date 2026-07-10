@@ -1,5 +1,11 @@
 import { BrandKit } from "@wankong/core";
-import type { AppContext } from "../context.js";
+import type { Store } from "@wankong/store";
+
+/** Structural slice of AppContext the generators need — tools can call in too. */
+export interface StudioCtx {
+  store: Store;
+  organizationId: string;
+}
 
 export interface GenerateResult {
   kind: string;
@@ -22,7 +28,7 @@ const str = (v: unknown, fallback = ""): string => (typeof v === "string" ? v : 
 const rows = (v: unknown): Record<string, unknown>[] =>
   Array.isArray(v) ? (v.filter((r) => r && typeof r === "object") as Record<string, unknown>[]) : [];
 
-async function brandOf(ctx: AppContext): Promise<BrandKit> {
+async function brandOf(ctx: StudioCtx): Promise<BrandKit> {
   const kits = await ctx.store.brandKits.list((b) => b.organizationId === ctx.organizationId);
   if (kits[0]) return kits[0];
   return ctx.store.brandKits.create(
@@ -39,7 +45,7 @@ async function brandOf(ctx: AppContext): Promise<BrandKit> {
  * SVG, CSV) derived from its input and the org's records/brand kit.
  */
 export async function generate(
-  ctx: AppContext,
+  ctx: StudioCtx,
   studioId: string,
   input: Input,
 ): Promise<GenerateResult> {

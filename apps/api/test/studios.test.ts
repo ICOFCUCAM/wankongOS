@@ -112,3 +112,29 @@ describe("builtin generators produce real files", () => {
     expect((await res.json()).error).toContain("Integration Hub");
   });
 });
+
+describe("employees produce assets via the studio.produce tool", () => {
+  it("creates a stored, audited asset attributed to the employee", async () => {
+    const { createAppContext } = await import("../src/context.js");
+    const { createSeededStore: seed, SEED_ORG_ID: ORG } = await import("@wankong/store");
+    const { ProviderRegistry: PR } = await import("@wankong/agents");
+    const { LocalEmbedder } = await import("@wankong/knowledge");
+    const ctx = createAppContext({
+      store: seed(),
+      registry: new PR(),
+      embedder: new LocalEmbedder(),
+      organizationId: ORG,
+    });
+    const out = await ctx.toolRegistry.execute(
+      "studio.produce",
+      { studioId: "document", kind: "sop", title: "Refund SOP", data: { purpose: "Handle refunds", steps: "1. Verify order" } },
+      { organizationId: ORG, employeeId: "emp_support_manager", permissions: ["task:create"] },
+    );
+    expect(String(out)).toContain("Produced");
+    const assets = await ctx.store.assets.list(() => true);
+    expect(assets).toHaveLength(1);
+    expect(assets[0]!.createdBy).toEqual({ kind: "employee", id: "emp_support_manager" });
+    const audits = await ctx.store.auditEvents.list((a) => a.action === "studio.generate");
+    expect(audits).toHaveLength(1);
+  });
+});

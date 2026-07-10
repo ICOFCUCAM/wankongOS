@@ -32,6 +32,8 @@ const AUDIT_PHRASES: Record<string, string> = {
   "workflow.run.start": "started a workflow run",
   "workflow.run.scheduled": "had a workflow run scheduled",
   "document.injection_flagged": "flagged a suspicious document",
+  "studio.generate": "produced a new asset in a studio",
+  "asset.create": "stored a new asset",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */

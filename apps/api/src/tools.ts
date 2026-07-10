@@ -129,6 +129,59 @@ export function buildToolRegistry(
     },
   });
 
+  registry.register("studio.produce", {
+    definition: {
+      name: "studio.produce",
+      description:
+        "Produce a real company asset via a builtin studio (document/invoice, document/sop, design/business_card, legal/nda, financial/spend_report, cad/floor_plan, website/landing_page, conversion/*). Returns the stored asset id.",
+      parameters: {
+        type: "object",
+        properties: {
+          studioId: { type: "string" },
+          kind: { type: "string" },
+          title: { type: "string" },
+          data: { type: "object" },
+        },
+        required: ["studioId", "kind"],
+      },
+      triggers: ["\\b(generate|create|produce|draft)\\b[^.]*\\b(invoice|sop|nda|report|card|banner|floor plan|landing page)\\b"],
+    },
+    requires: "task:create",
+    async run(args, ctx) {
+      const { generate: gen, StudioError } = await import("./studios/generate.js");
+      try {
+        const result = await gen(
+          { store, organizationId: ctx.organizationId },
+          str(args.studioId) ?? "document",
+          {
+            kind: str(args.kind) ?? "report",
+            title: str(args.title) ?? undefined,
+            data: (args.data ?? {}) as Record<string, unknown>,
+          },
+        );
+        const asset = await store.assets.create({
+          organizationId: ctx.organizationId,
+          studioId: str(args.studioId) ?? "document",
+          version: 1,
+          createdBy: { kind: "employee", id: ctx.employeeId },
+          ...result,
+        });
+        await store.audit({
+          organizationId: ctx.organizationId,
+          actor: { kind: "employee", id: ctx.employeeId },
+          action: "studio.generate",
+          targetType: "asset",
+          targetId: asset.id,
+          metadata: { studioId: asset.studioId, kind: asset.kind, title: asset.title },
+        });
+        return `Produced "${asset.title}" (${asset.id}, ${asset.mimeType}) in the ${asset.studioId} studio.`;
+      } catch (e) {
+        if (e instanceof StudioError) return e.message;
+        throw e;
+      }
+    },
+  });
+
   registry.register("kb.search", {
     definition: {
       name: "kb.search",
