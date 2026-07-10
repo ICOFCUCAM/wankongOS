@@ -198,3 +198,31 @@ describe("console: company pulse", () => {
     expect(data.length).toBeLessThanOrEqual(2);
   });
 });
+
+describe("command center: workforce health", () => {
+  it("derives header metrics, live queue, and per-department pulse from records", async () => {
+    const res = await app.request("/v1/workforce/health");
+    expect(res.status).toBe(200);
+    const h = await res.json();
+
+    expect(h.employees).toBe(11);
+    expect(h.activeTasks).toBeGreaterThan(0);
+    expect(h.liveQueue.blocked).toBe(1); // Zoe's seeded vendor-quote block
+    expect(h.liveQueue.running).toBeGreaterThanOrEqual(2); // Ava + Kai in progress
+
+    // The score is a disclosed formula over disclosed inputs.
+    const { score, formula, inputs } = h.companyHealth;
+    expect(formula).toContain("availability");
+    const recomputed = Math.round(
+      100 * (0.4 * inputs.availability + 0.3 * inputs.flow + 0.1 * inputs.approvalLoad + 0.2 * inputs.confidence),
+    );
+    expect(score).toBe(recomputed);
+    expect(score).toBeGreaterThan(0);
+    expect(score).toBeLessThanOrEqual(100);
+
+    // Department pulse: procurement (Zoe blocked) needs attention.
+    const procurement = h.departmentsDetail.find((d: { name: string }) => /procure/i.test(d.name));
+    expect(procurement.health).toBe("attention");
+    expect(procurement.byActivity.blocked).toBe(1);
+  });
+});
