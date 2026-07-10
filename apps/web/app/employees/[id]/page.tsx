@@ -27,6 +27,32 @@ function List({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+/**
+ * How this employee operates (Problem 12). These traits are not cosmetic —
+ * they feed the system prompt, so what's shown here is exactly how the
+ * employee behaves in chat and at work.
+ */
+function PersonalityRow({ personality }: { personality: Employee["personality"] }) {
+  const traits = [
+    { label: "style", value: personality.communicationStyle },
+    { label: "decisions", value: personality.decisionSpeed },
+    { label: "autonomy", value: personality.autonomy },
+    ...(personality.reasoningDepth === "advanced"
+      ? [{ label: "reasoning", value: "advanced" }]
+      : []),
+  ];
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      {traits.map((t) => (
+        <span key={t.label} className="pill text-muted" title={`Feeds the system prompt`}>
+          <span className="text-[10px] uppercase tracking-wide">{t.label}</span>
+          <span className="text-text/90">{t.value}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default async function EmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let employee: Employee;
@@ -75,6 +101,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           </div>
           <p className="text-muted">{employee.title}</p>
           <p className="mt-3 max-w-2xl text-sm text-muted">{employee.description}</p>
+          <PersonalityRow personality={employee.personality} />
         </div>
       </div>
 
