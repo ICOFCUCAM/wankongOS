@@ -131,7 +131,14 @@ checks; raw-document OCR honestly gated on a vision connector.
 ✅ AI recruiting (ADR-0023): adaptive interviews, resume verification,
 evidence-linked rubric reports (no culture-fit scoring), human hiring
 decision via approvals; real-time stack (WebRTC/STT/TTS/sandbox)
-connector-gated. ⬜ Real revenue (M6 billing), event push (websockets),
+connector-gated. ✅ Autonomous work cycle (ADR-0024) · real identity & multi-tenancy with
+starter-pack onboarding (ADR-0025) · notifications inbox + Slack mirror ·
+indexed tenant queries · live SSE event stream with event-driven console
+refresh · real Slack/GitHub connectors · billing plans with enforcement ·
+role marketplace with CI-enforced benchmark · eval drift detection ·
+retention runs + full-org export (M5c) · dependency-free PDF rendering
+(ADR-0026). ⬜ Stripe payment rails, SSO/OIDC, session revocation,
+long-job checkpointing, object storage, visual workflow builder,
 human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
