@@ -46,15 +46,34 @@ export default async function WorkflowDetailPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
         <div className="card">
           <h3 className="mb-3 text-sm font-medium">Definition</h3>
-          <ol className="space-y-2">
-            {workflow.nodes.map((n) => (
-              <li key={n.id} className="flex items-center gap-2 text-sm">
-                <span className="w-4 text-center text-accent-soft">{NODE_ICON[n.type] ?? "•"}</span>
-                <span className="font-mono text-xs text-muted">{n.type}</span>
-                <span>{"name" in n && n.name ? n.name : n.id}</span>
+          <ol className="space-y-0">
+            {workflow.nodes.map((n, i) => (
+              <li key={n.id}>
+                <div
+                  className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${
+                    n.type === "approval"
+                      ? "border-approval/50 bg-approval/5"
+                      : n.type === "decision"
+                        ? "border-info/40 bg-info/5"
+                        : "border-border bg-surface-2"
+                  }`}
+                >
+                  <span className="w-4 text-center text-accent-soft">{NODE_ICON[n.type] ?? "•"}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {"name" in n && n.name ? n.name : n.id}
+                  </span>
+                  <span className="pill font-mono text-[10px] text-muted">{n.type}</span>
+                </div>
+                {i < workflow.nodes.length - 1 && (
+                  <div className="my-0.5 ml-6 h-4 w-px border-l border-dashed border-border" />
+                )}
               </li>
             ))}
           </ol>
+          <p className="mt-3 text-xs text-muted">
+            Approval nodes pause the run for a human; decision nodes branch. A drag-and-drop
+            builder is on the roadmap — this graph reads the same definition it will edit.
+          </p>
         </div>
 
         <RunPanel workflowId={workflow.id} />
