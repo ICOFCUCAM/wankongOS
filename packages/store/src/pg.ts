@@ -128,6 +128,8 @@ export class PgStore extends BaseStore {
   readonly workflowRuns!: Repository<import("@wankong/core").WorkflowRun>;
   readonly evalSuites!: Repository<import("@wankong/core").EvalSuite>;
   readonly evalReports!: Repository<import("@wankong/core").EvalReport>;
+  readonly assets!: Repository<import("@wankong/core").Asset>;
+  readonly brandKits!: Repository<import("@wankong/core").BrandKit>;
   readonly employeeVersions!: Repository<import("@wankong/core").EmployeeVersion>;
 
   constructor(

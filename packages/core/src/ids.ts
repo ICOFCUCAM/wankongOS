@@ -29,6 +29,8 @@ export const ID_PREFIXES = {
   auditEvent: "evt",
   evalSuite: "evs",
   evalReport: "evr",
+  asset: "ast",
+  brand: "brd",
   employeeVersion: "empv",
 } as const;
 

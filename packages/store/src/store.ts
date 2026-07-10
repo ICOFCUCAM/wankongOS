@@ -8,6 +8,8 @@ import {
   type Document,
   type Employee,
   type EmployeeVersion,
+  type Asset,
+  type BrandKit,
   type EvalReport,
   type EvalSuite,
   type Goal,
@@ -55,6 +57,8 @@ export interface StoreRepositories {
   readonly workflowRuns: Repository<WorkflowRun>;
   readonly evalSuites: Repository<EvalSuite>;
   readonly evalReports: Repository<EvalReport>;
+  readonly assets: Repository<Asset>;
+  readonly brandKits: Repository<BrandKit>;
   readonly employeeVersions: Repository<EmployeeVersion>;
 }
 
@@ -82,6 +86,8 @@ export const STORE_ENTITY_KINDS = [
   "workflowRun",
   "evalSuite",
   "evalReport",
+  "asset",
+  "brand",
   "employeeVersion",
 ] as const satisfies readonly EntityKind[];
 
@@ -108,6 +114,8 @@ const REPO_FIELDS = [
   "workflowRuns",
   "evalSuites",
   "evalReports",
+  "assets",
+  "brandKits",
   "employeeVersions",
 ] as const;
 
@@ -145,6 +153,8 @@ export abstract class BaseStore implements StoreRepositories {
   abstract readonly workflowRuns: Repository<WorkflowRun>;
   abstract readonly evalSuites: Repository<EvalSuite>;
   abstract readonly evalReports: Repository<EvalReport>;
+  abstract readonly assets: Repository<Asset>;
+  abstract readonly brandKits: Repository<BrandKit>;
   abstract readonly employeeVersions: Repository<EmployeeVersion>;
 
   // --- cross-entity read helpers ------------------------------------------
@@ -208,6 +218,8 @@ export class MemoryStore extends BaseStore {
   readonly workflowRuns: MemoryRepository<WorkflowRun>;
   readonly evalSuites: MemoryRepository<EvalSuite>;
   readonly evalReports: MemoryRepository<EvalReport>;
+  readonly assets: MemoryRepository<Asset>;
+  readonly brandKits: MemoryRepository<BrandKit>;
   readonly employeeVersions: MemoryRepository<EmployeeVersion>;
 
   constructor(clock: Clock = systemClock) {
@@ -234,6 +246,8 @@ export class MemoryStore extends BaseStore {
     this.workflowRuns = new MemoryRepository("workflowRun", clock);
     this.evalSuites = new MemoryRepository("evalSuite", clock);
     this.evalReports = new MemoryRepository("evalReport", clock);
+    this.assets = new MemoryRepository("asset", clock);
+    this.brandKits = new MemoryRepository("brand", clock);
     this.employeeVersions = new MemoryRepository("employeeVersion", clock);
   }
 }
