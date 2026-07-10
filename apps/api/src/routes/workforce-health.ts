@@ -40,6 +40,10 @@ export interface WorkforceHealth {
     };
   };
   liveQueue: { running: number; waiting: number; needsApproval: number; blocked: number };
+  /** Today's task ledger — raw counts from records. */
+  tasksToday: { completed: number; running: number; queued: number; blocked: number };
+  /** Estimated value of completed work. An ESTIMATE with a disclosed formula — real revenue lands with billing (M6). */
+  valueDelivered: { estUsd: number; formula: string };
   departmentsDetail: DepartmentPulse[];
 }
 
@@ -158,6 +162,18 @@ workforceHealthRoutes.get("/workforce/health", async (c) => {
         approvalLoad: round6(approvalLoad),
         confidence: round6(confidence),
       },
+    },
+    tasksToday: {
+      completed: completedToday,
+      running: openTasks.filter((t) => t.status === "in_progress").length,
+      queued: openTasks.filter((t) => t.status === "todo" || t.status === "awaiting_approval")
+        .length,
+      blocked: openTasks.filter((t) => t.status === "blocked").length,
+    },
+    valueDelivered: {
+      estUsd: completedToday * 2.5 * 60,
+      formula:
+        "completedToday × 2.5h × $60/h — same hours-saved basis as the dashboard; an estimate, not revenue (billing lands in M6)",
     },
     liveQueue: {
       running: statuses.filter((s) => s === "working" || s === "thinking").length,

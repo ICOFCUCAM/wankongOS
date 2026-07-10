@@ -226,3 +226,13 @@ describe("command center: workforce health", () => {
     expect(procurement.byActivity.blocked).toBe(1);
   });
 });
+
+describe("command center: today ledger and value estimate", () => {
+  it("counts today's tasks and disclosed-formula value from records", async () => {
+    const h = await (await app.request("/v1/workforce/health")).json();
+    expect(h.tasksToday.running).toBeGreaterThanOrEqual(2); // seeded in-progress
+    expect(h.tasksToday.blocked).toBe(1);
+    expect(h.valueDelivered.estUsd).toBe(h.tasksToday.completed * 2.5 * 60);
+    expect(h.valueDelivered.formula).toContain("estimate");
+  });
+});
