@@ -1,8 +1,9 @@
-import { ToolRegistry } from "@wankong/agents";
-import { redactPii } from "@wankong/core";
+import { ToolError, ToolRegistry, type EmployeeRuntime } from "@wankong/agents";
+import { redactPii, type Employee } from "@wankong/core";
 import type { Embedder } from "@wankong/knowledge";
 import type { Store } from "@wankong/store";
 import { searchKnowledge } from "./retrieval.js";
+import { buildGroundedEmployeeContext } from "./employee-context.js";
 
 /**
  * The built-in tool registry: capabilities employees can genuinely execute,
@@ -13,7 +14,12 @@ import { searchKnowledge } from "./retrieval.js";
  * Local-provider convention: arguments arrive as `{ text: <user request> }`;
  * each tool maps that onto its primary field when structured fields are absent.
  */
-export function buildToolRegistry(store: Store, organizationId: string, embedder: Embedder): ToolRegistry {
+export function buildToolRegistry(
+  store: Store,
+  organizationId: string,
+  embedder: Embedder,
+  runtime: EmployeeRuntime,
+): ToolRegistry {
   const registry = new ToolRegistry();
 
   registry.register("task.create", {
@@ -108,6 +114,120 @@ export function buildToolRegistry(store: Store, organizationId: string, embedder
         lastAccessedAt: new Date().toISOString(),
       });
       return `Saved to memory (${memory.id}): "${content.slice(0, 120)}".`;
+    },
+  });
+
+  registry.register("delegate", {
+    definition: {
+      name: "delegate",
+      description:
+        "Delegate a request to a colleague AI employee (by name or title) and return their answer. Every delegation is recorded as a task and audited.",
+      parameters: {
+        type: "object",
+        properties: {
+          colleague: { type: "string", description: "The colleague's name or title" },
+          request: { type: "string", description: "What to ask the colleague to do" },
+        },
+        required: ["colleague", "request"],
+      },
+      triggers: [
+        "\\b(ask|delegate to|check with|hand (this |it )?to)\\b[^.?!]*\\b(analyst|assistant|director|manager|officer|recruiter|accountant|counsel|legal|research)\\b",
+      ],
+    },
+    requires: "task:assign",
+    async run(args, ctx) {
+      const request = str(args.request) ?? str(args.text) ?? "";
+      const hint = (str(args.colleague) ?? request).toLowerCase();
+
+      const [delegator, colleagues] = await Promise.all([
+        store.employees.get(ctx.employeeId),
+        store.employees.list(
+          (e) => e.organizationId === ctx.organizationId && e.id !== ctx.employeeId,
+        ),
+      ]);
+      if (!delegator) throw new ToolError("Delegating employee not found");
+
+      // Resolve the colleague: longest name/title appearing in the hint wins.
+      let target: Employee | undefined;
+      let bestLen = 0;
+      for (const e of colleagues) {
+        for (const key of [e.name.toLowerCase(), e.title.toLowerCase()]) {
+          if (hint.includes(key) && key.length > bestLen) {
+            target = e;
+            bestLen = key.length;
+          }
+        }
+      }
+      if (!target) {
+        throw new ToolError(
+          "Could not identify which colleague to delegate to — name them explicitly (e.g. \"the Research Analyst\").",
+        );
+      }
+      if (target.status !== "active") {
+        throw new ToolError(`${target.name} is ${target.status} and cannot take on work.`);
+      }
+
+      // The colleague answers with their OWN grounding but WITHOUT tools —
+      // delegation is one hop deep by construction, never a recursion chain.
+      const grounded = await buildGroundedEmployeeContext(store, ctx.organizationId, target, {
+        query: request,
+        embedder,
+      });
+      const startedAt = Date.now();
+      const result = await runtime.complete({
+        employee: target,
+        context: grounded.context,
+        input: request,
+      });
+
+      // Traceability: the exchange is a real conversation between employees…
+      const conversation = await store.conversations.create({
+        organizationId: ctx.organizationId,
+        employeeId: target.id,
+        openedBy: { kind: "employee", id: delegator.id },
+        title: `Delegation: ${delegator.name} → ${target.name}`,
+      });
+      await store.messages.create({
+        conversationId: conversation.id,
+        role: "user",
+        authorId: delegator.id,
+        content: request,
+      });
+      await store.messages.create({
+        conversationId: conversation.id,
+        role: "assistant",
+        authorId: target.id,
+        content: result.text,
+        tokensIn: result.usage.inputTokens,
+        tokensOut: result.usage.outputTokens,
+        provider: result.provider,
+        model: result.model,
+        latencyMs: Date.now() - startedAt,
+      });
+      // …a completed task on the board…
+      const task = await store.tasks.create({
+        organizationId: ctx.organizationId,
+        title: `Delegated to ${target.name}: ${request.slice(0, 140)}`,
+        description: "",
+        status: "done",
+        priority: "normal",
+        assignee: { kind: "employee", id: target.id },
+        createdBy: { kind: "employee", id: delegator.id },
+        labels: ["delegation"],
+        result: result.text.slice(0, 20000),
+      });
+      // …and an audit entry.
+      await store.audit({
+        organizationId: ctx.organizationId,
+        actor: { kind: "employee", id: delegator.id },
+        action: "employee.delegate",
+        targetType: "employee",
+        targetId: target.id,
+        metadata: { taskId: task.id, conversationId: conversation.id },
+      });
+
+      const reply = result.text.length > 1500 ? `${result.text.slice(0, 1497)}…` : result.text;
+      return `${target.name} (${target.title}) responded: ${reply}`;
     },
   });
 
