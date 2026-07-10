@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { PLANS, planById } from "@wankong/core";
+import type { Store } from "@wankong/store";
 import type { Env } from "../context.js";
 import { authorize, parseBody } from "../http.js";
 import { perEmployeeUsage, round6 } from "../metrics.js";
@@ -24,6 +25,14 @@ billingRoutes.get("/billing", async (c) => {
     (m) => m.role === "assistant" && m.createdAt.startsWith(month) && convIds.has(m.conversationId),
   );
   const monthTokens = messages.reduce((n, m) => n + (m.tokensIn ?? 0) + (m.tokensOut ?? 0), 0);
+  const billingEntries = await ctx.store.journalEntries.listByOrg(
+    ctx.organizationId,
+    (e) => e.source === "billing" && e.date.startsWith(month),
+  );
+  const recordedMonthUsd = billingEntries.reduce(
+    (n, e) => n + e.lines.filter((l) => l.accountCode === "4000").reduce((m, l) => m + l.credit, 0),
+    0,
+  );
   return c.json({
     plan,
     availablePlans: PLANS,
@@ -36,6 +45,11 @@ billingRoutes.get("/billing", async (c) => {
     invoicePreview: {
       base: plan.priceUsdMonthly,
       note: "Base subscription only — AI provider costs pass through at the estimates shown in analytics. Payment collection requires a connected Stripe integration; until then this is a document, not a charge.",
+    },
+    recordedRevenue: {
+      monthUsd: recordedMonthUsd,
+      entries: billingEntries.length,
+      note: "Real journal entries (source: billing) posted only when Stripe's signed webhook confirms payment — never an estimate.",
     },
   });
 });
@@ -105,7 +119,10 @@ billingRoutes.post("/billing/stripe/webhook", async (c) => {
   const v1 = /(?:^|,)v1=([0-9a-f]+)/.exec(sig)?.[1];
   if (!t || !v1) return c.json({ error: "Missing stripe-signature" }, 400);
 
-  let event: { type: string; data: { object: { metadata?: { organizationId?: string; plan?: string } } } };
+  let event: {
+    type: string;
+    data: { object: { id?: string; metadata?: { organizationId?: string; plan?: string } } };
+  };
   try {
     event = JSON.parse(raw);
   } catch {
@@ -129,8 +146,51 @@ billingRoutes.post("/billing/stripe/webhook", async (c) => {
     if (plan && ["starter", "growth", "enterprise"].includes(plan)) {
       await ctx.store.organizations.update(orgId, { plan: plan as "starter" });
       await ctx.store.audit({ organizationId: orgId, actor: { kind: "user", id: "usr_stripe_webhook" }, action: "billing.plan.paid", metadata: { plan } });
-      return c.json({ applied: plan });
+      const revenue = await recordSubscriptionRevenue(ctx.store, orgId, plan, event.data.object.id);
+      return c.json({ applied: plan, revenue });
     }
   }
   return c.json({ received: true });
 });
+
+/**
+ * The billing↔accounting bridge: a Stripe-confirmed payment becomes a REAL
+ * balanced journal entry (Dr 1000 Cash & bank / Cr 4000 Revenue) — the first
+ * revenue in the books that is not an estimate. Idempotent on the checkout
+ * session reference (webhook retries post nothing twice), and it respects a
+ * closed period rather than writing behind the close.
+ */
+async function recordSubscriptionRevenue(
+  store: Store,
+  orgId: string,
+  plan: string,
+  sessionId: string | undefined,
+): Promise<{ posted: boolean; reason?: string; entryId?: string }> {
+  const amount = planById(plan).priceUsdMonthly;
+  if (amount <= 0) return { posted: false, reason: "Zero-price plan — nothing to record." };
+  const reference = `STRIPE-${sessionId ?? "unknown"}`;
+  const existing = await store.journalEntries.listByOrg(orgId, (e) => e.reference === reference);
+  if (existing.length > 0) {
+    return { posted: false, reason: `Already recorded as ${existing[0]!.id} (webhook retry).` };
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const period = (await store.accountingPeriods.listByOrg(orgId, (p) => p.period === today.slice(0, 7)))[0];
+  if (period?.status === "closed") {
+    await store.audit({ organizationId: orgId, actor: { kind: "user", id: "usr_stripe_webhook" }, action: "accounting.revenue.skipped_closed_period", metadata: { plan, reference, amount } });
+    return { posted: false, reason: `Period ${period.period} is closed — post manually to an open period.` };
+  }
+  const entry = await store.journalEntries.create({
+    organizationId: orgId,
+    date: today,
+    memo: `Subscription payment — WankongOS ${planById(plan).name} (Stripe checkout)`,
+    source: "billing",
+    reference,
+    lines: [
+      { accountCode: "1000", description: "Stripe payout receivable/cash", debit: amount, credit: 0 },
+      { accountCode: "4000", description: `Subscription revenue — ${plan}`, debit: 0, credit: amount },
+    ],
+    createdBy: { kind: "user", id: "usr_stripe_webhook" },
+  });
+  await store.audit({ organizationId: orgId, actor: { kind: "user", id: "usr_stripe_webhook" }, action: "accounting.revenue.recorded", targetType: "journalEntry", targetId: entry.id, metadata: { plan, amount, reference } });
+  return { posted: true, entryId: entry.id };
+}

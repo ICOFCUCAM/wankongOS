@@ -3,6 +3,7 @@ import type { Env } from "../context.js";
 import { authorize } from "../http.js";
 import { runScheduledWorkflows } from "../scheduler.js";
 import { runWorkCycle } from "../autonomy.js";
+import { recordHealthSnapshot } from "../health.js";
 
 export const workerRoutes = new Hono<Env>();
 
@@ -16,7 +17,8 @@ workerRoutes.post("/worker/tick", async (c) => {
   const ctx = c.get("ctx");
   const result = await runScheduledWorkflows(ctx);
   const work = await runWorkCycle(ctx);
-  return c.json({ ...result, work });
+  const healthSnapshot = await recordHealthSnapshot(ctx.store, ctx.organizationId);
+  return c.json({ ...result, work, healthSnapshot });
 });
 
 /**
@@ -35,5 +37,6 @@ workerRoutes.get("/worker/tick", async (c) => {
   const ctx = c.get("ctx");
   const result = await runScheduledWorkflows(ctx);
   const work = await runWorkCycle(ctx);
-  return c.json({ ...result, work });
+  const healthSnapshot = await recordHealthSnapshot(ctx.store, ctx.organizationId);
+  return c.json({ ...result, work, healthSnapshot });
 });

@@ -21,6 +21,7 @@ import {
   type EvalReport,
   type EvalSuite,
   type Goal,
+  type HealthSnapshot,
   type Integration,
   type KnowledgeBase,
   type Memory,
@@ -76,6 +77,7 @@ export interface StoreRepositories {
   readonly notifications: Repository<Notification>;
   readonly brandKits: Repository<BrandKit>;
   readonly employeeVersions: Repository<EmployeeVersion>;
+  readonly healthSnapshots: Repository<HealthSnapshot>;
 }
 
 /** Entity kind ids in repository order — shared by every store implementation. */
@@ -113,6 +115,7 @@ export const STORE_ENTITY_KINDS = [
   "notification",
   "brand",
   "employeeVersion",
+  "healthSnapshot",
 ] as const satisfies readonly EntityKind[];
 
 const REPO_FIELDS = [
@@ -149,6 +152,7 @@ const REPO_FIELDS = [
   "notifications",
   "brandKits",
   "employeeVersions",
+  "healthSnapshots",
 ] as const;
 
 /** Field name ↔ entity kind pairs, for implementations that build repos generically. */
@@ -196,6 +200,7 @@ export abstract class BaseStore implements StoreRepositories {
   abstract readonly notifications: Repository<Notification>;
   abstract readonly brandKits: Repository<BrandKit>;
   abstract readonly employeeVersions: Repository<EmployeeVersion>;
+  abstract readonly healthSnapshots: Repository<HealthSnapshot>;
 
   // --- cross-entity read helpers ------------------------------------------
 
@@ -269,6 +274,7 @@ export class MemoryStore extends BaseStore {
   readonly notifications: MemoryRepository<Notification>;
   readonly brandKits: MemoryRepository<BrandKit>;
   readonly employeeVersions: MemoryRepository<EmployeeVersion>;
+  readonly healthSnapshots: MemoryRepository<HealthSnapshot>;
 
   constructor(clock: Clock = systemClock) {
     super();
@@ -305,5 +311,6 @@ export class MemoryStore extends BaseStore {
     this.notifications = new MemoryRepository("notification", clock);
     this.brandKits = new MemoryRepository("brand", clock);
     this.employeeVersions = new MemoryRepository("employeeVersion", clock);
+    this.healthSnapshots = new MemoryRepository("healthSnapshot", clock);
   }
 }

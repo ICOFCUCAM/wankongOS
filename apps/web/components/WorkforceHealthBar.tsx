@@ -49,6 +49,19 @@ export function WorkforceHealthBar({ health }: { health: WorkforceHealth }) {
             <span className={`text-xs font-medium ${healthTone(h.companyHealth.score)}`}>
               {h.companyHealth.score >= 85 ? "Excellent" : h.companyHealth.score >= 60 ? "Stable" : "Needs attention"}
             </span>
+            {h.trend && h.trend.deltaScore !== 0 && (
+              <span
+                className={`text-xs font-medium ${h.trend.deltaScore > 0 ? "text-success" : "text-danger"}`}
+                title={h.trend.basis}
+              >
+                {h.trend.deltaScore > 0 ? "▲" : "▼"} {Math.abs(h.trend.deltaScore)} vs {h.trend.hoursAgo}h ago
+              </span>
+            )}
+            {h.trend && h.trend.deltaScore === 0 && (
+              <span className="text-xs text-muted" title={h.trend.basis}>
+                = steady over {h.trend.hoursAgo}h
+              </span>
+            )}
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
             <div

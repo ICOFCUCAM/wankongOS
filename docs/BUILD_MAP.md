@@ -143,7 +143,10 @@ checkpointing. ✅ Company memory search · collaboration threads + feed ·
 executive meetings with filed minutes · evidence-cited employee memory
 timeline (ADR-0027) · department packs with benchmark-enforced
 guardrails · the digital office floor · computer-use registered
-connector-tier. ⬜ SSO/OIDC, object storage, visual workflow builder,
+connector-tier. ✅ Billing↔accounting bridge (Stripe-confirmed payments
+posted as real revenue journal entries, retry-safe, closed-period aware) ·
+health-history snapshots with an honest dashboard trend (no history → no
+arrow). ⬜ SSO/OIDC, object storage, visual workflow builder,
 human-utilization split.
 
 ### Security 🟡 (hardening core shipped)

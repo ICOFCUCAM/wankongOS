@@ -40,6 +40,7 @@ export const ID_PREFIXES = {
   notification: "ntf",
   brand: "brd",
   employeeVersion: "empv",
+  healthSnapshot: "hsn",
 } as const;
 
 export type EntityKind = keyof typeof ID_PREFIXES;

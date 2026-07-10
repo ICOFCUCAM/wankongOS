@@ -103,7 +103,7 @@ export const JournalEntry = z
     organizationId: Id,
     date: z.string().min(8).max(30),
     memo: z.string().max(500).default(""),
-    source: z.enum(["manual", "invoice", "bank", "payroll", "inventory", "adjustment"]).default("manual"),
+    source: z.enum(["manual", "invoice", "bank", "payroll", "inventory", "adjustment", "billing"]).default("manual"),
     /** Entity whose books this entry belongs to; absent = the primary company. */
     companyId: Id.optional(),
     /** Counterparty group company — marks the entry for consolidation elimination. */

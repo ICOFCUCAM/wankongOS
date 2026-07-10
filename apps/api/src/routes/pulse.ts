@@ -53,6 +53,9 @@ const AUDIT_PHRASES: Record<string, string> = {
   "meeting.executive": "held an executive meeting — minutes filed",
   "recruiting.interview.complete": "completed an interview and filed the report",
   "autonomy.task.complete": "autonomously completed an assigned task",
+  "accounting.revenue.recorded": "recorded a Stripe-confirmed subscription payment in the ledger",
+  "accounting.revenue.skipped_closed_period": "held a subscription payment for manual posting (period closed)",
+  "billing.plan.paid": "upgraded the plan — payment confirmed by Stripe",
   "studio.publish": "published a post through a connected channel",
   "studio.engineering.issue": "filed a GitHub issue",
 };

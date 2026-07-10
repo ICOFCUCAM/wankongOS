@@ -139,4 +139,42 @@ describe("Stripe payment rails", () => {
     expect(ok.status).toBe(200);
     expect((await (await app.request("/v1/billing")).json()).plan.id).toBe("growth");
   });
+
+  it("posts real subscription revenue to the ledger exactly once per checkout session", async () => {
+    const { createHmac } = await import("node:crypto");
+    await app.request("/v1/integrations", json({
+      kind: "stripe", name: "Payments", config: { secretKey: "sk_test_x", webhookSecret: "whsec_y" },
+    }));
+    const payload = JSON.stringify({
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_pay_1", metadata: { organizationId: SEED_ORG_ID, plan: "growth" } } },
+    });
+    const t = String(Math.floor(Date.now() / 1000));
+    const v1 = createHmac("sha256", "whsec_y").update(`${t}.${payload}`).digest("hex");
+    const send = () =>
+      app.request("/v1/billing/stripe/webhook", {
+        method: "POST", headers: { "stripe-signature": `t=${t},v1=${v1}` }, body: payload,
+      });
+
+    const first = await (await send()).json();
+    expect(first.revenue.posted).toBe(true);
+
+    const entries = await ctx.store.journalEntries.listByOrg(SEED_ORG_ID, (e) => e.reference === "STRIPE-cs_pay_1");
+    expect(entries).toHaveLength(1);
+    const entry = entries[0]!;
+    expect(entry.source).toBe("billing");
+    expect(entry.lines.find((l) => l.accountCode === "1000")?.debit).toBe(499);
+    expect(entry.lines.find((l) => l.accountCode === "4000")?.credit).toBe(499);
+
+    // Stripe retries webhooks — a retry must not double-book revenue.
+    const second = await (await send()).json();
+    expect(second.revenue.posted).toBe(false);
+    expect(second.revenue.reason).toContain("Already recorded");
+    expect(await ctx.store.journalEntries.listByOrg(SEED_ORG_ID, (e) => e.reference === "STRIPE-cs_pay_1")).toHaveLength(1);
+
+    const b = await (await app.request("/v1/billing")).json();
+    expect(b.recordedRevenue.monthUsd).toBe(499);
+    expect(b.recordedRevenue.entries).toBe(1);
+    expect(b.recordedRevenue.note).toContain("never an estimate");
+  });
 });

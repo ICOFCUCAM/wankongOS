@@ -41,6 +41,19 @@ export default async function BillingPage() {
         </div>
         <p className="mt-3 text-xs text-muted">{b.invoicePreview.note}</p>
       </div>
+      <div className="card">
+        <h2 className="mb-1 font-medium">Recorded revenue</h2>
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-semibold">
+            ${b.recordedRevenue.monthUsd.toLocaleString()}
+          </span>
+          <span className="text-xs text-muted">
+            this month · {b.recordedRevenue.entries}{" "}
+            {b.recordedRevenue.entries === 1 ? "ledger entry" : "ledger entries"}
+          </span>
+        </div>
+        <p className="mt-2 text-xs text-muted">{b.recordedRevenue.note}</p>
+      </div>
     </div>
   );
 }

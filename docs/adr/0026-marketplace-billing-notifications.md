@@ -27,3 +27,23 @@ secrets redacted from all reads; retention runs exempt legal records; the
 full-org export doubles as backup and DSAR; drift detection names, numbers,
 and notifies declines without auto-remediation; and documents leave the
 system as real PDFs from a dependency-free writer.
+
+## Addendum: the billing↔accounting bridge and honest health history
+
+**Real revenue.** A Stripe-confirmed payment (signature-verified webhook,
+`checkout.session.completed`) now posts a balanced journal entry —
+Dr 1000 Cash & bank / Cr 4000 Revenue, `source: billing` — the first
+revenue in the books that is not an estimate. Idempotent on the checkout
+session reference so webhook retries never double-book, and a closed
+period is respected (the payment is audited and held for manual posting,
+never written behind a close). `GET /v1/billing` reports the month's
+recorded revenue alongside the estimates, clearly labelled as ledger
+fact vs estimate.
+
+**Honest trend.** The worker tick records throttled `HealthSnapshot`
+rows (score + disclosed formula inputs, pruned after 90 days). The
+dashboard trend compares the live score against the oldest stored
+snapshot within 24 hours that is at least an hour old — two stored
+measurements, nothing inferred. No history → no arrow, by design: the
+console never invents a direction (same rule that kept fake "+2%"
+trends out of the health hero).

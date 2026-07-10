@@ -148,6 +148,7 @@ export class PgStore extends BaseStore {
   readonly notifications!: Repository<import("@wankong/core").Notification>;
   readonly brandKits!: Repository<import("@wankong/core").BrandKit>;
   readonly employeeVersions!: Repository<import("@wankong/core").EmployeeVersion>;
+  readonly healthSnapshots!: Repository<import("@wankong/core").HealthSnapshot>;
 
   constructor(
     readonly client: SqlClient,

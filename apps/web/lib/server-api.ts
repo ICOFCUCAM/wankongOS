@@ -140,6 +140,7 @@ export const api = {
       availablePlans: import("@wankong/core").Plan[];
       usage: { employees: number; employeeLimit: number; monthTokens: number; estAiCostUsd: number };
       invoicePreview: { base: number; note: string };
+      recordedRevenue: { monthUsd: number; entries: number; note: string };
     }>("/v1/billing"),
   studios: () =>
     call<{ data: (import("@wankong/core").StudioDef & { active: boolean; connectedVia: string[] })[] }>(
