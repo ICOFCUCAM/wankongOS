@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   ACCOUNTING_SAFEGUARD,
   cashFlow,
+  reconcile,
   detectAnomalies,
   engineFor,
   JournalEntry,
@@ -301,5 +302,97 @@ accountingRoutes.get("/accounting/consolidated", async (c) => {
         ? `Entities report in ${currencies.join(", ")}. FX translation and intercompany eliminations are NOT applied — totals are per currency and must not be summed across currencies.`
         : "Single-currency group; intercompany eliminations are not yet applied.",
     safeguard: ACCOUNTING_SAFEGUARD,
+  });
+});
+
+const ImportBank = z.object({
+  companyId: z.string().max(80).optional(),
+  /** CSV with header date,description,amount[,reference] — or structured rows. */
+  csv: z.string().max(200_000).optional(),
+  transactions: z.array(z.object({ date: z.string(), description: z.string().optional(), amount: z.number(), reference: z.string().optional() })).optional(),
+});
+
+/** Import a bank feed (CSV or JSON rows). Lines become records, never entries. */
+accountingRoutes.post("/accounting/bank/import", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, ImportBank);
+  const rows = input.transactions ?? [];
+  if (input.csv) {
+    const [head, ...body] = input.csv.trim().split(/\r?\n/);
+    const cols = (head ?? "").split(",").map((h) => h.trim().toLowerCase());
+    for (const line of body) {
+      const v = line.split(",");
+      const get = (k: string) => v[cols.indexOf(k)]?.trim();
+      const amount = Number(get("amount"));
+      if (!get("date") || Number.isNaN(amount)) continue;
+      rows.push({ date: get("date")!, description: get("description") ?? "", amount, reference: get("reference") || undefined });
+    }
+  }
+  if (rows.length === 0) return c.json({ error: "No transactions found in the import" }, 400);
+  const created = [];
+  for (const r of rows) {
+    created.push(await ctx.store.bankTransactions.create({
+      organizationId: ctx.organizationId,
+      companyId: input.companyId,
+      date: r.date,
+      description: r.description ?? "",
+      amount: r.amount,
+      reference: r.reference,
+      status: "unmatched",
+    }));
+  }
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.bank.import", targetType: "bankFeed", metadata: { imported: created.length } });
+  return c.json({ imported: created.length, data: created }, 201);
+});
+
+/**
+ * Auto-reconciliation: deterministic matching (exact reference, or exact
+ * cash movement within 5 days). Matches are persisted; what remains comes
+ * back with DRAFTED journal-entry suggestions — never auto-posted.
+ */
+accountingRoutes.post("/accounting/bank/reconcile", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const [txs, entries] = await Promise.all([
+    ctx.store.bankTransactions.list((t) => t.organizationId === ctx.organizationId),
+    ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId),
+  ]);
+  const result = reconcile(txs, entries);
+  for (const m of result.matches) {
+    await ctx.store.bankTransactions.update(m.transactionId, { status: "matched", matchedEntryId: m.entryId });
+  }
+  const suggestions = result.unmatched.map((tx) => ({
+    forTransactionId: tx.id,
+    draft: {
+      date: tx.date.slice(0, 10),
+      source: "bank" as const,
+      reference: tx.reference ?? `BANK-${tx.id.slice(-6)}`,
+      memo: `Bank: ${tx.description || "imported transaction"}`,
+      companyId: tx.companyId,
+      lines:
+        tx.amount >= 0
+          ? [{ accountCode: "1000", debit: tx.amount }, { accountCode: "4000", credit: tx.amount }]
+          : [{ accountCode: "6000", debit: -tx.amount }, { accountCode: "1000", credit: -tx.amount }],
+    },
+  }));
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.bank.reconcile", targetType: "bankFeed", metadata: { matched: result.matches.length, unmatched: result.unmatched.length } });
+  return c.json({
+    matched: result.matches,
+    unmatched: result.unmatched.length,
+    suggestions,
+    note: "Suggestions are drafts for review — post them via POST /v1/accounting/entries after checking the categorization.",
+  });
+});
+
+/** Reconciliation status for the console. */
+accountingRoutes.get("/accounting/bank", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const txs = await ctx.store.bankTransactions.list((t) => t.organizationId === ctx.organizationId);
+  return c.json({
+    total: txs.length,
+    matched: txs.filter((t) => t.status === "matched").length,
+    unmatched: txs.filter((t) => t.status === "unmatched").length,
   });
 });

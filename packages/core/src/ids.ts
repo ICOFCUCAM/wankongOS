@@ -33,6 +33,7 @@ export const ID_PREFIXES = {
   journalEntry: "jnl",
   accountingPeriod: "prd",
   company: "cmp",
+  bankTransaction: "btx",
   brand: "brd",
   employeeVersion: "empv",
 } as const;

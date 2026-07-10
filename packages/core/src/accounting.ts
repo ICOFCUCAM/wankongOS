@@ -174,6 +174,65 @@ export function cashFlow(entries: JournalEntry[]): { inflow: number; outflow: nu
   return { inflow: r(inflow), outflow: r(outflow), net: r(inflow - outflow) };
 }
 
+/** An imported bank-statement line. Reconciliation links it to a journal entry. */
+export const BankTransaction = z.object({
+  id: Id,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+  organizationId: Id,
+  companyId: Id.optional(),
+  date: z.string().min(8).max(30),
+  description: z.string().max(300).default(""),
+  /** Signed amount: positive = money in, negative = money out. */
+  amount: z.number(),
+  reference: z.string().max(120).optional(),
+  status: z.enum(["unmatched", "matched"]).default("unmatched"),
+  matchedEntryId: Id.optional(),
+});
+export type BankTransaction = z.infer<typeof BankTransaction>;
+
+/** Net cash movement of one journal entry (its 10xx lines). */
+export function entryCashMovement(e: JournalEntry): number {
+  return Math.round(e.lines.filter((l) => l.accountCode.startsWith("10")).reduce((n, l) => n + l.debit - l.credit, 0) * 100) / 100;
+}
+
+/**
+ * Deterministic reconciliation: a bank line matches a journal entry when the
+ * reference matches exactly, or when the cash movement equals the amount and
+ * the dates are within 5 days. One entry matches at most one line.
+ */
+export function reconcile(
+  transactions: BankTransaction[],
+  entries: JournalEntry[],
+): { matches: { transactionId: string; entryId: string; rule: "reference" | "amount_date" }[]; unmatched: BankTransaction[] } {
+  const used = new Set<string>();
+  const matches: { transactionId: string; entryId: string; rule: "reference" | "amount_date" }[] = [];
+  const unmatched: BankTransaction[] = [];
+  for (const tx of transactions) {
+    if (tx.status === "matched") continue;
+    let hit = tx.reference
+      ? entries.find((e) => !used.has(e.id) && e.reference && e.reference === tx.reference)
+      : undefined;
+    let rule: "reference" | "amount_date" = "reference";
+    if (!hit) {
+      hit = entries.find(
+        (e) =>
+          !used.has(e.id) &&
+          entryCashMovement(e) === tx.amount &&
+          Math.abs(Date.parse(e.date) - Date.parse(tx.date)) <= 5 * 86400_000,
+      );
+      rule = "amount_date";
+    }
+    if (hit) {
+      used.add(hit.id);
+      matches.push({ transactionId: tx.id, entryId: hit.id, rule });
+    } else {
+      unmatched.push(tx);
+    }
+  }
+  return { matches, unmatched };
+}
+
 export interface AnomalyFinding {
   severity: "warning" | "recommendation";
   code: string;

@@ -186,3 +186,35 @@ describe("multi-company consolidation", () => {
     expect(res.status).toBe(422);
   });
 });
+
+describe("bank feed import and auto-reconciliation", () => {
+  it("imports CSV, matches by reference and by amount+date, drafts the rest", async () => {
+    await app.request("/v1/accounting/entries", json(INVOICE)); // ref INV-100, no cash line
+    await app.request("/v1/accounting/entries", json({
+      date: "2026-07-03", source: "bank", reference: "PAY-7",
+      lines: [{ accountCode: "1000", debit: 500 }, { accountCode: "4000", credit: 500 }],
+    }));
+
+    const imp = await app.request("/v1/accounting/bank/import", json({
+      csv: "date,description,amount,reference\n2026-07-01,Customer payment,125,INV-100\n2026-07-04,Card settlement,500,\n2026-07-05,Office rent,-900,",
+    }));
+    expect(imp.status).toBe(201);
+    expect((await imp.json()).imported).toBe(3);
+
+    const rec = await (await app.request("/v1/accounting/bank/reconcile", json({}))).json();
+    expect(rec.matched).toHaveLength(2);
+    expect(rec.matched.map((m: { rule: string }) => m.rule).sort()).toEqual(["amount_date", "reference"]);
+    expect(rec.unmatched).toBe(1);
+    // The rent line is drafted as an expense entry — for review, not posted.
+    expect(rec.suggestions).toHaveLength(1);
+    expect(rec.suggestions[0].draft.lines[0]).toEqual({ accountCode: "6000", debit: 900 });
+    expect(rec.note).toContain("review");
+
+    const entriesBefore = (await (await app.request("/v1/accounting/entries")).json()).data.length;
+    expect(entriesBefore).toBe(2); // nothing auto-posted
+
+    const status = await (await app.request("/v1/accounting/bank")).json();
+    expect(status.matched).toBe(2);
+    expect(status.unmatched).toBe(1);
+  });
+});

@@ -39,6 +39,8 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.period.reopen": "reopened an accounting period (with reason)",
   "accounting.department.hire": "staffed the accounting department",
   "accounting.company.create": "registered a new group company",
+  "accounting.bank.import": "imported a bank feed",
+  "accounting.bank.reconcile": "ran bank reconciliation",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */
