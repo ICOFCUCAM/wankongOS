@@ -46,6 +46,15 @@ export function Sidebar({ orgName }: { orgName: string }) {
         })}
       </nav>
 
+      <div className="px-3 pt-3">
+        <Link
+          href="/employees/new"
+          className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted transition hover:border-accent hover:text-accent-soft"
+        >
+          + Hire AI employee
+        </Link>
+      </div>
+
       <div className="mt-auto border-t border-border px-5 py-4">
         <div className="text-xs text-muted">Organization</div>
         <div className="truncate text-sm font-medium">{orgName}</div>

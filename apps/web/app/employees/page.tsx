@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Department } from "@wankong/core";
 import { api, type EmployeeSummary } from "@/lib/server-api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
@@ -61,13 +62,16 @@ export default async function EmployeesPage() {
 
 function Header({ count, working }: { count: number; working: number }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-3">
       <div>
         <h1 className="text-2xl font-semibold">AI Employees</h1>
         <p className="text-sm text-muted">
           {count} digital workers{working > 0 ? ` — ${working} working right now` : ""}.
         </p>
       </div>
+      <Link href="/employees/new" className="btn shrink-0">
+        + Hire AI employee
+      </Link>
     </div>
   );
 }
