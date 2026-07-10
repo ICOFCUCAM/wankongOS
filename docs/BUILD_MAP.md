@@ -119,7 +119,8 @@ P&L / balance sheet, anomaly monitoring, 13-role department hire,
 VAT-return + trial-balance filing documents with the review safeguard,
 /accounting console page. ✅ Periods (controlled close/reopen), audit trail, cash flow, one-click
 audit package. ⬜ More jurisdictions, bank-feed import, payroll engines,
-e-filing connectors, multi-company consolidation.
+e-filing connectors. ✅ Multi-company ledgers + per-currency consolidation
+(FX translation and eliminations explicitly not applied yet).
 ⬜ Real revenue (M6 billing), event push (websockets),
 human-utilization split.
 

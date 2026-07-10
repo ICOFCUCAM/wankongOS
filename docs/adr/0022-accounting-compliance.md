@@ -58,5 +58,7 @@ Feedback-driven additions: accounting periods with controlled close/reopen
 (postings into closed periods are rejected; reopening requires a recorded
 reason and is audited), a department audit trail endpoint, derived cash
 flow, and a one-click audit package (GL + trial balance + adjustments +
-period status). Multi-company consolidation is the roadmap's next
-structural step and is deliberately NOT claimed yet.
+period status). Multi-company is now in: each legal
+entity holds its own ledger under its own engine, and consolidation reports
+per-entity and per-currency results while explicitly declining to apply FX
+translation or intercompany eliminations until those are real.

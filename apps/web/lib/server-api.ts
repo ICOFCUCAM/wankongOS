@@ -110,6 +110,16 @@ export const api = {
     call<{ data: { createdAt: string; action: string; metadata: Record<string, unknown> }[] }>(
       "/v1/accounting/audit-trail",
     ).then((r) => r.data),
+  accountingCompanies: () =>
+    call<{ data: import("@wankong/core").Company[] }>("/v1/accounting/companies").then(
+      (r) => r.data,
+    ),
+  accountingConsolidated: () =>
+    call<{
+      perEntity: { companyId: string | null; name: string; currency: string; jurisdiction: string; entries: number; revenue: number; netIncome: number; assets: number }[];
+      byCurrency: Record<string, { revenue: number; netIncome: number; assets: number; entities: number }>;
+      note: string;
+    }>("/v1/accounting/consolidated"),
   accountingAnomalies: () =>
     call<{ data: import("@wankong/core").AnomalyFinding[] }>("/v1/accounting/anomalies").then(
       (r) => r.data,

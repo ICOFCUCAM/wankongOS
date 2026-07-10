@@ -13,14 +13,16 @@ export default async function AccountingPage() {
   let periods;
   let entries;
   let trail;
+  let consolidated;
   try {
-    [engine, statements, anomalies, periods, entries, trail] = await Promise.all([
+    [engine, statements, anomalies, periods, entries, trail, consolidated] = await Promise.all([
       api.accountingEngine(),
       api.accountingStatements(),
       api.accountingAnomalies(),
       api.accountingPeriods(),
       api.accountingEntries(),
       api.accountingAuditTrail(),
+      api.accountingConsolidated(),
     ]);
   } catch {
     return <ApiDownNotice />;
@@ -131,6 +133,26 @@ export default async function AccountingPage() {
           </table>
         )}
       </div>
+
+      {consolidated.perEntity.length > 1 && (
+        <div className="card">
+          <h2 className="mb-1 font-medium">Group structure</h2>
+          <p className="mb-3 text-xs text-muted">{consolidated.note}</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {consolidated.perEntity.map((u) => (
+              <div key={u.companyId ?? "primary"} className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="truncate font-medium">{u.name}</span>
+                  <span className="pill text-[10px] text-muted">{u.jurisdiction}</span>
+                </div>
+                <div className="mt-1 font-mono text-xs text-muted">
+                  rev {u.revenue.toFixed(2)} {u.currency} · net {u.netIncome.toFixed(2)} · {u.entries} entries
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card overflow-x-auto">
