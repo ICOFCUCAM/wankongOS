@@ -21,6 +21,7 @@ const NAV = [
   { href: "/billing", label: "Billing", icon: "◍" },
   { href: "/analytics", label: "Analytics", icon: "◔" },
   { href: "/intelligence", label: "Intelligence", icon: "◎" },
+  { href: "/dna", label: "Company DNA", icon: "❖" },
 ];
 
 export function Sidebar({ orgName }: { orgName: string }) {
