@@ -46,7 +46,7 @@ describe("notifications: decisions reach the humans who can act", () => {
 
   it("read-all clears the inbox and cross-user access 404s", async () => {
     const other = await ctx.store.users.create({
-      organizationId: SEED_ORG_ID, email: "cfo@acme.dev", name: "CFO", role: "admin", status: "active",
+      organizationId: SEED_ORG_ID, email: "cfo@acme.dev", name: "CFO", role: "admin", status: "active", tokenVersion: 0,
     });
     const { notify } = await import("../src/notify.js");
     await notify(ctx.store, SEED_ORG_ID, { kind: "test", title: "Ping" });

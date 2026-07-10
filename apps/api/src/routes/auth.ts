@@ -44,6 +44,7 @@ authRoutes.post("/auth/register", async (c) => {
     role: "owner",
     status: "active",
     passwordHash: hashPassword(input.password),
+    tokenVersion: 0,
   });
   await ctx.store.audit({
     organizationId: org.id,
