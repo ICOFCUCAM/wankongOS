@@ -61,3 +61,37 @@ describe("notifications: decisions reach the humans who can act", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("Slack channel delivery", () => {
+  it("mirrors notifications to a connected Slack webhook, and stays quiet without one", async () => {
+    const { deliverSlack, notify } = await import("../src/notify.js");
+    const calls: { url: string; body: string }[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(url), body: String(init?.body) });
+      return new Response("ok", { status: 200 });
+    }) as typeof fetch;
+    try {
+      // No integration yet → honest no-op.
+      const off = await deliverSlack(ctx.store, SEED_ORG_ID, "hello");
+      expect(off.delivered).toBe(false);
+      expect(calls).toHaveLength(0);
+
+      await ctx.store.integrations.create({
+        organizationId: SEED_ORG_ID,
+        kind: "slack",
+        name: "Ops channel",
+        status: "connected",
+        config: { webhookUrl: "https://hooks.slack.example/T123/B456" },
+      });
+      const on = await deliverSlack(ctx.store, SEED_ORG_ID, "hello");
+      expect(on.delivered).toBe(true);
+      expect(calls[0]!.url).toContain("hooks.slack.example");
+
+      await notify(ctx.store, SEED_ORG_ID, { kind: "test", title: "Approval waiting" });
+      expect(calls.some((c) => c.body.includes("Approval waiting"))).toBe(true);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
