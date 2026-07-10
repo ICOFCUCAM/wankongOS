@@ -199,3 +199,22 @@ describe("engineering studio files real GitHub issues", () => {
     }
   });
 });
+
+describe("real PDF output", () => {
+  it("renders a markdown asset to a valid, downloadable PDF", async () => {
+    const inv = await (await app.request("/v1/studios/document/generate", json({
+      kind: "invoice", title: "INV-PDF", data: { billTo: "BigCo", items: [{ description: "Consulting", qty: 1, unitPrice: 250 }] },
+    }))).json();
+    const rendered = await app.request(`/v1/assets/${inv.id}/render-pdf`, json({}));
+    expect(rendered.status).toBe(201);
+    const { id, bytes } = await rendered.json();
+    expect(bytes).toBeGreaterThan(500);
+
+    const dl = await app.request(`/v1/assets/${id}/download`);
+    expect(dl.headers.get("content-type")).toBe("application/pdf");
+    const buf = Buffer.from(await dl.arrayBuffer());
+    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(buf.toString("binary")).toContain("%%EOF");
+    expect(buf.toString("binary")).toContain("Consulting");
+  });
+});

@@ -263,3 +263,42 @@ studioRoutes.post("/studios/engineering/issue", async (c) => {
   });
   return c.json({ asset, issue: { number: issue.number, url: issue.html_url } }, 201);
 });
+
+/** Render any text/markdown asset to a real PDF asset (builtin writer). */
+studioRoutes.post("/assets/:id/render-pdf", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const source = await findScoped(c, (id) => ctx.store.assets.get(id), c.req.param("id"));
+  if (!source.mimeType.startsWith("text/")) {
+    return c.json({ error: `Only text assets render to PDF (got ${source.mimeType}).` }, 422);
+  }
+  const { buildSimplePdf, markdownToLines } = await import("../studios/pdf.js");
+  const pdf = buildSimplePdf(source.title, markdownToLines(source.content));
+  const asset = await ctx.store.assets.create({
+    organizationId: ctx.organizationId,
+    studioId: "document",
+    kind: "pdf",
+    title: `${source.title}.pdf`,
+    mimeType: "application/pdf",
+    content: pdf.toString("base64"),
+    version: 1,
+    tags: [...source.tags, "pdf"],
+    createdBy: { kind: "user", id: c.get("actor").user.id },
+  });
+  return c.json({ id: asset.id, title: asset.title, bytes: pdf.length }, 201);
+});
+
+/** Download an asset as its real file (decodes base64 for binary types). */
+studioRoutes.get("/assets/:id/download", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const asset = await findScoped(c, (id) => ctx.store.assets.get(id), c.req.param("id"));
+  const binary = asset.mimeType === "application/pdf";
+  const body = binary ? Buffer.from(asset.content, "base64") : asset.content;
+  return new Response(body, {
+    headers: {
+      "content-type": asset.mimeType,
+      "content-disposition": `attachment; filename="${asset.title.replace(/[^\w.-]+/g, "_")}"`,
+    },
+  });
+});
