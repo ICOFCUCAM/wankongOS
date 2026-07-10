@@ -53,6 +53,84 @@ function PersonalityRow({ personality }: { personality: Employee["personality"] 
   );
 }
 
+/**
+ * The intelligence strip: evidence that this is a reasoning agent, not a
+ * database row. Confidence is the average eval pass rate; memory and
+ * knowledge state come straight from the stores.
+ */
+function IntelligencePanel({
+  employee,
+  evals,
+  memories,
+}: {
+  employee: Employee;
+  evals: Awaited<ReturnType<typeof api.employeeEvals>>;
+  memories: Awaited<ReturnType<typeof api.employeeMemories>>;
+}) {
+  const confidence =
+    evals.reports.length === 0
+      ? null
+      : Math.round(
+          (evals.reports.reduce((n, r) => n + r.passedTasks / Math.max(1, r.totalTasks), 0) /
+            evals.reports.length) *
+            100,
+        );
+  const lastMemory = memories[0]?.createdAt;
+  const cells = [
+    {
+      label: "Confidence",
+      value: confidence === null ? "unproven" : `${confidence}%`,
+      sub: confidence === null ? "no eval runs yet" : `${evals.reports.length} eval run(s)`,
+      tone:
+        confidence === null
+          ? "text-muted"
+          : confidence >= 80
+            ? "text-success"
+            : confidence >= 50
+              ? "text-warn"
+              : "text-danger",
+    },
+    {
+      label: "Reasoning",
+      value: employee.personality.reasoningDepth === "advanced" ? "Advanced" : "Standard",
+      sub: "feeds the system prompt",
+    },
+    {
+      label: "Autonomy",
+      value: employee.personality.autonomy,
+      sub: `${employee.approvalRules.length} approval rule(s)`,
+    },
+    {
+      label: "Memory",
+      value: memories.length === 0 ? "empty" : `${memories.length} entries`,
+      sub: lastMemory ? `last: ${new Date(lastMemory).toLocaleDateString()}` : "forms as they work",
+    },
+    {
+      label: "Knowledge",
+      value:
+        employee.knowledgeBaseIds.length === 0
+          ? "none"
+          : `${employee.knowledgeBaseIds.length} base(s)`,
+      sub: employee.knowledgeBaseIds.length === 0 ? "no bases attached" : "searchable in chat",
+    },
+  ];
+  return (
+    <div className="card !p-0">
+      <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
+        {cells.map((c) => (
+          <div key={c.label} className="px-4 py-3">
+            <div className="text-[11px] uppercase tracking-wide text-muted">{c.label}</div>
+            <div className={`mt-1 text-lg font-semibold capitalize leading-tight ${c.tone ?? ""}`}>
+              {c.value}
+            </div>
+            <div className="text-[11px] text-muted">{c.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default async function EmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let employee: Employee;
@@ -107,6 +185,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
         <div className="space-y-6">
+          <IntelligencePanel employee={employee} evals={evals} memories={memories} />
+
           <div className="card grid grid-cols-1 gap-6 sm:grid-cols-2">
             <List title="Responsibilities" items={employee.responsibilities} />
             <List title="Objectives" items={employee.objectives} />
