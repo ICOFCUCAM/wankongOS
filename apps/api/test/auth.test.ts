@@ -72,3 +72,25 @@ describe("real identity and tenant isolation (ADR-0025)", () => {
     expect(forged.status).toBe(401);
   });
 });
+
+describe("onboarding: the starter pack", () => {
+  it("a new org can sign up already staffed — three probation hires with eval gates", async () => {
+    const reg = await (await app.request("/v1/auth/register", json({
+      organizationName: "Fjord Studio", name: "Kari", email: "kari@fjord.no",
+      password: "long-enough-pass", starterPack: true,
+    }))).json();
+    expect(reg.starterHires).toBe(3); // exactly the trial plan's limit
+
+    const employees = await (await app.request("/v1/employees", auth(reg.token))).json();
+    expect(employees.data).toHaveLength(3);
+    expect(employees.data.every((e: { status: string }) => e.status === "training")).toBe(true);
+
+    // The fourth hire hits the trial limit — plan enforcement holds at signup too.
+    const overflow = await app.request("/v1/marketplace/hire", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${reg.token}` },
+      body: JSON.stringify({ templateId: "sdr", name: "Fourth" }),
+    });
+    expect(overflow.status).toBe(402);
+  });
+});

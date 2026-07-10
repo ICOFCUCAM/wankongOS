@@ -9,6 +9,8 @@ const Register = z.object({
   name: z.string().min(1).max(120),
   email: z.string().email(),
   password: z.string().min(10).max(200),
+  /** Hire a starter team (marketplace templates, on probation) during signup. */
+  starterPack: z.boolean().optional(),
 });
 const Login = z.object({ email: z.string().email(), password: z.string().min(1).max(200) });
 
@@ -51,8 +53,33 @@ authRoutes.post("/auth/register", async (c) => {
     targetId: org.id,
     metadata: { slug },
   });
+  let starterHires = 0;
+  if (input.starterPack) {
+    const { templateById, Permission } = await import("@wankong/core");
+    const dept = await ctx.store.departments.create({
+      organizationId: org.id, kind: "operations", name: "Core Team", slug: "core-team",
+      description: "Starter roles hired at signup — on probation until they pass evals.",
+    });
+    for (const id of ["exec-assistant", "support-agent", "content-writer"]) {
+      const t = templateById(id)!;
+      const employee = await ctx.store.employees.create({
+        organizationId: org.id, departmentId: dept.id, name: t.title, title: t.title,
+        status: "training", description: t.description, systemPrompt: t.systemPrompt,
+        responsibilities: t.responsibilities, toolIds: t.toolIds,
+        permissions: t.permissions.map((p) => Permission.parse(p)),
+        personality: t.personality, objectives: [], kpis: [], temperature: 0.3,
+        knowledgeBaseIds: [], escalationRules: [], approvalRules: [],
+        availability: { timezone: "UTC", alwaysOn: true },
+      });
+      await ctx.store.evalSuites.create({
+        organizationId: org.id, employeeId: employee.id,
+        name: `${t.title} starter suite`, tasks: t.starterEvals,
+      });
+      starterHires += 1;
+    }
+  }
   const token = signSession({ userId: user.id, organizationId: org.id, exp: Math.floor(Date.now() / 1000) + WEEK });
-  return c.json({ token, organization: org, user: { id: user.id, email: user.email, name: user.name, role: user.role } }, 201);
+  return c.json({ token, organization: org, starterHires, user: { id: user.id, email: user.email, name: user.name, role: user.role } }, 201);
 });
 
 authRoutes.post("/auth/login", async (c) => {
