@@ -120,6 +120,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
       name: "System",
       role: "owner" as const,
       status: "active" as const,
+      tokenVersion: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
