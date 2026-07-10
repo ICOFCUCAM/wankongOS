@@ -10,6 +10,8 @@ const NAV = [
   { href: "/workflows", label: "Workflows", icon: "⧉" },
   { href: "/tasks", label: "Tasks", icon: "☰" },
   { href: "/knowledge", label: "Knowledge", icon: "◱" },
+  { href: "/studios", label: "Studios", icon: "▣" },
+  { href: "/assets", label: "Assets", icon: "◧" },
   { href: "/analytics", label: "Analytics", icon: "◔" },
 ];
 

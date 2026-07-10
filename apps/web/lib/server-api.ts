@@ -82,6 +82,15 @@ export const api = {
   analytics: () => call<AnalyticsData>("/v1/analytics"),
   workforceHealth: () => call<WorkforceHealth>("/v1/workforce/health"),
   briefing: () => call<Briefing>("/v1/briefing"),
+  studios: () =>
+    call<{ data: (import("@wankong/core").StudioDef & { active: boolean; connectedVia: string[] })[] }>(
+      "/v1/studios",
+    ).then((r) => r.data),
+  assets: () =>
+    call<{ data: (Omit<import("@wankong/core").Asset, "content"> & { bytes: number })[] }>(
+      "/v1/assets",
+    ).then((r) => r.data),
+  asset: (id: string) => call<import("@wankong/core").Asset>(`/v1/assets/${id}`),
   tools: () =>
     call<{ data: { id: string; description: string; requires: string | null }[] }>(
       "/v1/tools",
