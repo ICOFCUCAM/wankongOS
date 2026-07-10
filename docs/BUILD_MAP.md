@@ -93,10 +93,14 @@ OAuth flows, inbound webhooks.
 ### Dashboard ✅
 Live CEO dashboard: workforce, tasks pipeline, approvals, goals, AI utilization,
 workflow runs, estimated hours saved (transparent formula). ✅ Living console
-(ADR-0018): attention banner, workforce-right-now row, company pulse feed
-(`/v1/pulse` + `/pulse` page), per-employee live cards with derived status /
-progress / cost / confidence, department strip + containers, live org chart,
-hire flow with tool catalog, clone endpoint, analytics page, 15s auto-refresh.
+(ADR-0018): company pulse feed (`/v1/pulse` + `/pulse` page), live cards,
+hire flow with tool catalog, clone endpoint, analytics page, auto-refresh.
+✅ Command center (ADR-0019): eight-state presence model (incl. thinking /
+needs-approval), `/v1/workforce/health` with a disclosed company-health
+formula, department containers with healthy/busy/attention badges, cards as
+mini dashboards with hover actions + offboarding, company-pulse side panel
+with live queue, goals panel, org chart on `/org`, shared presence
+derivation, animated (record-driven) progress and feed.
 ⬜ Revenue, event push (websockets), human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
