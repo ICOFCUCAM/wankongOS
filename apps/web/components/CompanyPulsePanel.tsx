@@ -7,6 +7,15 @@ import { activityStyle } from "@/lib/activity";
  * open + completed-today tasks — and the live queue of employee presence
  * states. Everything from /v1/workforce/health.
  */
+function Ledger({ label, value, tone }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className="px-2 py-1.5 text-center">
+      <div className={`text-sm font-semibold leading-tight ${tone ?? ""}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wide text-muted">{label}</div>
+    </div>
+  );
+}
+
 export function CompanyPulsePanel({ health }: { health: WorkforceHealth }) {
   const depts = health.departmentsDetail;
   const magnitude = (d: (typeof depts)[number]) => d.openTasks + d.completedToday;
@@ -25,6 +34,27 @@ export function CompanyPulsePanel({ health }: { health: WorkforceHealth }) {
   return (
     <div className="card space-y-5">
       <div>
+        <h2 className="mb-3 font-medium">Today</h2>
+        <div className="grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-surface-2/60">
+          <Ledger label="Done" value={health.tasksToday.completed} tone="text-success" />
+          <Ledger label="Running" value={health.tasksToday.running} />
+          <Ledger label="Queued" value={health.tasksToday.queued} />
+          <Ledger
+            label="Blocked"
+            value={health.tasksToday.blocked}
+            tone={health.tasksToday.blocked > 0 ? "text-danger" : undefined}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted" title={health.valueDelivered.formula}>
+          Est. value delivered today:{" "}
+          <span className="font-mono text-text/90">
+            ${health.valueDelivered.estUsd.toLocaleString()}
+          </span>{" "}
+          <span className="text-muted/70">(estimate — hover for formula)</span>
+        </p>
+      </div>
+
+      <div className="border-t border-border pt-4">
         <h2 className="mb-3 font-medium">Company pulse</h2>
         <div className="space-y-2.5">
           {depts.map((d) => (
