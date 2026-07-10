@@ -48,6 +48,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.invoice.ingest": "ingested an invoice into the books",
   "recruiting.interview.schedule": "scheduled a candidate interview",
   "recruiting.interview.complete": "completed an interview and filed the report",
+  "autonomy.task.complete": "autonomously completed an assigned task",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "../context.js";
 import { authorize } from "../http.js";
 import { runScheduledWorkflows } from "../scheduler.js";
+import { runWorkCycle } from "../autonomy.js";
 
 export const workerRoutes = new Hono<Env>();
 
@@ -14,5 +15,6 @@ workerRoutes.post("/worker/tick", async (c) => {
   authorize(c, "workflow:run");
   const ctx = c.get("ctx");
   const result = await runScheduledWorkflows(ctx);
-  return c.json(result);
+  const work = await runWorkCycle(ctx);
+  return c.json({ ...result, work });
 });
