@@ -372,6 +372,19 @@ export const Webhook = z.object({
 });
 export type Webhook = z.infer<typeof Webhook>;
 
+export const Notification = z.object({
+  ...auditFields,
+  organizationId: Id,
+  /** Recipient user. */
+  userId: Id,
+  kind: z.string().min(1).max(60),
+  title: z.string().min(1).max(200),
+  body: z.string().max(2000).default(""),
+  link: z.string().max(300).optional(),
+  read: z.boolean().default(false),
+});
+export type Notification = z.infer<typeof Notification>;
+
 export const AuditEvent = z.object({
   ...auditFields,
   organizationId: Id,

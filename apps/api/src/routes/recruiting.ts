@@ -9,6 +9,7 @@ import {
 } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
+import { notify } from "../notify.js";
 
 /** The interview stack: what runs today vs. what a connector activates. */
 const STACK = [
@@ -130,6 +131,12 @@ recruitingRoutes.post("/recruiting/interviews/:id/answer", async (c) => {
     summary: `Hiring decision for ${iv.candidateName} (${iv.roleTitle}): AI recommends "${report.recommendation}" — review the evidence-linked report before deciding.`,
     requiredPermission: "task:approve",
     status: "pending",
+  });
+  await notify(ctx.store, ctx.organizationId, {
+    kind: "approval.pending",
+    title: `Hiring decision needed: ${iv.candidateName} (${iv.roleTitle})`,
+    body: `AI recommends "${report.recommendation}" — review the evidence-linked report.`,
+    link: "/tasks",
   });
   const updated = await ctx.store.interviews.update(iv.id, {
     status: "completed",

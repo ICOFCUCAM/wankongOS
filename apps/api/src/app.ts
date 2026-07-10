@@ -35,6 +35,7 @@ import { studioRoutes } from "./routes/studios.js";
 import { accountingRoutes } from "./routes/accounting.js";
 import { recruitingRoutes } from "./routes/recruiting.js";
 import { authRoutes } from "./routes/auth.js";
+import { notificationRoutes } from "./routes/notifications.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
@@ -153,6 +154,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", studioRoutes);
   v1.route("/", accountingRoutes);
   v1.route("/", recruitingRoutes);
+  v1.route("/", notificationRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

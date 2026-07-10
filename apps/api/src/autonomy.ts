@@ -3,6 +3,7 @@ import type { AppContext } from "./context.js";
 import { buildGroundedEmployeeContext } from "./employee-context.js";
 import { composeToolRegistry } from "./mcp-tools.js";
 import { todaysTokenUsage } from "./governance.js";
+import { notify } from "./notify.js";
 
 export interface WorkCycleResult {
   scanned: number;
@@ -76,6 +77,12 @@ export async function runWorkCycle(
           summary: `${employee.name} requests approval to start “${task.title}” (${task.id}) — autonomy is set to low.`,
           requiredPermission: "task:approve",
           status: "pending",
+        });
+        await notify(ctx.store, ctx.organizationId, {
+          kind: "approval.pending",
+          title: `${employee.name} requests approval to start “${task.title}”`,
+          body: "Autonomy is set to low for this employee — approve or reject in the task board.",
+          link: "/tasks",
         });
         result.approvalsRequested.push({ employeeId: employee.id, taskId: task.id });
       } else {

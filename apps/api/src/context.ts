@@ -111,6 +111,13 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
       };
     },
     createApproval: async ({ summary, requiredPermission, runId, nodeId }) => {
+      const { notify } = await import("./notify.js");
+      void notify(context.store, organizationId, {
+        kind: "approval.pending",
+        title: "A workflow is paused on your approval",
+        body: summary,
+        link: "/workflows",
+      });
       const approval = await context.store.approvals.create({
         organizationId,
         requestedBy: { kind: "employee", id: "workflow" },
