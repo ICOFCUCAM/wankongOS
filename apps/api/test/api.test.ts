@@ -154,6 +154,20 @@ describe("API", () => {
     expect(taskTool.requires).toBe("task:create");
   });
 
+  it("lists an employee's conversations after a chat", async () => {
+    await app.request("/v1/employees/emp_support_manager/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input: "Summarize open tickets." }),
+    });
+    const res = await app.request("/v1/employees/emp_support_manager/conversations");
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.length).toBeGreaterThanOrEqual(1);
+    expect(data[0].messageCount).toBe(2);
+    expect(typeof data[0].lastMessage).toBe("string");
+  });
+
   it("creates and lists tasks", async () => {
     const created = await app.request("/v1/tasks", {
       method: "POST",

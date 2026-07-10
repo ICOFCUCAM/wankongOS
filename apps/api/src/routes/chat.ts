@@ -108,6 +108,31 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
   });
 });
 
+/** An employee's conversations, newest first (Level 8: chats are records too). */
+chatRoutes.get("/employees/:id/conversations", async (c) => {
+  authorize(c, "employee:read");
+  const ctx = c.get("ctx");
+  const employee = await findScoped(c, (id) => ctx.store.employees.get(id), c.req.param("id"));
+  const conversations = await ctx.store.conversations.list(
+    (cv) => cv.organizationId === ctx.organizationId && cv.employeeId === employee.id,
+  );
+  conversations.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const data = await Promise.all(
+    conversations.slice(0, 20).map(async (cv) => {
+      const messages = await ctx.store.conversationMessages(cv.id);
+      const last = messages[messages.length - 1];
+      return {
+        id: cv.id,
+        title: cv.title,
+        updatedAt: cv.updatedAt,
+        messageCount: messages.length,
+        lastMessage: last ? last.content.slice(0, 140) : null,
+      };
+    }),
+  );
+  return c.json({ data });
+});
+
 /** Messages in a conversation. */
 chatRoutes.get("/conversations/:id", async (c) => {
   authorize(c, "employee:read");
