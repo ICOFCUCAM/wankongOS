@@ -6,6 +6,7 @@ import { WorkforceControls } from "@/components/WorkforceControls";
 import { AttentionBanner } from "@/components/AttentionBanner";
 import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
 import { CompanyPulse } from "@/components/CompanyPulse";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import type { PulseItem } from "@/lib/server-api";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh seconds={15} />
       <PageHeader workforce={data.workforce} />
 
       <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />

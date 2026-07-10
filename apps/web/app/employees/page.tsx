@@ -5,6 +5,7 @@ import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { OrgChart } from "@/components/OrgChart";
 import { EmployeeLiveCard } from "@/components/EmployeeLiveCard";
 import { DepartmentStrip } from "@/components/DepartmentStrip";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh seconds={15} />
       <Header count={summaries.length} working={working} />
 
       <DepartmentStrip departments={departments} summaries={summaries} />
