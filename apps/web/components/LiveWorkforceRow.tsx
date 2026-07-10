@@ -34,7 +34,7 @@ export function LiveWorkforceRow({ summaries }: { summaries: EmployeeSummary[] }
               title={`${s.name} — ${style.label}${s.currentTask ? `: ${s.currentTask.title}` : ""}`}
               className="relative transition hover:scale-105"
             >
-              <Avatar name={s.name} size={36} />
+              <Avatar name={s.name} size={36} role={s.title} />
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface ${style.dot} ${style.live ? "live-dot" : ""}`}
               />

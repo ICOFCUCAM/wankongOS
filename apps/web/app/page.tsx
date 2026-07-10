@@ -70,7 +70,7 @@ export default async function DashboardPage() {
           <LiveWorkforceRow summaries={summaries} />
           <DepartmentStatusList health={health} />
         </div>
-        <CompanyPulse items={pulse} showAllLink />
+        <CompanyPulse items={pulse} showAllLink clock />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

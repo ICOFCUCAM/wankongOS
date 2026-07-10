@@ -23,11 +23,36 @@ function colorFor(name: string): string {
   return PALETTE[hash % PALETTE.length]!;
 }
 
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+/** Role glyph from the title — a fast visual cue next to the initials. */
+export function roleEmoji(title: string): string {
+  const t = title.toLowerCase();
+  if (/exec|assistant|chief of staff/.test(t)) return "👩‍💼";
+  if (/sales|sdr|account/.test(t)) return "💼";
+  if (/legal|counsel|compliance/.test(t)) return "⚖️";
+  if (/account|book|financ|payroll|tax|treasur|audit/.test(t)) return "📈";
+  if (/market|content|social|brand|writer/.test(t)) return "🎨";
+  if (/engineer|developer|qa|devops/.test(t)) return "💻";
+  if (/support|success|service/.test(t)) return "🎧";
+  if (/recruit|hr|people|talent/.test(t)) return "🤝";
+  if (/research|analyst|data/.test(t)) return "🔬";
+  if (/opera|procure|inventory|logisti/.test(t)) return "⚙️";
+  return "🤖";
+}
+
+export function Avatar({
+  name,
+  size = 40,
+  role,
+}: {
+  name: string;
+  size?: number;
+  /** Title used to render the role glyph badge (when big enough to read). */
+  role?: string;
+}) {
   const bg = colorFor(name);
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
+      className="relative flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
       style={{
         width: size,
         height: size,
@@ -37,6 +62,14 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
       aria-hidden
     >
       {initials(name)}
+      {role && size >= 36 && (
+        <span
+          className="absolute -left-1 -top-1 select-none"
+          style={{ fontSize: size * 0.4, lineHeight: 1 }}
+        >
+          {roleEmoji(role)}
+        </span>
+      )}
     </div>
   );
 }

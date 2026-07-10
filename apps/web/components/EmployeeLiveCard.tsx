@@ -34,7 +34,7 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
     <div className="group/card card flex flex-col gap-3 !p-4 transition hover:border-accent/60">
       <Link href={`/employees/${summary.employeeId}`} className="group flex items-start gap-3">
         <div className="relative">
-          <Avatar name={summary.name} size={42} />
+          <Avatar name={summary.name} size={42} role={summary.title} />
           <span
             className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-surface ${s.dot} ${s.live ? "live-dot" : ""}`}
             title={s.label}
