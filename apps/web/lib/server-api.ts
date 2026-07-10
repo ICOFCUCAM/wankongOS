@@ -3,6 +3,7 @@ import type { Hono } from "hono";
 import {
   createApp,
   createAppContext,
+  type AnalyticsData,
   type EmployeeSummary,
   type PulseItem,
 } from "@wankong/api";
@@ -75,6 +76,7 @@ export const api = {
   employeeSummaries: () =>
     call<{ data: EmployeeSummary[] }>("/v1/employees/summaries").then((r) => r.data),
   pulse: (limit = 12) => call<{ data: PulseItem[] }>(`/v1/pulse?limit=${limit}`).then((r) => r.data),
+  analytics: () => call<AnalyticsData>("/v1/analytics"),
   employee: (id: string) => call<Employee>(`/v1/employees/${id}`),
   employeeGoals: (id: string) =>
     call<{ data: Goal[] }>(`/v1/employees/${id}/goals`).then((r) => r.data),
@@ -114,4 +116,4 @@ export interface DocumentMeta {
 }
 
 export { EmbeddedApiError as ApiError };
-export type { EmployeeSummary, PulseItem };
+export type { AnalyticsData, EmployeeSummary, PulseItem };

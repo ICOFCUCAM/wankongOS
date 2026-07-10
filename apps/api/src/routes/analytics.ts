@@ -3,6 +3,23 @@ import type { Env } from "../context.js";
 import { authorize } from "../http.js";
 import { avgOf, perEmployeeUsage, round6 } from "../metrics.js";
 
+export interface AnalyticsRow {
+  employeeId: string;
+  name: string;
+  title: string;
+  requests: number;
+  tokensIn: number;
+  tokensOut: number;
+  estCostUsd: number;
+  avgLatencyMs: number | null;
+}
+
+export interface AnalyticsData {
+  note: string;
+  totals: { requests: number; tokensIn: number; tokensOut: number; estCostUsd: number };
+  perEmployee: AnalyticsRow[];
+}
+
 export const analyticsRoutes = new Hono<Env>();
 
 /**
@@ -21,7 +38,7 @@ analyticsRoutes.get("/analytics", async (c) => {
     perEmployeeUsage(ctx.store, orgId),
   ]);
 
-  const rows = employees
+  const rows: AnalyticsRow[] = employees
     .map((e) => {
       const b = usage.get(e.id);
       return {
