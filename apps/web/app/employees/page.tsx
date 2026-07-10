@@ -13,6 +13,7 @@ import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
 import { CompanyPulsePanel } from "@/components/CompanyPulsePanel";
 import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { WorkforceControls } from "@/components/WorkforceControls";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,14 @@ export default async function EmployeesPage() {
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={12} />
-      <Header />
+      <Header
+        controls={
+          <WorkforceControls
+            activeCount={health.activeEmployees}
+            pausedCount={summaries.filter((s) => s.status === "paused").length}
+          />
+        }
+      />
 
       <WorkforceHealthBar health={health} />
 
@@ -97,18 +105,21 @@ export default async function EmployeesPage() {
   );
 }
 
-function Header() {
+function Header({ controls }: { controls?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 className="text-2xl font-semibold">AI Workforce</h1>
         <p className="text-sm text-muted">
           The command center — live work, operational health, and what needs you.
         </p>
       </div>
-      <Link href="/employees/new" className="btn shrink-0">
-        + Hire AI employee
-      </Link>
+      <div className="flex items-center gap-3">
+        {controls}
+        <Link href="/employees/new" className="btn shrink-0">
+          + Hire AI employee
+        </Link>
+      </div>
     </div>
   );
 }
