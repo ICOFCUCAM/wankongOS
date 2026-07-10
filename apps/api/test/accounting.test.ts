@@ -135,3 +135,17 @@ describe("accounting periods preserve integrity", () => {
     expect(s.cashFlow.net).toBe(50);
   });
 });
+
+describe("one-click audit package", () => {
+  it("bundles GL, trial balance, adjustments, and period status", async () => {
+    await app.request("/v1/accounting/entries", json(INVOICE));
+    await app.request("/v1/accounting/periods/2026-06/close", json({}));
+    const res = await app.request("/v1/studios/financial/generate", json({ kind: "audit_package" }));
+    expect(res.status).toBe(201);
+    const asset = await res.json();
+    expect(asset.content).toContain("General ledger (1 entries)");
+    expect(asset.content).toContain("INV-100");
+    expect(asset.content).toContain("Closed periods: 2026-06");
+    expect(asset.content).toContain("authorized accountant");
+  });
+});

@@ -165,6 +165,27 @@ ${body}
 > ${ACCOUNTING_SAFEGUARD}
 ` };
     }
+    case "financial/audit_package": {
+      const { engineFor, trialBalance, ACCOUNTING_SAFEGUARD } = await import("@wankong/core");
+      const engine = engineFor(org?.settings.jurisdiction ?? "US") ?? engineFor("US")!;
+      const entries = await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId);
+      const periods = await ctx.store.accountingPeriods.list((p) => p.organizationId === ctx.organizationId);
+      const tb = trialBalance(engine, entries).filter((a) => a.debit !== 0 || a.credit !== 0);
+      const gl = entries
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((e) => `| ${e.date} | ${e.reference ?? e.id} | ${e.source} | ${e.memo || "—"} | ${e.lines.map((l) => `${l.accountCode} D${l.debit.toFixed(2)}/C${l.credit.toFixed(2)}`).join("; ")} |`)
+        .join("\n");
+      const tbRows = tb.map((a) => `| ${a.code} | ${a.name} | ${a.debit.toFixed(2)} | ${a.credit.toFixed(2)} |`).join("\n");
+      const adjustments = entries.filter((e) => e.source === "adjustment").length;
+      const closed = periods.filter((p) => p.status === "closed").map((p) => p.period).join(", ") || "none";
+      return {
+        kind: input.kind,
+        title: input.title ?? `Audit package ${today}`,
+        mimeType: "text/markdown",
+        tags: ["accounting", "audit"],
+        content: `# Audit package — ${orgName}\n\nJurisdiction: ${engine.country} (${engine.standard}, rules ${engine.rulesVersion})\nCurrency: ${engine.currency} · Generated: ${today}\n\n## 1. General ledger (${entries.length} entries)\n\n| Date | Ref | Source | Memo | Lines |\n|---|---|---|---|---|\n${gl}\n\n## 2. Trial balance\n\n| Code | Account | Debit | Credit |\n|---|---|---|---|\n${tbRows}\n\n## 3. Adjustments\n\n${adjustments} adjustment entr${adjustments === 1 ? "y" : "ies"} recorded.\n\n## 4. Period status\n\nClosed periods: ${closed}\n\n## 5. Notes\n\nEvery figure traces to a journal entry id in section 1; the attributable action log is available at /v1/accounting/audit-trail.\n\n> ${ACCOUNTING_SAFEGUARD}\n`,
+      };
+    }
     case "legal/nda":
       return {
         kind: input.kind,
