@@ -197,3 +197,35 @@ describe("M3a: config versioning & rollback", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("clone: same configuration, fresh trust", () => {
+  it("copies config but starts the clone on probation", async () => {
+    const res = await app.request("/v1/employees/emp_support_manager/clone", json({}));
+    expect(res.status).toBe(201);
+    const clone = await res.json();
+    const source = await (await app.request("/v1/employees/emp_support_manager")).json();
+
+    expect(clone.id).not.toBe(source.id);
+    expect(clone.name).toBe(`${source.name} (Clone)`);
+    expect(clone.status).toBe("training"); // trust is earned, not inherited
+    expect(clone.systemPrompt).toBe(source.systemPrompt);
+    expect(clone.personality).toEqual(source.personality);
+    expect(clone.approvalRules).toEqual(source.approvalRules);
+
+    const audit = await (await app.request("/v1/audit")).json();
+    expect(
+      audit.data.some(
+        (e: { action: string; targetId?: string }) =>
+          e.action === "employee.clone" && e.targetId === clone.id,
+      ),
+    ).toBe(true);
+  });
+
+  it("requires employee:create (viewers are refused)", async () => {
+    const res = await app.request("/v1/employees/emp_support_manager/clone", {
+      ...json({}),
+      headers: { "content-type": "application/json", "x-demo-role": "viewer" },
+    });
+    expect(res.status).toBe(403);
+  });
+});

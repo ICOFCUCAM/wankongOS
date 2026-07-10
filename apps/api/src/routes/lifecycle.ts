@@ -64,6 +64,25 @@ lifecycleRoutes.post("/employees/:id/activate", async (c) => {
   return c.json({ ...updated, activationReport: report });
 });
 
+/**
+ * Clone an employee: same configuration (prompt, personality, rules, tools,
+ * budget), fresh identity — and probation status, because trust is earned per
+ * employee, not inherited from the original.
+ */
+lifecycleRoutes.post("/employees/:id/clone", async (c) => {
+  authorize(c, "employee:create");
+  const ctx = c.get("ctx");
+  const source = await findScoped(c, (id) => ctx.store.employees.get(id), c.req.param("id"));
+  const { id: _id, createdAt: _c, updatedAt: _u, ...config } = source;
+  const clone = await ctx.store.employees.create({
+    ...config,
+    name: `${source.name} (Clone)`,
+    status: "training",
+  });
+  await audit(c, "employee.clone", clone.id, { sourceId: source.id });
+  return c.json(clone, 201);
+});
+
 /** Org-wide kill switch: pause every active employee at once. */
 lifecycleRoutes.post("/workforce/pause", async (c) => {
   authorize(c, "org:manage");
