@@ -25,6 +25,15 @@ organizationRoutes.get("/org-chart", async (c) => {
   return c.json({ data: await ctx.store.orgChart(ctx.organizationId) });
 });
 
+/** Organization-level goals with live progress. */
+organizationRoutes.get("/goals", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const goals = await ctx.store.goals.list((g) => g.organizationId === ctx.organizationId);
+  goals.sort((a, b) => a.title.localeCompare(b.title));
+  return c.json({ data: goals });
+});
+
 /** The tool catalog: what employees can be granted, with required permissions. */
 organizationRoutes.get("/tools", (c) => {
   const ctx = c.get("ctx");

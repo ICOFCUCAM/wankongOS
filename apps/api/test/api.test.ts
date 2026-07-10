@@ -132,6 +132,17 @@ describe("API", () => {
     expect(typeof dash.automation.estimatedHoursSaved).toBe("number");
   });
 
+  it("lists organization goals with progress", async () => {
+    const res = await app.request("/v1/goals");
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(3);
+    for (const g of data) {
+      expect(g.progress).toBeGreaterThanOrEqual(0);
+      expect(g.progress).toBeLessThanOrEqual(1);
+    }
+  });
+
   it("lists the tool catalog", async () => {
     const res = await app.request("/v1/tools");
     expect(res.status).toBe(200);

@@ -11,6 +11,7 @@ import { EmployeeLiveCard } from "@/components/EmployeeLiveCard";
 import { DepartmentSection } from "@/components/DepartmentSection";
 import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
 import { CompanyPulsePanel } from "@/components/CompanyPulsePanel";
+import { GoalsPanel } from "@/components/GoalsPanel";
 import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { WorkforceControls } from "@/components/WorkforceControls";
@@ -29,12 +30,14 @@ export default async function EmployeesPage() {
   let departments: Department[];
   let health: WorkforceHealth;
   let activity: PulseItem[];
+  let goals: Awaited<ReturnType<typeof api.goals>>;
   try {
-    [summaries, departments, health, activity] = await Promise.all([
+    [summaries, departments, health, activity, goals] = await Promise.all([
       api.employeeSummaries(),
       api.departments(),
       api.workforceHealth(),
       api.pulse(10),
+      api.goals(),
     ]);
   } catch {
     return (
@@ -86,6 +89,7 @@ export default async function EmployeesPage() {
 
         <div className="space-y-6 lg:sticky lg:top-8 lg:self-start">
           <CompanyPulsePanel health={health} />
+          <GoalsPanel goals={goals} />
         </div>
       </div>
 

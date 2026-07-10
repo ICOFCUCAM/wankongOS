@@ -87,6 +87,7 @@ export const api = {
   employee: (id: string) => call<Employee>(`/v1/employees/${id}`),
   employeeGoals: (id: string) =>
     call<{ data: Goal[] }>(`/v1/employees/${id}/goals`).then((r) => r.data),
+  goals: () => call<{ data: Goal[] }>("/v1/goals").then((r) => r.data),
   tasks: () => call<{ data: Task[] }>("/v1/tasks").then((r) => r.data),
   dashboard: () => call<DashboardData>("/v1/dashboard"),
   workflows: () => call<{ data: Workflow[] }>("/v1/workflows").then((r) => r.data),
