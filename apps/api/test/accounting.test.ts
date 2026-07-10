@@ -83,3 +83,23 @@ describe("Global Accounting & Compliance", () => {
     expect(titles).toContain("Compliance Officer");
   });
 });
+
+describe("filing documents from the ledger", () => {
+  it("generates a jurisdiction-aware VAT return with the safeguard", async () => {
+    await app.request("/v1/accounting/jurisdiction", json({ code: "NO" }, "PUT"));
+    await app.request("/v1/accounting/entries", json(INVOICE));
+    const res = await app.request("/v1/studios/financial/generate", json({ kind: "vat_return" }));
+    expect(res.status).toBe(201);
+    const asset = await res.json();
+    expect(asset.content).toContain("MVA");
+    expect(asset.content).toContain("Norwegian");
+    expect(asset.content).toContain("authorized accountant");
+    expect(asset.content).toContain("25.00"); // 25% of 100 recorded revenue
+  });
+
+  it("explains sub-national sales tax honestly for the US engine", async () => {
+    const res = await app.request("/v1/studios/financial/generate", json({ kind: "vat_return" }));
+    const asset = await res.json();
+    expect(asset.content).toContain("no national VAT");
+  });
+});

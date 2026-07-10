@@ -113,6 +113,62 @@ export async function generate(
         content: `# AI spend report — ${orgName}\n\nGenerated ${today} from recorded usage. Costs are list-price estimates.\n\n| Employee | Role | Requests | Est. cost |\n|---|---|---|---|\n${body}\n\n**Total estimated spend: $${total}**\n`,
       };
     }
+    case "financial/vat_return": {
+      const { engineFor, trialBalance, ACCOUNTING_SAFEGUARD } = await import("@wankong/core");
+      const engine = engineFor(str(d.jurisdiction) || (org?.settings.jurisdiction ?? "US")) ?? engineFor("US")!;
+      const entries = await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId);
+      const tb = trialBalance(engine, entries);
+      const revenue = tb.filter((a) => a.type === "revenue").reduce((n, a) => n + a.balance, 0);
+      const vatPayable = tb.find((a) => a.code === "2200")?.balance ?? 0;
+      if (engine.vatRate === null) {
+        return { kind: input.kind, title, mimeType: "text/markdown", tags: ["accounting", "tax"], content: `# ${engine.vatName} note — ${orgName}
+
+${engine.country} has no national VAT; indirect tax is sub-national. Consult the engine notes:
+${engine.notes.map((n) => `- ${n}`).join("
+")}
+
+> ${ACCOUNTING_SAFEGUARD}
+` };
+      }
+      return {
+        kind: input.kind,
+        title: input.title ?? `${engine.vatName} return — ${today}`,
+        mimeType: "text/markdown",
+        tags: ["accounting", "tax", engine.code.toLowerCase()],
+        content: `# ${engine.vatName} return — ${orgName}
+
+Jurisdiction: ${engine.country} (${engine.standard})
+Official filing language: ${engine.language} · Currency: ${engine.currency}
+Period generated: ${today}
+
+| Line | Amount (${engine.currency}) |
+|---|---|
+| Taxable revenue (recorded) | ${revenue.toFixed(2)} |
+| ${engine.vatName} at ${(engine.vatRate * 100).toFixed(0)}% (expected) | ${(revenue * engine.vatRate).toFixed(2)} |
+| ${engine.vatName} payable (ledger 2200) | ${Math.abs(vatPayable).toFixed(2)} |
+
+${Math.abs(Math.abs(vatPayable) - revenue * engine.vatRate) > 0.5 ? "**⚠ Ledger VAT differs from the expected rate — review before filing.**
+
+" : ""}> ${ACCOUNTING_SAFEGUARD}
+`,
+      };
+    }
+    case "financial/trial_balance": {
+      const { engineFor, trialBalance, ACCOUNTING_SAFEGUARD } = await import("@wankong/core");
+      const engine = engineFor(org?.settings.jurisdiction ?? "US") ?? engineFor("US")!;
+      const entries = await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId);
+      const tb = trialBalance(engine, entries).filter((a) => a.debit !== 0 || a.credit !== 0);
+      const body = tb.map((a) => `| ${a.code} | ${a.name} | ${a.debit.toFixed(2)} | ${a.credit.toFixed(2)} |`).join("
+");
+      return { kind: input.kind, title: input.title ?? `Trial balance ${today}`, mimeType: "text/markdown", tags: ["accounting"], content: `# Trial balance — ${orgName} (${engine.currency}, ${engine.standard})
+
+| Code | Account | Debit | Credit |
+|---|---|---|---|
+${body}
+
+> ${ACCOUNTING_SAFEGUARD}
+` };
+    }
     case "legal/nda":
       return {
         kind: input.kind,
