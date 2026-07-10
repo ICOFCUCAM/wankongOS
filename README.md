@@ -24,7 +24,7 @@ packages/
   workflow/  Workflow engine: employee/decision/approval/integration nodes, retries, pause & resume
 apps/
   api/       REST API (Hono): every object over /v1, buffered + streaming chat
-  web/       Next.js console: CEO dashboard, org chart, employee profiles, live chat, tasks
+  web/       Next.js console: workforce command center (live presence, health, pulse), CEO dashboard, org chart, hire flow, analytics, live chat
 docs/
   ARCHITECTURE.md, adr/   Architecture overview and decision records
 ```
@@ -122,6 +122,11 @@ store code is tested in CI on real SQL via PGlite (ADR-0009).
 | `GET`  | `/v1/analytics` | Per-employee AI cost & latency (estimates) *(org:read)* |
 | `GET`  | `/v1/compliance/evidence` | Auditor-ready evidence pack *(audit:read)* |
 | `GET`  | `/v1/dashboard` | Live CEO metrics |
+| `GET`  | `/v1/employees/summaries` | Per-employee live presence, work, metrics, confidence *(employee:read)* |
+| `GET`  | `/v1/workforce/health` | Command-center header: live queue, department pulse, disclosed health formula *(org:read)* |
+| `GET`  | `/v1/pulse` | Company activity feed, phrased for humans *(org:read)* |
+| `POST` | `/v1/employees/:id/clone` · `/offboard` | Duplicate (fresh probation) / retire an employee *(employee:create/manage)* |
+| `GET`  | `/v1/tools` · `/v1/goals` | Tool catalog · org goals |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 
 Authorization is permission-based. Machine access: create an API key and call with
