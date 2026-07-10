@@ -58,6 +58,8 @@ export const Organization = z.object({
     .object({
       defaultProvider: ProviderId.default("local"),
       dataResidency: z.enum(["us", "eu", "global"]).default("global"),
+      /** Jurisdiction code for the accounting engine (e.g. "NO", "UK", "US"). */
+      jurisdiction: z.string().max(4).default("US"),
     })
     .default({ defaultProvider: "local", dataResidency: "global" }),
 });

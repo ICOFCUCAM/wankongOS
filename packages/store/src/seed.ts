@@ -432,7 +432,7 @@ export function buildSeedData(): SeedData {
     slug: "acme-robotics",
     plan: "growth",
     billingEmail: "billing@acme.example",
-    settings: { defaultProvider: "local", dataResidency: "us" },
+    settings: { defaultProvider: "local", dataResidency: "us", jurisdiction: "US" },
     createdAt: TS,
     updatedAt: TS,
   };
