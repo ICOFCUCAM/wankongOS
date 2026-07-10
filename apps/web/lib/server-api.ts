@@ -82,6 +82,25 @@ export const api = {
   analytics: () => call<AnalyticsData>("/v1/analytics"),
   workforceHealth: () => call<WorkforceHealth>("/v1/workforce/health"),
   briefing: () => call<Briefing>("/v1/briefing"),
+  accountingEngine: () =>
+    call<{
+      engine: import("@wankong/core").JurisdictionEngine;
+      available: { code: string; country: string }[];
+      safeguard: string;
+    }>("/v1/accounting/engine"),
+  accountingStatements: () =>
+    call<{
+      currency: string;
+      standard: string;
+      trialBalance: import("@wankong/core").AccountBalance[];
+      profitAndLoss: { revenue: number; expenses: number; netIncome: number };
+      balanceSheet: { assets: number; liabilities: number; equity: number };
+      safeguard: string;
+    }>("/v1/accounting/statements"),
+  accountingAnomalies: () =>
+    call<{ data: import("@wankong/core").AnomalyFinding[] }>("/v1/accounting/anomalies").then(
+      (r) => r.data,
+    ),
   studios: () =>
     call<{ data: (import("@wankong/core").StudioDef & { active: boolean; connectedVia: string[] })[] }>(
       "/v1/studios",
