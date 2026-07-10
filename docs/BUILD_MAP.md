@@ -101,7 +101,13 @@ formula, department containers with healthy/busy/attention badges, cards as
 mini dashboards with hover actions + offboarding, company-pulse side panel
 with live queue, goals panel, org chart on `/org`, shared presence
 derivation, animated (record-driven) progress and feed.
-⬜ Revenue, event push (websockets), human-utilization split.
+✅ Company simulation (ADR-0020): living cards (ETA / last-delivered),
+Today ledger + disclosed value estimate, mission-control department lines,
+department workspaces, employee mission view, wall-clock timeline,
+conversation history, unfolding company map, analytics insights, five-step
+hiring wizard with real-permission authority, morning briefing endpoint +
+panel. ⬜ Real revenue (M6 billing), event push (websockets),
+human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
 Permission-based least-privilege access on every route; per-tenant scoping (404 on
