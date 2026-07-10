@@ -47,6 +47,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.depreciation.run": "ran depreciation for the period",
   "accounting.invoice.ingest": "ingested an invoice into the books",
   "recruiting.interview.schedule": "scheduled a candidate interview",
+  "marketplace.hire": "was hired from a marketplace template",
   "recruiting.interview.complete": "completed an interview and filed the report",
   "autonomy.task.complete": "autonomously completed an assigned task",
   "studio.publish": "published a post through a connected channel",

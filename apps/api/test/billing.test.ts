@@ -51,3 +51,27 @@ describe("platform billing (M6)", () => {
     expect((await checkout.json()).error).toContain("Stripe");
   });
 });
+
+describe("role marketplace", () => {
+  it("hires from a template with a working eval gate", async () => {
+    const list = await (await app.request("/v1/marketplace/templates")).json();
+    expect(list.data.length).toBeGreaterThanOrEqual(6);
+    expect(list.data.every((t: { evalTasks: number }) => t.evalTasks >= 1)).toBe(true);
+
+    const hired = await app.request("/v1/marketplace/hire", json({ templateId: "support-agent", name: "Sam" }));
+    expect(hired.status).toBe(201);
+    const { employee } = await hired.json();
+    expect(employee.status).toBe("training");
+
+    // The starter suite gates activation — and this one passes on the local provider.
+    const activate = await app.request(`/v1/employees/${employee.id}/activate`, json({}));
+    expect(activate.status).toBe(200);
+    expect((await activate.json()).status).toBe("active");
+  });
+
+  it("404s unknown templates and respects plan limits", async () => {
+    expect((await app.request("/v1/marketplace/hire", json({ templateId: "nope", name: "X" }))).status).toBe(404);
+    await ctx.store.organizations.update(SEED_ORG_ID, { plan: "trial" });
+    expect((await app.request("/v1/marketplace/hire", json({ templateId: "sdr", name: "Y" }))).status).toBe(402);
+  });
+});

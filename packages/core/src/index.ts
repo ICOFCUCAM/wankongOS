@@ -24,3 +24,4 @@ export * from "./studios.js";
 export * from "./accounting.js";
 export * from "./recruiting.js";
 export * from "./billing.js";
+export * from "./marketplace.js";

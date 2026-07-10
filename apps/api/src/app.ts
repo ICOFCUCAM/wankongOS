@@ -38,6 +38,7 @@ import { authRoutes } from "./routes/auth.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { streamRoutes } from "./routes/stream.js";
 import { billingRoutes } from "./routes/billing.js";
+import { marketplaceRoutes } from "./routes/marketplace.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
@@ -159,6 +160,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", notificationRoutes);
   v1.route("/", streamRoutes);
   v1.route("/", billingRoutes);
+  v1.route("/", marketplaceRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));
