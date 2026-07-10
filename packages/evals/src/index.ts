@@ -5,3 +5,4 @@
  * this package is the runner.
  */
 export * from "./runner.js";
+export * from "./grader.js";

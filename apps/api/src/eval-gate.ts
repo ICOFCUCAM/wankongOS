@@ -1,4 +1,4 @@
-import { runSuite } from "@wankong/evals";
+import { createModelGrader, runSuite } from "@wankong/evals";
 import type { Employee, EvalReport, EvalSuite } from "@wankong/core";
 import type { AppContext } from "./context.js";
 import { buildEmployeePromptContext } from "./employee-context.js";
@@ -39,7 +39,7 @@ export async function runAndRecord(
   trigger: "manual" | "gate",
 ): Promise<EvalReport> {
   const context = await buildEmployeePromptContext(ctx.store, ctx.organizationId, employee);
-  const outcome = await runSuite({ runtime: ctx.runtime, employee, context, suite });
+  const outcome = await runSuite({ runtime: ctx.runtime, employee, context, suite, grader: createModelGrader(ctx.runtime) });
   return ctx.store.evalReports.create({
     organizationId: ctx.organizationId,
     suiteId: suite.id,

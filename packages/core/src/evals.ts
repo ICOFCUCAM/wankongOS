@@ -15,6 +15,15 @@ export const EvalCheck = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("matches"), pattern: z.string().min(1) }),
   z.object({ kind: z.literal("min_length"), value: z.number().int().positive() }),
   z.object({ kind: z.literal("max_length"), value: z.number().int().positive() }),
+  z.object({
+    kind: z.literal("rubric"),
+    criteria: z
+      .array(z.object({ name: z.string().min(1).max(80), description: z.string().min(1).max(500) }))
+      .min(1)
+      .max(8),
+    /** Average score (1–5 scale) required to pass. */
+    passScore: z.number().min(1).max(5).default(3.5),
+  }),
 ]);
 export type EvalCheck = z.infer<typeof EvalCheck>;
 
@@ -45,6 +54,14 @@ export const EvalCheckResult = z.object({
   check: EvalCheck,
   pass: z.boolean(),
   detail: z.string().max(500).optional(),
+  /** Rubric checks only: average score on the 1–5 scale. */
+  score: z.number().optional(),
+  /** Rubric checks only: per-criterion scores. */
+  scores: z.array(z.object({ criterion: z.string(), score: z.number() })).optional(),
+  /** Rubric checks only: how the grade was produced — model judge or the
+   *  disclosed deterministic heuristic (used when no judge model replies
+   *  with parsable scores). */
+  gradingMode: z.enum(["model", "heuristic"]).optional(),
 });
 export type EvalCheckResult = z.infer<typeof EvalCheckResult>;
 
@@ -108,5 +125,39 @@ export function runCheck(check: EvalCheck, reply: string): { pass: boolean; deta
       return reply.length <= check.value
         ? { pass: true }
         : { pass: false, detail: `reply length ${reply.length} > ${check.value}` };
+    case "rubric": {
+      const scores = heuristicRubricScores(check.criteria, reply);
+      const avg = scores.reduce((n, s) => n + s.score, 0) / scores.length;
+      return {
+        pass: avg >= check.passScore,
+        detail: `heuristic grading (formula disclosed; connect a judge model for true rubric grading): avg ${avg.toFixed(2)} vs required ${check.passScore}`,
+      };
+    }
   }
+}
+
+/**
+ * Deterministic rubric fallback with a DISCLOSED formula, used when no judge
+ * model produces parsable scores (e.g. the local CI provider). Per criterion:
+ * start at 1; +1 if the reply has ≥120 chars of substance, +1 more at ≥320;
+ * +1 if a third of the criterion's keywords (words >4 chars) appear in the
+ * reply, +1 if two thirds do. Capped at 5. It measures coverage and
+ * substance — it is NOT a quality judgement, and results are labelled
+ * gradingMode: "heuristic" so nobody mistakes it for one.
+ */
+export function heuristicRubricScores(
+  criteria: { name: string; description: string }[],
+  reply: string,
+): { criterion: string; score: number }[] {
+  const lower = reply.toLowerCase();
+  return criteria.map((c) => {
+    let score = 1;
+    if (reply.trim().length >= 120) score += 1;
+    if (reply.trim().length >= 320) score += 1;
+    const words = [...new Set(`${c.name} ${c.description}`.toLowerCase().match(/[a-z]{5,}/g) ?? [])];
+    const hit = words.filter((w) => lower.includes(w)).length;
+    if (words.length > 0 && hit >= words.length / 3) score += 1;
+    if (words.length > 0 && hit >= (2 * words.length) / 3) score += 1;
+    return { criterion: c.name, score: Math.min(5, score) };
+  });
 }
