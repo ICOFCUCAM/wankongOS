@@ -77,7 +77,7 @@ export default async function AnalyticsPage() {
                         <span className="font-mono">{tokens.toLocaleString()}</span>
                         <span className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-2">
                           <span
-                            className="block h-full rounded-full bg-accent"
+                            className="bar-fill block h-full rounded-full bg-accent"
                             style={{ width: `${Math.round((tokens / max) * 100)}%` }}
                           />
                         </span>

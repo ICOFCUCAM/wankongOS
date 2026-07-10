@@ -49,6 +49,11 @@ body {
   }
 }
 
+/* Progress bars glide to their new value on refresh instead of jumping. */
+.bar-fill {
+  transition: width 0.9s ease;
+}
+
 @keyframes pulse-dot {
   0%,
   100% {

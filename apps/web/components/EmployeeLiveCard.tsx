@@ -46,7 +46,7 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
           {summary.currentTask.progress !== null && (
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
               <div
-                className="h-full rounded-full bg-accent"
+                className="bar-fill h-full rounded-full bg-accent"
                 style={{ width: `${Math.round(summary.currentTask.progress * 100)}%` }}
               />
             </div>
@@ -76,7 +76,7 @@ export function EmployeeLiveCard({ summary }: { summary: EmployeeSummary }) {
           <span>confidence</span>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div
-              className={`h-full rounded-full ${summary.confidence >= 0.8 ? "bg-success" : summary.confidence >= 0.5 ? "bg-warn" : "bg-danger"}`}
+              className={`bar-fill h-full rounded-full ${summary.confidence >= 0.8 ? "bg-success" : summary.confidence >= 0.5 ? "bg-warn" : "bg-danger"}`}
               style={{ width: `${Math.round(summary.confidence * 100)}%` }}
             />
           </div>

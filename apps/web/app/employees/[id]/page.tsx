@@ -142,7 +142,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
                       <div
-                        className={`h-full rounded-full ${
+                        className={`bar-fill h-full rounded-full ${
                           g.status === "at_risk"
                             ? "bg-warn"
                             : g.status === "off_track"

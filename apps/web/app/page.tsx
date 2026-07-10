@@ -42,7 +42,7 @@ function Bar({ label, value, total }: { label: string; value: number; total: num
         <span className="text-text">{value}</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+        <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
