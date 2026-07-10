@@ -42,6 +42,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.bank.import": "imported a bank feed",
   "accounting.bank.reconcile": "ran bank reconciliation",
   "accounting.fx.record": "recorded an exchange rate",
+  "accounting.payroll.run": "ran payroll for the period",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */

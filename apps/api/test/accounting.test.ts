@@ -246,3 +246,39 @@ describe("FX translation with recorded rates only", () => {
     expect(cons.presentation.revenue).toBeCloseTo(100 / 10.5, 2);
   });
 });
+
+describe("payroll runs under the active engine", () => {
+  it("computes employer contributions, posts one balanced entry, stores the register", async () => {
+    await app.request("/v1/accounting/jurisdiction", json({ code: "NO" }, "PUT"));
+    const res = await app.request("/v1/accounting/payroll/run", json({
+      period: "2026-07",
+      staff: [{ name: "Ava Chen", gross: 50000 }, { name: "Noah Berg", gross: 40000 }],
+    }));
+    expect(res.status).toBe(201);
+    const run = await res.json();
+    expect(run.totals.employerContribution).toBeCloseTo(90000 * 0.141, 2); // arbeidsgiveravgift
+    expect(run.simplifications.join(" ")).toContain("zone");
+
+    const entries = (await (await app.request("/v1/accounting/entries")).json()).data;
+    const payroll = entries.find((e: { source: string }) => e.source === "payroll");
+    expect(payroll.lines[0].debit).toBeCloseTo(run.totals.totalCost, 2);
+
+    const assets = (await (await app.request("/v1/assets?tag=payroll")).json()).data;
+    expect(assets).toHaveLength(1);
+
+    // One run per period: the second attempt is refused.
+    const again = await app.request("/v1/accounting/payroll/run", json({ period: "2026-07", staff: [{ name: "X", gross: 1 }] }));
+    expect(again.status).toBe(409);
+  });
+
+  it("respects closed periods and per-company engines", async () => {
+    await app.request("/v1/accounting/periods/2026-06/close", json({}));
+    const blocked = await app.request("/v1/accounting/payroll/run", json({ period: "2026-06", staff: [{ name: "A", gross: 100 }] }));
+    expect(blocked.status).toBe(409);
+
+    const se = await (await app.request("/v1/accounting/companies", json({ name: "Acme Sweden AB", jurisdiction: "SE" }))).json();
+    const run = await (await app.request("/v1/accounting/payroll/run", json({ period: "2026-07", companyId: se.id, staff: [{ name: "B", gross: 1000 }] }))).json();
+    expect(run.engineRule.name).toBe("Arbetsgivaravgifter");
+    expect(run.totals.employerContribution).toBeCloseTo(314.2, 1);
+  });
+});

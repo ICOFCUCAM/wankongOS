@@ -42,6 +42,8 @@ export interface JurisdictionEngine {
   filings: FilingDef[];
   /** Minimal standard chart of accounts for the jurisdiction. */
   chartOfAccounts: AccountDef[];
+  /** Employer payroll contribution — the STANDARD rate, simplified. */
+  payroll: { name: string; employerRate: number; notes: string[] };
   notes: string[];
 }
 
@@ -61,12 +63,12 @@ const BASE_COA: AccountDef[] = [
 ];
 
 export const JURISDICTION_ENGINES: JurisdictionEngine[] = [
-  { code: "NO", rulesVersion: "2026.07", country: "Norway", currency: "NOK", language: "Norwegian", standard: "Norwegian Accounting Act (regnskapsloven) + Bookkeeping Act", vatRate: 0.25, vatName: "MVA", filings: [ { id: "saf-t", name: "SAF-T Financial export", period: "yearly" }, { id: "mva-melding", name: "MVA-melding (VAT return)", period: "bimonthly" }, { id: "arsregnskap", name: "Årsregnskap (annual accounts)", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Employer contributions (arbeidsgiveravgift) vary by region.", "Altinn is the filing portal."] },
-  { code: "SE", rulesVersion: "2026.07", country: "Sweden", currency: "SEK", language: "Swedish", standard: "Bokföringslagen + K2/K3", vatRate: 0.25, vatName: "Moms", filings: [ { id: "momsdeklaration", name: "Momsdeklaration", period: "quarterly" }, { id: "arsredovisning", name: "Årsredovisning", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["BAS chart of accounts is the national convention."] },
-  { code: "UK", rulesVersion: "2026.07", country: "United Kingdom", currency: "GBP", language: "English", standard: "UK GAAP (FRS 102) / IFRS", vatRate: 0.20, vatName: "VAT", filings: [ { id: "vat-return", name: "VAT Return (Making Tax Digital)", period: "quarterly" }, { id: "ct600", name: "Corporation Tax (CT600)", period: "yearly" }, { id: "annual-accounts", name: "Companies House annual accounts", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["PAYE for payroll; MTD requires digital VAT records."] },
-  { code: "US", rulesVersion: "2026.07", country: "United States", currency: "USD", language: "English", standard: "US GAAP", vatRate: null, vatName: "Sales tax (state/local)", filings: [ { id: "form-1120", name: "Federal corporate return (1120)", period: "yearly" }, { id: "941", name: "Payroll tax (Form 941)", period: "quarterly" }, { id: "1099-w2", name: "1099 / W-2 information returns", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Sales tax is state/local — no federal VAT.", "Multi-state payroll requires per-state registration."] },
-  { code: "DE", rulesVersion: "2026.07", country: "Germany", currency: "EUR", language: "German", standard: "HGB", vatRate: 0.19, vatName: "USt", filings: [ { id: "ust-va", name: "Umsatzsteuervoranmeldung", period: "monthly" }, { id: "jahresabschluss", name: "Jahresabschluss", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["SKR03/SKR04 charts are the national convention; ELSTER is the portal."] },
-  { code: "CA", rulesVersion: "2026.07", country: "Canada", currency: "CAD", language: "English/French", standard: "ASPE / IFRS", vatRate: 0.05, vatName: "GST/HST", filings: [ { id: "gst-return", name: "GST/HST return", period: "quarterly" }, { id: "t2", name: "T2 corporate return", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["HST rates vary by province on top of federal GST."] },
+  { code: "NO", rulesVersion: "2026.07", payroll: { name: "Arbeidsgiveravgift", employerRate: 0.141, notes: ["Standard zone rate; regional zones (0–14.1%) not modeled."] }, country: "Norway", currency: "NOK", language: "Norwegian", standard: "Norwegian Accounting Act (regnskapsloven) + Bookkeeping Act", vatRate: 0.25, vatName: "MVA", filings: [ { id: "saf-t", name: "SAF-T Financial export", period: "yearly" }, { id: "mva-melding", name: "MVA-melding (VAT return)", period: "bimonthly" }, { id: "arsregnskap", name: "Årsregnskap (annual accounts)", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Employer contributions (arbeidsgiveravgift) vary by region.", "Altinn is the filing portal."] },
+  { code: "SE", rulesVersion: "2026.07", payroll: { name: "Arbetsgivaravgifter", employerRate: 0.3142, notes: ["Full statutory rate; reduced age brackets not modeled."] }, country: "Sweden", currency: "SEK", language: "Swedish", standard: "Bokföringslagen + K2/K3", vatRate: 0.25, vatName: "Moms", filings: [ { id: "momsdeklaration", name: "Momsdeklaration", period: "quarterly" }, { id: "arsredovisning", name: "Årsredovisning", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["BAS chart of accounts is the national convention."] },
+  { code: "UK", rulesVersion: "2026.07", payroll: { name: "Employer NI", employerRate: 0.138, notes: ["Flat above-threshold approximation; secondary threshold not modeled."] }, country: "United Kingdom", currency: "GBP", language: "English", standard: "UK GAAP (FRS 102) / IFRS", vatRate: 0.20, vatName: "VAT", filings: [ { id: "vat-return", name: "VAT Return (Making Tax Digital)", period: "quarterly" }, { id: "ct600", name: "Corporation Tax (CT600)", period: "yearly" }, { id: "annual-accounts", name: "Companies House annual accounts", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["PAYE for payroll; MTD requires digital VAT records."] },
+  { code: "US", rulesVersion: "2026.07", payroll: { name: "Employer FICA", employerRate: 0.0765, notes: ["Social Security + Medicare employer share; FUTA/SUTA and wage caps not modeled."] }, country: "United States", currency: "USD", language: "English", standard: "US GAAP", vatRate: null, vatName: "Sales tax (state/local)", filings: [ { id: "form-1120", name: "Federal corporate return (1120)", period: "yearly" }, { id: "941", name: "Payroll tax (Form 941)", period: "quarterly" }, { id: "1099-w2", name: "1099 / W-2 information returns", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Sales tax is state/local — no federal VAT.", "Multi-state payroll requires per-state registration."] },
+  { code: "DE", rulesVersion: "2026.07", payroll: { name: "SV-Arbeitgeberanteil", employerRate: 0.20, notes: ["Approximate employer share of social insurance; caps and Umlagen not modeled."] }, country: "Germany", currency: "EUR", language: "German", standard: "HGB", vatRate: 0.19, vatName: "USt", filings: [ { id: "ust-va", name: "Umsatzsteuervoranmeldung", period: "monthly" }, { id: "jahresabschluss", name: "Jahresabschluss", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["SKR03/SKR04 charts are the national convention; ELSTER is the portal."] },
+  { code: "CA", rulesVersion: "2026.07", payroll: { name: "CPP + EI (employer)", employerRate: 0.0766, notes: ["Approximate combined employer share; YMPE caps not modeled."] }, country: "Canada", currency: "CAD", language: "English/French", standard: "ASPE / IFRS", vatRate: 0.05, vatName: "GST/HST", filings: [ { id: "gst-return", name: "GST/HST return", period: "quarterly" }, { id: "t2", name: "T2 corporate return", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["HST rates vary by province on top of federal GST."] },
 ];
 
 export function engineFor(code: string): JurisdictionEngine | undefined {
@@ -259,6 +261,31 @@ export function latestRate(rates: FxRate[], from: string, to: string): number | 
   if (direct) return direct.rate;
   const inverse = pick(to, from);
   return inverse ? Math.round((1 / inverse.rate) * 1e8) / 1e8 : null;
+}
+
+export interface PayrollLine {
+  employee: string;
+  gross: number;
+  employerContribution: number;
+  totalCost: number;
+}
+
+/** Simplified payroll run: gross + employer contribution at the engine's standard rate. */
+export function runPayroll(engine: JurisdictionEngine, staff: { name: string; gross: number }[]): {
+  lines: PayrollLine[];
+  totals: { gross: number; employerContribution: number; totalCost: number };
+} {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const lines = staff.map((p) => {
+    const employerContribution = r2(p.gross * engine.payroll.employerRate);
+    return { employee: p.name, gross: r2(p.gross), employerContribution, totalCost: r2(p.gross + employerContribution) };
+  });
+  const totals = {
+    gross: r2(lines.reduce((n, l) => n + l.gross, 0)),
+    employerContribution: r2(lines.reduce((n, l) => n + l.employerContribution, 0)),
+    totalCost: r2(lines.reduce((n, l) => n + l.totalCost, 0)),
+  };
+  return { lines, totals };
 }
 
 export interface AnomalyFinding {

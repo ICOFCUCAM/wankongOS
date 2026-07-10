@@ -73,3 +73,10 @@ date); `consolidated?presentation=CCY` translates entity totals using the
 latest recorded rate (direct or inverse), excludes and lists entities with
 no recorded rate, and discloses the method's limits (closing-rate on
 totals; not a full IAS 21 / ASC 830 translation).
+
+Payroll (same day): each engine carries its employer-contribution rule as
+versioned data (arbeidsgiveravgift, arbetsgivaravgifter, employer NI, FICA,
+SV-Anteil, CPP+EI) at the STANDARD rate with simplifications disclosed in
+every response (zones, thresholds, caps not modeled). A run posts exactly
+one balanced journal entry, stores a payroll-register asset, refuses closed
+periods and duplicate runs, and follows the company's own engine.

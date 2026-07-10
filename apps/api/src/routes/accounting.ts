@@ -5,6 +5,7 @@ import {
   cashFlow,
   latestRate,
   reconcile,
+  runPayroll,
   detectAnomalies,
   engineFor,
   JournalEntry,
@@ -461,4 +462,68 @@ accountingRoutes.post("/accounting/fx-rates", async (c) => {
   });
   await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.fx.record", targetType: "fxRate", targetId: rate.id, metadata: { pair: `${rate.base}/${rate.quote}`, rate: rate.rate } });
   return c.json(rate, 201);
+});
+
+const RunPayroll = z.object({
+  /** Month key, e.g. "2026-07" — one run per period per company. */
+  period: z.string().regex(/^\d{4}-\d{2}$/),
+  companyId: z.string().max(80).optional(),
+  staff: z.array(z.object({ name: z.string().min(1).max(160), gross: z.number().positive() })).min(1),
+});
+
+/**
+ * Run payroll for a period: employer contributions at the active engine's
+ * standard rate (simplifications disclosed in the response), posted as ONE
+ * balanced journal entry and stored as a payroll-register asset. One run
+ * per period per company; closed periods are rejected.
+ */
+accountingRoutes.post("/accounting/payroll/run", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, RunPayroll);
+  const userId = c.get("actor").user.id;
+
+  let engine = await engineOf(ctx);
+  if (input.companyId) {
+    const company = await ctx.store.companies.get(input.companyId);
+    if (!company || company.organizationId !== ctx.organizationId) return c.json({ error: "Unknown company" }, 404);
+    engine = engineFor(company.jurisdiction) ?? engine;
+  }
+
+  const period = (await ctx.store.accountingPeriods.list((p) => p.organizationId === ctx.organizationId && p.period === input.period))[0];
+  if (period?.status === "closed") return c.json({ error: `Period ${input.period} is closed.` }, 409);
+
+  const reference = `PAYROLL-${input.period}${input.companyId ? `-${input.companyId.slice(-6)}` : ""}`;
+  const existing = await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId && e.reference === reference);
+  if (existing.length > 0) return c.json({ error: `Payroll ${reference} already ran. Post an adjustment instead of re-running.` }, 409);
+
+  const run = runPayroll(engine, input.staff);
+  const entry = await ctx.store.journalEntries.create({
+    organizationId: ctx.organizationId,
+    companyId: input.companyId,
+    date: `${input.period}-28`,
+    memo: `Payroll ${input.period} (${input.staff.length} staff, ${engine.payroll.name} ${(engine.payroll.employerRate * 100).toFixed(2)}%)`,
+    source: "payroll",
+    reference,
+    lines: [
+      { accountCode: "6500", description: "Gross salaries + employer contributions", debit: run.totals.totalCost, credit: 0 },
+      { accountCode: "2400", description: "Net pay, withholdings, and contributions payable", debit: 0, credit: run.totals.totalCost },
+    ],
+    createdBy: { kind: "user", id: userId },
+  });
+
+  const register = await ctx.store.assets.create({
+    organizationId: ctx.organizationId,
+    studioId: "financial",
+    kind: "payroll_register",
+    title: `Payroll register ${input.period}`,
+    mimeType: "text/markdown",
+    version: 1,
+    tags: ["accounting", "payroll", input.period],
+    createdBy: { kind: "user", id: userId },
+    content: `# Payroll register — ${input.period}\n\nJurisdiction: ${engine.country} · ${engine.payroll.name} at ${(engine.payroll.employerRate * 100).toFixed(2)}% (standard rate, simplified)\n\n| Employee | Gross | Employer contribution | Total cost |\n|---|---|---|---|\n${run.lines.map((l) => `| ${l.employee} | ${l.gross.toFixed(2)} | ${l.employerContribution.toFixed(2)} | ${l.totalCost.toFixed(2)} |`).join("\n")}\n\n**Totals: gross ${run.totals.gross.toFixed(2)} · contributions ${run.totals.employerContribution.toFixed(2)} · cost ${run.totals.totalCost.toFixed(2)} ${engine.currency}**\n\nSimplifications: ${engine.payroll.notes.join(" ")}\nJournal entry: ${entry.id} (${reference})\n\n> ${ACCOUNTING_SAFEGUARD}\n`,
+  });
+
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: userId }, action: "accounting.payroll.run", targetType: "journalEntry", targetId: entry.id, metadata: { period: input.period, staff: input.staff.length, totalCost: run.totals.totalCost } });
+  return c.json({ ...run, engineRule: engine.payroll, currency: engine.currency, entryId: entry.id, registerAssetId: register.id, safeguard: ACCOUNTING_SAFEGUARD, simplifications: engine.payroll.notes }, 201);
 });

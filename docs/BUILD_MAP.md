@@ -119,7 +119,9 @@ P&L / balance sheet, anomaly monitoring, 13-role department hire,
 VAT-return + trial-balance filing documents with the review safeguard,
 /accounting console page. ✅ Periods (controlled close/reopen), audit trail, cash flow, one-click
 audit package. ✅ Bank-feed import + deterministic reconciliation (drafts, never
-auto-posted). ⬜ More jurisdictions, payroll engines,
+auto-posted). ✅ Payroll runs (per-jurisdiction employer contributions, one balanced
+entry + register asset per period, simplifications disclosed).
+⬜ More jurisdictions,
 e-filing connectors. ✅ Multi-company ledgers + consolidation with optional presentation-currency
 translation from recorded FX rates (closing-rate method, limits disclosed;
 intercompany eliminations still not applied).
