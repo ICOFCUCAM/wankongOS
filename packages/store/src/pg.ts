@@ -172,7 +172,15 @@ export async function ensurePgSchema(client: SqlClient): Promise<void> {
  */
 export async function createPostgresClient(databaseUrl: string): Promise<SqlClient> {
   const { default: postgres } = await import("postgres");
-  const sql = postgres(databaseUrl, { max: 5, prepare: false });
+  // Serverless-friendly defaults: small pool (each function instance holds its
+  // own), no prepared statements (required by Supabase's transaction pooler),
+  // and bounded timeouts so cold starts fail fast instead of hanging.
+  const sql = postgres(databaseUrl, {
+    max: Number(process.env.PG_POOL_MAX ?? 1),
+    prepare: false,
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
   return {
     async query(text, params = []) {
       const rows = (await sql.unsafe(text, params as never[])) as unknown as Record<

@@ -98,3 +98,33 @@ describe("API over Postgres", () => {
     );
   });
 });
+
+describe("accounting persists on real SQL", () => {
+  it("runs the full lifecycle over Postgres: entity, entries, period, bank, FX", async () => {
+    const json = (body: unknown, method = "POST") => ({
+      method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const co = await (await app.request("/v1/accounting/companies", json({ name: "Acme Norway AS", jurisdiction: "NO" }))).json();
+    const entry = await app.request("/v1/accounting/entries", json({
+      date: "2026-07-01", source: "invoice", reference: "PG-1", companyId: co.id,
+      lines: [{ accountCode: "1200", debit: 125 }, { accountCode: "4000", credit: 100 }, { accountCode: "2200", credit: 25 }],
+    }));
+    expect(entry.status).toBe(201);
+
+    const stmt = await (await app.request(`/v1/accounting/statements?companyId=${co.id}`)).json();
+    expect(stmt.currency).toBe("NOK");
+    expect(stmt.profitAndLoss.revenue).toBe(100);
+
+    expect((await app.request("/v1/accounting/periods/2026-06/close", json({}))).status).toBe(200);
+    await app.request("/v1/accounting/bank/import", json({ transactions: [{ date: "2026-07-01", amount: 125, reference: "PG-1" }] }));
+    const rec = await (await app.request("/v1/accounting/bank/reconcile", json({}))).json();
+    expect(rec.matched).toHaveLength(1);
+
+    await app.request("/v1/accounting/fx-rates", json({ base: "NOK", quote: "USD", rate: 0.095 }));
+    const cons = await (await app.request("/v1/accounting/consolidated?presentation=USD")).json();
+    expect(cons.presentation.missingRates).toHaveLength(0);
+  });
+});

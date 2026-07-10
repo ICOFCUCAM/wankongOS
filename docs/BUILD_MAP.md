@@ -20,7 +20,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | --- | --- | --- |
 | Core objects & domain rules | `packages/core` | ✅ |
 | AI provider abstraction | `packages/agents` | ✅ |
-| Data layer / database | `packages/store` (+ `schema.sql`) | ✅ in-memory · ✅ Postgres (JSONB, ADR-0009) · ⬜ normalised SQL |
+| Data layer / database | `packages/store` (+ `schema.sql`) | ✅ in-memory · ✅ Postgres (JSONB, ADR-0009, serverless-tuned; see docs/DEPLOYMENT.md) · ⬜ normalised SQL |
 | Workflow engine | `packages/workflow` | ✅ engine · 🟡 visual builder |
 | Memory system | `packages/core` (scoring/pruning) + `packages/store` | ✅ scoring/pruning/timeline · ⬜ vector recall |
 | Knowledge system | `packages/knowledge` + `packages/store` | ✅ ingestion/embeddings/search/citations · ⬜ PDF/Word/connector sources |
