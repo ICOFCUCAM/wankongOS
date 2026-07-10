@@ -135,6 +135,7 @@ export class PgStore extends BaseStore {
   readonly bankTransactions!: Repository<import("@wankong/core").BankTransaction>;
   readonly fxRates!: Repository<import("@wankong/core").FxRate>;
   readonly fixedAssets!: Repository<import("@wankong/core").FixedAsset>;
+  readonly interviews!: Repository<import("@wankong/core").Interview>;
   readonly brandKits!: Repository<import("@wankong/core").BrandKit>;
   readonly employeeVersions!: Repository<import("@wankong/core").EmployeeVersion>;
 

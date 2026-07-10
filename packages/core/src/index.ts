@@ -22,3 +22,4 @@ export * from "./injection.js";
 export * from "./activity.js";
 export * from "./studios.js";
 export * from "./accounting.js";
+export * from "./recruiting.js";

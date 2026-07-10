@@ -128,7 +128,10 @@ intercompany eliminations applied to flagged entries — unflagged activity
 is explicitly not detected). ✅ Fixed-asset register + straight-line
 depreciation runs. ✅ Structured invoice intake with jurisdiction VAT
 checks; raw-document OCR honestly gated on a vision connector.
-⬜ Real revenue (M6 billing), event push (websockets),
+✅ AI recruiting (ADR-0023): adaptive interviews, resume verification,
+evidence-linked rubric reports (no culture-fit scoring), human hiring
+decision via approvals; real-time stack (WebRTC/STT/TTS/sandbox)
+connector-gated. ⬜ Real revenue (M6 billing), event push (websockets),
 human-utilization split.
 
 ### Security 🟡 (hardening core shipped)

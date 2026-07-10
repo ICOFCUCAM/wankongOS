@@ -13,6 +13,7 @@ import {
   type BankTransaction,
   type FixedAsset,
   type FxRate,
+  type Interview,
   type Company,
   type JournalEntry,
   type BrandKit,
@@ -70,6 +71,7 @@ export interface StoreRepositories {
   readonly bankTransactions: Repository<BankTransaction>;
   readonly fxRates: Repository<FxRate>;
   readonly fixedAssets: Repository<FixedAsset>;
+  readonly interviews: Repository<Interview>;
   readonly brandKits: Repository<BrandKit>;
   readonly employeeVersions: Repository<EmployeeVersion>;
 }
@@ -105,6 +107,7 @@ export const STORE_ENTITY_KINDS = [
   "bankTransaction",
   "fxRate",
   "fixedAsset",
+  "interview",
   "brand",
   "employeeVersion",
 ] as const satisfies readonly EntityKind[];
@@ -139,6 +142,7 @@ const REPO_FIELDS = [
   "bankTransactions",
   "fxRates",
   "fixedAssets",
+  "interviews",
   "brandKits",
   "employeeVersions",
 ] as const;
@@ -184,6 +188,7 @@ export abstract class BaseStore implements StoreRepositories {
   abstract readonly bankTransactions: Repository<BankTransaction>;
   abstract readonly fxRates: Repository<FxRate>;
   abstract readonly fixedAssets: Repository<FixedAsset>;
+  abstract readonly interviews: Repository<Interview>;
   abstract readonly brandKits: Repository<BrandKit>;
   abstract readonly employeeVersions: Repository<EmployeeVersion>;
 
@@ -255,6 +260,7 @@ export class MemoryStore extends BaseStore {
   readonly bankTransactions: MemoryRepository<BankTransaction>;
   readonly fxRates: MemoryRepository<FxRate>;
   readonly fixedAssets: MemoryRepository<FixedAsset>;
+  readonly interviews: MemoryRepository<Interview>;
   readonly brandKits: MemoryRepository<BrandKit>;
   readonly employeeVersions: MemoryRepository<EmployeeVersion>;
 
@@ -289,6 +295,7 @@ export class MemoryStore extends BaseStore {
     this.bankTransactions = new MemoryRepository("bankTransaction", clock);
     this.fxRates = new MemoryRepository("fxRate", clock);
     this.fixedAssets = new MemoryRepository("fixedAsset", clock);
+    this.interviews = new MemoryRepository("interview", clock);
     this.brandKits = new MemoryRepository("brand", clock);
     this.employeeVersions = new MemoryRepository("employeeVersion", clock);
   }
