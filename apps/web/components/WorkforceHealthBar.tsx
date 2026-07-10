@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CountUp } from "./CountUp";
 import type { WorkforceHealth } from "@/lib/server-api";
 
 function money(n: number): string {
@@ -21,7 +22,7 @@ export function WorkforceHealthBar({ health }: { health: WorkforceHealth }) {
   const h = health;
   return (
     <div className="card !p-0">
-      <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-y-0 lg:grid-cols-8 lg:divide-x">
+      <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-y-0 lg:grid-cols-9 lg:divide-x">
         <Cell
           label="AI Employees"
           value={h.employees}
@@ -36,12 +37,27 @@ export function WorkforceHealthBar({ health }: { health: WorkforceHealth }) {
         />
         <Cell label="Departments" value={h.departments} href="/employees" />
         <Cell label="Workflows" value={h.runningWorkflows} sub="running" href="/workflows" />
-        <Cell
-          label="Company Health"
-          value={`${h.companyHealth.score}%`}
-          tone={healthTone(h.companyHealth.score)}
+        <div
+          className="col-span-2 row-span-1 border-l-2 border-l-accent/60 bg-surface-2/40 px-4 py-3"
           title={h.companyHealth.formula}
-        />
+        >
+          <div className="text-[11px] uppercase tracking-wide text-muted">Company Health</div>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-4xl font-bold leading-none ${healthTone(h.companyHealth.score)}`}>
+              <CountUp value={h.companyHealth.score} suffix="%" />
+            </span>
+            <span className={`text-xs font-medium ${healthTone(h.companyHealth.score)}`}>
+              {h.companyHealth.score >= 85 ? "Excellent" : h.companyHealth.score >= 60 ? "Stable" : "Needs attention"}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
+            <div
+              className={`bar-fill h-full rounded-full ${h.companyHealth.score >= 85 ? "bg-success" : h.companyHealth.score >= 60 ? "bg-warn" : "bg-danger"}`}
+              style={{ width: `${h.companyHealth.score}%` }}
+            />
+          </div>
+          <div className="mt-1 text-[10px] text-muted">formula on hover — derived, never a vibe</div>
+        </div>
         <Cell
           label="Avg Response"
           value={h.avgResponseMs === null ? "—" : `${(h.avgResponseMs / 1000).toFixed(1)}s`}
