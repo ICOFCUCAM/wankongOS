@@ -16,7 +16,7 @@ import { composeAndRender, resolveEvidence } from "../composition.js";
 
 const ComposeInput = z.object({
   doc: ComposedDoc,
-  format: z.enum(["markdown", "pdf"]).default("markdown"),
+  format: z.enum(["markdown", "pdf", "deck"]).default("markdown"),
 });
 
 export const composeRoutes = new Hono<Env>();
@@ -42,6 +42,7 @@ composeRoutes.post("/compose", async (c) => {
     {
       assetId: result.assetId,
       pdfAssetId: result.pdfAssetId,
+      deckAssetId: result.deckAssetId,
       verification: result.verification,
       qualityReport: {
         findings: result.findings,

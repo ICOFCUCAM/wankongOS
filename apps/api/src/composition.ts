@@ -59,6 +59,7 @@ export type ComposeOutcome =
       ok: true;
       assetId: string;
       pdfAssetId?: string;
+      deckAssetId?: string;
       verification: string;
       findings: QualityFinding[];
       evidence: (EvidenceRef & { title: string; link: string })[];
@@ -69,7 +70,7 @@ export async function composeAndRender(
   store: Store,
   organizationId: string,
   doc: ComposedDoc,
-  format: "markdown" | "pdf",
+  format: "markdown" | "pdf" | "deck",
   createdBy: { kind: "user" | "employee"; id: string },
 ): Promise<ComposeOutcome> {
   const evidence = allEvidence(doc);
@@ -107,6 +108,29 @@ export async function composeAndRender(
   await store.assets.update(asset.id, { tags: [...asset.tags, `verify:${verification}`] });
 
   let pdfAssetId: string | undefined;
+  let deckAssetId: string | undefined;
+  if (format === "deck") {
+    const { buildHtmlDeck } = await import("./studios/deck.js");
+    const html = buildHtmlDeck(doc, {
+      companyName,
+      primaryHex: kit?.colors.primary ?? "#6d5efc",
+      accentHex: kit?.colors.accent ?? "#33c481",
+      tagline: kit?.tagline,
+      register: dna?.style.register ?? "formal",
+    });
+    const deckAsset = await store.assets.create({
+      organizationId,
+      studioId: "presentation",
+      kind: "presentation_deck",
+      title: `${doc.title} (deck)`,
+      mimeType: "text/html",
+      content: html,
+      version: 1,
+      tags: ["composed", "presentation", `verify:${verification}`],
+      createdBy,
+    });
+    deckAssetId = deckAsset.id;
+  }
   if (format === "pdf") {
     const { buildBrandedPdf, markdownToLines } = await import("./studios/pdf.js");
     const pdf = buildBrandedPdf(doc.title, markdownToLines(markdown), {
@@ -149,6 +173,7 @@ export async function composeAndRender(
     ok: true,
     assetId: asset.id,
     pdfAssetId,
+    deckAssetId,
     verification,
     findings,
     evidence: evidence.map((e, i) => ({ ...e, title: resolved[i]!.title, link: resolved[i]!.link })),

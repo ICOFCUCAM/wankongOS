@@ -117,3 +117,32 @@ describe("Enterprise Composition Engine", () => {
     expect(policy.message).toContain("superlative");
   });
 });
+
+describe("Presentation Engine", () => {
+  it("renders a branded HTML deck with summary slide, chart, and speaker notes", async () => {
+    const doc = {
+      title: "Q3 Board Update",
+      docType: "presentation",
+      status: "internal",
+      author: { name: "Ava Chen", department: "Executive Office" },
+      sections: [
+        { kind: "slide", title: "Revenue", bullets: ["Recorded revenue is up"], speakerNotes: "Pause here for questions.", chart: { title: "Revenue by month", bars: [{ label: "May", value: 0 }, { label: "Jun", value: 499 }] } },
+        { kind: "slide", title: "Hiring", bullets: ["a", "b", "c", "d", "e", "f", "g", "h"], speakerNotes: "" },
+      ],
+    };
+    const res = await app.request("/v1/compose", json({ doc, format: "deck" }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.deckAssetId).toBeTruthy();
+    const deck = await ctx.store.assets.get(body.deckAssetId);
+    expect(deck?.mimeType).toBe("text/html");
+    const html = deck!.content;
+    expect(html).toContain("Executive summary");
+    expect(html).toContain("Revenue by month"); // SVG chart caption
+    expect(html).toContain("<svg");
+    expect(html).toContain("Pause here for questions.");
+    // Layout rule: never a wall of bullets — overflow moves to notes.
+    expect(html).toContain("moved to speaker notes");
+    expect(html).toContain("Acme Robotics");
+  });
+});
