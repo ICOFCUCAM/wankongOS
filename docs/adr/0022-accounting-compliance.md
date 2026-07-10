@@ -86,3 +86,14 @@ IE, AU, NZ, SG, JP, KR, ZA join the original six. Every engine carries a
 rulesVersion, a payroll rule with disclosed approximations, and its filing
 calendar; the registry test pins the full checklist. Adding jurisdiction
 #19 remains a data record plus tests.
+
+Eliminations / assets / invoices (same day): consolidation now eliminates
+entries explicitly flagged `intercompanyWith` (revenue and asset legs) and
+states that unflagged intercompany activity is not detected. A fixed-asset
+register drives idempotent straight-line depreciation runs (one adjustment
+entry per period, closed periods respected) — clearing the depreciation
+anomaly the honest way. Invoice intake posts jurisdiction-checked entries
+from structured data (sale → AR/revenue/output VAT; purchase → expense/
+input VAT/AP) with duplicate guards and standard-rate warnings; raw
+documents are refused with a pointer to a vision connector, never
+pretend-parsed.

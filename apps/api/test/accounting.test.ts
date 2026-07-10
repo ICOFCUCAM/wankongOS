@@ -177,7 +177,7 @@ describe("multi-company consolidation", () => {
     const cons = await (await app.request("/v1/accounting/consolidated")).json();
     expect(cons.byCurrency.NOK.revenue).toBe(100);
     expect(cons.byCurrency.USD.revenue).toBe(100);
-    expect(cons.note).toContain("NOT applied");
+    expect(cons.note).toContain("unflagged intercompany activity is not detected");
     expect(cons.safeguard).toContain("authorized accountant");
   });
 
@@ -280,5 +280,65 @@ describe("payroll runs under the active engine", () => {
     const run = await (await app.request("/v1/accounting/payroll/run", json({ period: "2026-07", companyId: se.id, staff: [{ name: "B", gross: 1000 }] }))).json();
     expect(run.engineRule.name).toBe("Arbetsgivaravgifter");
     expect(run.totals.employerContribution).toBeCloseTo(314.2, 1);
+  });
+});
+
+describe("intercompany eliminations", () => {
+  it("removes flagged intercompany activity from group totals", async () => {
+    await app.request("/v1/accounting/jurisdiction", json({ code: "NO" }, "PUT"));
+    const sub = await (await app.request("/v1/accounting/companies", json({ name: "Acme Norway AS", jurisdiction: "NO" }))).json();
+    // External sale (primary) + intercompany sale (sub -> primary), same currency.
+    await app.request("/v1/accounting/entries", json({ ...INVOICE }));
+    await app.request("/v1/accounting/entries", json({
+      date: "2026-07-02", source: "invoice", reference: "IC-1", companyId: sub.id, intercompanyWith: "primary",
+      lines: [{ accountCode: "1200", debit: 62.5 }, { accountCode: "4000", credit: 50 }, { accountCode: "2200", credit: 12.5 }],
+    }));
+    const cons = await (await app.request("/v1/accounting/consolidated")).json();
+    expect(cons.eliminations.NOK.entries).toBe(1);
+    expect(cons.byCurrency.NOK.revenue).toBe(100); // 150 recorded − 50 eliminated
+    expect(cons.note).toContain("unflagged intercompany activity is not detected");
+  });
+});
+
+describe("fixed assets and depreciation", () => {
+  it("registers assets and posts one idempotent straight-line adjustment", async () => {
+    await app.request("/v1/accounting/fixed-assets", json({ name: "CNC machine", cost: 12000, inServiceFrom: "2026-01", usefulLifeMonths: 24 }));
+    await app.request("/v1/accounting/fixed-assets", json({ name: "Old rig", cost: 5000, inServiceFrom: "2020-01", usefulLifeMonths: 36 })); // fully depreciated
+    const run = await (await app.request("/v1/accounting/depreciation/run", json({ period: "2026-07" }))).json();
+    expect(run.total).toBe(500); // 12000/24; old rig contributes 0
+    expect(run.charges).toHaveLength(1);
+    const again = await app.request("/v1/accounting/depreciation/run", json({ period: "2026-07" }));
+    expect(again.status).toBe(409);
+    // The depreciation-review anomaly clears (an adjustment entry now exists).
+    const anomalies = (await (await app.request("/v1/accounting/anomalies")).json()).data;
+    expect(anomalies.some((f: { code: string }) => f.code === "depreciation_review")).toBe(false);
+  });
+});
+
+describe("invoice intake with an honest OCR gate", () => {
+  it("posts jurisdiction-checked entries from structured invoices, both directions", async () => {
+    await app.request("/v1/accounting/jurisdiction", json({ code: "UK" }, "PUT"));
+    const sale = await (await app.request("/v1/accounting/invoices/ingest", json({
+      direction: "sale", counterparty: "BigCo", number: "2001", date: "2026-07-05", net: 100, vat: 20,
+    }))).json();
+    expect(sale.warnings).toHaveLength(0);
+    expect(sale.entry.lines[0].debit).toBe(120);
+
+    const bill = await (await app.request("/v1/accounting/invoices/ingest", json({
+      direction: "purchase", counterparty: "PaperCo", number: "77", date: "2026-07-06", net: 50, vat: 5,
+    }))).json();
+    expect(bill.warnings[0]).toContain("differs"); // 5 vs expected 10 at 20%
+    expect(bill.entry.lines.find((l: { accountCode: string }) => l.accountCode === "2000").credit).toBe(55);
+
+    const dup = await app.request("/v1/accounting/invoices/ingest", json({ direction: "sale", counterparty: "BigCo", number: "2001", date: "2026-07-05", net: 100 }));
+    expect(dup.status).toBe(409);
+  });
+
+  it("refuses raw documents until a vision connector exists", async () => {
+    const res = await app.request("/v1/accounting/invoices/ingest", json({
+      direction: "purchase", counterparty: "ScanCo", number: "S-1", date: "2026-07-07", document: "<scanned pdf bytes>",
+    }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toContain("vision connector");
   });
 });

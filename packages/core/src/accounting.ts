@@ -106,6 +106,8 @@ export const JournalEntry = z
     source: z.enum(["manual", "invoice", "bank", "payroll", "inventory", "adjustment"]).default("manual"),
     /** Entity whose books this entry belongs to; absent = the primary company. */
     companyId: Id.optional(),
+    /** Counterparty group company — marks the entry for consolidation elimination. */
+    intercompanyWith: Id.optional(),
     /** External reference (invoice #, bank tx id) — duplicate detection key. */
     reference: z.string().max(120).optional(),
     lines: z.array(JournalLine).min(2),
@@ -274,6 +276,31 @@ export function latestRate(rates: FxRate[], from: string, to: string): number | 
   if (direct) return direct.rate;
   const inverse = pick(to, from);
   return inverse ? Math.round((1 / inverse.rate) * 1e8) / 1e8 : null;
+}
+
+/** A capitalized asset on the register; depreciation derives from it. */
+export const FixedAsset = z.object({
+  id: Id,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+  organizationId: Id,
+  companyId: Id.optional(),
+  name: z.string().min(1).max(200),
+  cost: z.number().positive(),
+  residualValue: z.number().min(0).default(0),
+  /** First month of service, e.g. "2026-01". */
+  inServiceFrom: z.string().regex(/^\d{4}-\d{2}$/),
+  usefulLifeMonths: z.number().int().positive(),
+});
+export type FixedAsset = z.infer<typeof FixedAsset>;
+
+/** Straight-line depreciation charge for one asset in one period (month key). */
+export function monthlyDepreciation(asset: FixedAsset, period: string): number {
+  const idx =
+    (Number(period.slice(0, 4)) - Number(asset.inServiceFrom.slice(0, 4))) * 12 +
+    (Number(period.slice(5, 7)) - Number(asset.inServiceFrom.slice(5, 7)));
+  if (idx < 0 || idx >= asset.usefulLifeMonths) return 0;
+  return Math.round(((asset.cost - asset.residualValue) / asset.usefulLifeMonths) * 100) / 100;
 }
 
 export interface PayrollLine {

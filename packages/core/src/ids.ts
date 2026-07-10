@@ -35,6 +35,7 @@ export const ID_PREFIXES = {
   company: "cmp",
   bankTransaction: "btx",
   fxRate: "fxr",
+  fixedAsset: "fxa",
   brand: "brd",
   employeeVersion: "empv",
 } as const;

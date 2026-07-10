@@ -124,7 +124,10 @@ entry + register asset per period, simplifications disclosed).
 ⬜ More jurisdictions,
 e-filing connectors. ✅ Multi-company ledgers + consolidation with optional presentation-currency
 translation from recorded FX rates (closing-rate method, limits disclosed;
-intercompany eliminations still not applied).
+intercompany eliminations applied to flagged entries — unflagged activity
+is explicitly not detected). ✅ Fixed-asset register + straight-line
+depreciation runs. ✅ Structured invoice intake with jurisdiction VAT
+checks; raw-document OCR honestly gated on a vision connector.
 ⬜ Real revenue (M6 billing), event push (websockets),
 human-utilization split.
 

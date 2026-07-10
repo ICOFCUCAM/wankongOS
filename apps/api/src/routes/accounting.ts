@@ -4,6 +4,7 @@ import {
   ACCOUNTING_SAFEGUARD,
   cashFlow,
   latestRate,
+  monthlyDepreciation,
   reconcile,
   runPayroll,
   detectAnomalies,
@@ -18,6 +19,7 @@ import { authorize, parseBody } from "../http.js";
 const CreateEntry = z.object({
   date: z.string().min(8).max(30),
   companyId: z.string().max(80).optional(),
+  intercompanyWith: z.string().max(80).optional(),
   memo: z.string().max(500).optional(),
   source: z.enum(["manual", "invoice", "bank", "payroll", "inventory", "adjustment"]).optional(),
   reference: z.string().max(120).optional(),
@@ -290,10 +292,31 @@ accountingRoutes.get("/accounting/consolidated", async (c) => {
     return { companyId: u.id, name: u.name, currency: u.engine.currency, jurisdiction: u.engine.code, entries: entries.length, revenue, netIncome, assets: sum(["asset"]) };
   }).filter((u) => u.entries > 0 || u.companyId === null);
 
+  // Intercompany eliminations: entries flagged intercompanyWith are removed
+  // from group totals (revenue/expense and receivable/payable legs alike).
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const currencyOf = new Map(units.map((u) => [u.id, u.engine.currency]));
+  const eliminations: Record<string, { entries: number; revenue: number; assets: number }> = {};
+  for (const e of allEntries) {
+    if (!e.intercompanyWith) continue;
+    const ccy = currencyOf.get(e.companyId ?? null) ?? orgEngine.currency;
+    const b = (eliminations[ccy] ??= { entries: 0, revenue: 0, assets: 0 });
+    b.entries += 1;
+    b.revenue = r2(b.revenue + e.lines.filter((l) => l.accountCode.startsWith("4")).reduce((n, l) => n + l.credit - l.debit, 0));
+    b.assets = r2(b.assets + e.lines.filter((l) => l.accountCode.startsWith("1")).reduce((n, l) => n + l.debit - l.credit, 0));
+  }
+
   const byCurrency: Record<string, { revenue: number; netIncome: number; assets: number; entities: number }> = {};
   for (const u of perEntity) {
     const b = (byCurrency[u.currency] ??= { revenue: 0, netIncome: 0, assets: 0, entities: 0 });
     b.revenue += u.revenue; b.netIncome += u.netIncome; b.assets += u.assets; b.entities += 1;
+  }
+  for (const [ccy, el] of Object.entries(eliminations)) {
+    const b = byCurrency[ccy];
+    if (!b) continue;
+    b.revenue = r2(b.revenue - el.revenue);
+    b.netIncome = r2(b.netIncome - el.revenue);
+    b.assets = r2(b.assets - el.assets);
   }
   const currencies = Object.keys(byCurrency);
 
@@ -332,10 +355,11 @@ accountingRoutes.get("/accounting/consolidated", async (c) => {
     perEntity,
     byCurrency,
     presentation: presented,
+    eliminations,
     note:
       currencies.length > 1
-        ? `Entities report in ${currencies.join(", ")}. FX translation and intercompany eliminations are NOT applied — totals are per currency and must not be summed across currencies.`
-        : "Single-currency group; intercompany eliminations are not yet applied.",
+        ? `Entities report in ${currencies.join(", ")}. Intercompany eliminations apply only to entries flagged intercompanyWith; unflagged intercompany activity is not detected. Totals are per currency.`
+        : "Single-currency group. Intercompany eliminations apply only to entries flagged intercompanyWith; unflagged intercompany activity is not detected.",
     safeguard: ACCOUNTING_SAFEGUARD,
   });
 });
@@ -526,4 +550,132 @@ accountingRoutes.post("/accounting/payroll/run", async (c) => {
 
   await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: userId }, action: "accounting.payroll.run", targetType: "journalEntry", targetId: entry.id, metadata: { period: input.period, staff: input.staff.length, totalCost: run.totals.totalCost } });
   return c.json({ ...run, engineRule: engine.payroll, currency: engine.currency, entryId: entry.id, registerAssetId: register.id, safeguard: ACCOUNTING_SAFEGUARD, simplifications: engine.payroll.notes }, 201);
+});
+
+const CreateFixedAsset = z.object({
+  name: z.string().min(1).max(200),
+  cost: z.number().positive(),
+  residualValue: z.number().min(0).optional(),
+  inServiceFrom: z.string().regex(/^\d{4}-\d{2}$/),
+  usefulLifeMonths: z.number().int().positive(),
+  companyId: z.string().max(80).optional(),
+});
+
+accountingRoutes.get("/accounting/fixed-assets", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  return c.json({ data: await ctx.store.fixedAssets.list((a) => a.organizationId === ctx.organizationId) });
+});
+
+accountingRoutes.post("/accounting/fixed-assets", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, CreateFixedAsset);
+  const asset = await ctx.store.fixedAssets.create({ ...input, residualValue: input.residualValue ?? 0, organizationId: ctx.organizationId });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.asset.register", targetType: "fixedAsset", targetId: asset.id, metadata: { name: asset.name, cost: asset.cost } });
+  return c.json(asset, 201);
+});
+
+/** Straight-line depreciation for a period: one adjustment entry, idempotent. */
+accountingRoutes.post("/accounting/depreciation/run", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const { period } = await parseBody(c, z.object({ period: z.string().regex(/^\d{4}-\d{2}$/) }));
+  const p = (await ctx.store.accountingPeriods.list((x) => x.organizationId === ctx.organizationId && x.period === period))[0];
+  if (p?.status === "closed") return c.json({ error: `Period ${period} is closed.` }, 409);
+  const reference = `DEPR-${period}`;
+  if ((await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId && e.reference === reference)).length > 0) {
+    return c.json({ error: `Depreciation ${reference} already ran.` }, 409);
+  }
+  const assets = await ctx.store.fixedAssets.list((a) => a.organizationId === ctx.organizationId);
+  const charges = assets
+    .map((a) => ({ asset: a.name, charge: monthlyDepreciation(a, period) }))
+    .filter((x) => x.charge > 0);
+  const total = Math.round(charges.reduce((n, x) => n + x.charge, 0) * 100) / 100;
+  if (total === 0) return c.json({ period, charges: [], total: 0, entryId: null, note: "No depreciable assets in service this period." });
+  const entry = await ctx.store.journalEntries.create({
+    organizationId: ctx.organizationId,
+    date: `${period}-28`,
+    memo: `Straight-line depreciation ${period} (${charges.length} asset(s))`,
+    source: "adjustment",
+    reference,
+    lines: [
+      { accountCode: "6000", description: "Depreciation expense", debit: total, credit: 0 },
+      { accountCode: "1500", description: "Accumulated depreciation (contra)", debit: 0, credit: total },
+    ],
+    createdBy: { kind: "user", id: c.get("actor").user.id },
+  });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.depreciation.run", targetType: "journalEntry", targetId: entry.id, metadata: { period, total } });
+  return c.json({ period, charges, total, entryId: entry.id, method: "Straight-line, monthly; credited against the asset account as a simplified contra." }, 201);
+});
+
+const IngestInvoice = z.object({
+  direction: z.enum(["sale", "purchase"]),
+  counterparty: z.string().min(1).max(200),
+  number: z.string().min(1).max(60),
+  date: z.string().min(8).max(30),
+  net: z.number().positive().optional(),
+  vat: z.number().min(0).optional(),
+  companyId: z.string().max(80).optional(),
+  intercompanyWith: z.string().max(80).optional(),
+  /** Raw document text/image — NOT processed: OCR needs a vision connector. */
+  document: z.string().optional(),
+});
+
+/**
+ * Invoice intake: structured invoices post real, jurisdiction-checked
+ * entries today; raw documents are refused with an honest OCR gate rather
+ * than pretend-parsed.
+ */
+accountingRoutes.post("/accounting/invoices/ingest", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, IngestInvoice);
+  if (input.net === undefined) {
+    return c.json({ error: "OCR extraction from raw documents requires a vision connector (Integration Hub). Provide structured fields (net, vat) to ingest today." }, 422);
+  }
+  const net = input.net;
+  let engine = await engineOf(ctx);
+  if (input.companyId) {
+    const company = await ctx.store.companies.get(input.companyId);
+    if (!company || company.organizationId !== ctx.organizationId) return c.json({ error: "Unknown company" }, 404);
+    engine = engineFor(company.jurisdiction) ?? engine;
+  }
+  const reference = `${input.direction === "sale" ? "INV" : "BILL"}-${input.number}`;
+  if ((await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId && e.reference === reference)).length > 0) {
+    return c.json({ error: `${reference} already ingested.` }, 409);
+  }
+  const vat = input.vat ?? (engine.vatRate === null ? 0 : Math.round(net * engine.vatRate * 100) / 100);
+  const warnings: string[] = [];
+  if (engine.vatRate !== null && input.vat !== undefined) {
+    const expected = Math.round(net * engine.vatRate * 100) / 100;
+    if (Math.abs(input.vat - expected) > Math.max(0.5, expected * 0.02)) {
+      warnings.push(`${engine.vatName} ${input.vat.toFixed(2)} differs from the standard-rate expectation ${expected.toFixed(2)} — verify the applied rate.`);
+    }
+  }
+  const gross = Math.round((net + vat) * 100) / 100;
+  const entry = await ctx.store.journalEntries.create({
+    organizationId: ctx.organizationId,
+    companyId: input.companyId,
+    intercompanyWith: input.intercompanyWith,
+    date: input.date.slice(0, 10),
+    memo: `${input.direction === "sale" ? "Sales invoice to" : "Supplier bill from"} ${input.counterparty}`,
+    source: "invoice",
+    reference,
+    lines:
+      input.direction === "sale"
+        ? [
+            { accountCode: "1200", description: input.counterparty, debit: gross, credit: 0 },
+            { accountCode: "4000", description: "Revenue", debit: 0, credit: net },
+            ...(vat > 0 ? [{ accountCode: "2200", description: `${engine.vatName} output`, debit: 0, credit: vat }] : []),
+          ]
+        : [
+            { accountCode: "6000", description: "Expense", debit: net, credit: 0 },
+            ...(vat > 0 ? [{ accountCode: "2200", description: `${engine.vatName} input`, debit: vat, credit: 0 }] : []),
+            { accountCode: "2000", description: input.counterparty, debit: 0, credit: gross },
+          ],
+    createdBy: { kind: "user", id: c.get("actor").user.id },
+  });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.invoice.ingest", targetType: "journalEntry", targetId: entry.id, metadata: { reference, direction: input.direction, gross } });
+  return c.json({ entry, vatApplied: vat, warnings }, 201);
 });
