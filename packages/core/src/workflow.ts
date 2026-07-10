@@ -234,3 +234,80 @@ export function renderTemplate(template: string, context: unknown): string {
     return typeof value === "string" ? value : JSON.stringify(value);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Graph validation — shared by the API (on save) and the visual builder
+// ---------------------------------------------------------------------------
+
+/** Every node id a node routes to, labelled for error messages. */
+export function nodeTargets(node: WorkflowNode): { label: string; to: string }[] {
+  switch (node.type) {
+    case "start":
+    case "employee":
+    case "notification":
+    case "integration":
+      return [{ label: "next", to: node.next }];
+    case "decision":
+      return [
+        ...node.branches.map((b, i) => ({ label: `branch ${i + 1}`, to: b.to })),
+        { label: "else", to: node.else },
+      ];
+    case "approval":
+      return [
+        { label: "onApprove", to: node.onApprove },
+        { label: "onReject", to: node.onReject },
+      ];
+    case "parallel":
+      return [
+        ...node.branches.map((b, i) => ({ label: `branch ${i + 1}`, to: b })),
+        { label: "join", to: node.join },
+      ];
+    case "end":
+      return [];
+  }
+}
+
+/**
+ * Structural checks a schema-valid definition can still fail: dangling edges,
+ * duplicate ids, a missing entry, no reachable end. Returns human-readable
+ * problems — empty means the graph is runnable.
+ */
+export function validateWorkflowGraph(nodes: WorkflowNode[], entryNodeId: string): string[] {
+  const problems: string[] = [];
+  const ids = new Set<string>();
+  for (const n of nodes) {
+    if (ids.has(n.id)) problems.push(`Duplicate node id "${n.id}".`);
+    ids.add(n.id);
+  }
+  if (!ids.has(entryNodeId)) problems.push(`Entry node "${entryNodeId}" does not exist.`);
+  if (!nodes.some((n) => n.type === "end")) problems.push("The workflow has no end node.");
+
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  for (const n of nodes) {
+    for (const t of nodeTargets(n)) {
+      if (!ids.has(t.to)) {
+        problems.push(`Node "${n.id}" (${n.type}) points ${t.label} at missing node "${t.to}".`);
+      }
+    }
+  }
+
+  // Reachability from the entry — unreachable nodes are dead weight or typos.
+  if (ids.has(entryNodeId)) {
+    const seen = new Set<string>();
+    const queue = [entryNodeId];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const node = byId.get(id);
+      if (node) queue.push(...nodeTargets(node).map((t) => t.to));
+    }
+    for (const n of nodes) {
+      if (!seen.has(n.id)) problems.push(`Node "${n.id}" (${n.type}) is unreachable from the entry.`);
+    }
+    if (!nodes.some((n) => n.type === "end" && seen.has(n.id)) && nodes.some((n) => n.type === "end")) {
+      problems.push("No end node is reachable from the entry.");
+    }
+  }
+  return problems;
+}

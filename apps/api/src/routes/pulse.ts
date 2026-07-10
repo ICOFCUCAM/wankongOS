@@ -30,6 +30,8 @@ const AUDIT_PHRASES: Record<string, string> = {
   "memory.prune": "had stale memories pruned",
   "tool.task.create": "created a task for a teammate",
   "workflow.approval.requested": "requested an approval inside a workflow",
+  "workflow.create": "designed a new workflow in the builder",
+  "workflow.update": "revised a workflow definition",
   "workflow.run.start": "started a workflow run",
   "workflow.run.scheduled": "had a workflow run scheduled",
   "document.injection_flagged": "flagged a suspicious document",

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { Workflow, validateWorkflowGraph } from "@wankong/core";
 import type { Env } from "../context.js";
 import { newWorkflowRunId } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
@@ -8,7 +9,72 @@ import { emitEvent } from "../events.js";
 
 const RunInput = z.object({ input: z.record(z.unknown()).default({}) });
 
+/** A definition as the builder submits it — server owns id/org/timestamps. */
+const WorkflowInput = Workflow.omit({ id: true, organizationId: true, createdAt: true, updatedAt: true });
+
+/**
+ * Reject definitions the schema can't catch: dangling edges, unreachable
+ * nodes, and employee nodes pointing outside this organization. Returns the
+ * problem list for a 422 body, or null when the definition is runnable.
+ */
+async function graphProblems(
+  ctx: Env["Variables"]["ctx"],
+  input: z.infer<typeof WorkflowInput>,
+): Promise<string[] | null> {
+  const problems = validateWorkflowGraph(input.nodes, input.entryNodeId);
+  const employeeIds = new Set(
+    (await ctx.store.employees.listByOrg(ctx.organizationId)).map((e) => e.id),
+  );
+  for (const n of input.nodes) {
+    if (n.type === "employee" && !employeeIds.has(n.employeeId)) {
+      problems.push(`Node "${n.id}" assigns work to unknown employee "${n.employeeId}".`);
+    }
+  }
+  return problems.length > 0 ? problems : null;
+}
+
 export const workflowRoutes = new Hono<Env>();
+
+/** Create a workflow definition (the visual builder's save). */
+workflowRoutes.post("/workflows", async (c) => {
+  authorize(c, "workflow:manage");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, WorkflowInput);
+  const problems = await graphProblems(ctx, input);
+  if (problems) return c.json({ error: "Workflow graph is not runnable", problems }, 422);
+
+  const workflow = await ctx.store.workflows.create({ ...input, organizationId: ctx.organizationId });
+  await ctx.store.audit({
+    organizationId: ctx.organizationId,
+    actor: { kind: "user", id: c.get("actor").user.id },
+    action: "workflow.create",
+    targetType: "workflow",
+    targetId: workflow.id,
+    metadata: { name: workflow.name, nodes: workflow.nodes.length },
+  });
+  return c.json(workflow, 201);
+});
+
+/** Replace a workflow definition (the visual builder's edit-save). */
+workflowRoutes.put("/workflows/:id", async (c) => {
+  authorize(c, "workflow:manage");
+  const ctx = c.get("ctx");
+  const existing = await findScoped(c, (id) => ctx.store.workflows.get(id), c.req.param("id"));
+  const input = await parseBody(c, WorkflowInput);
+  const problems = await graphProblems(ctx, input);
+  if (problems) return c.json({ error: "Workflow graph is not runnable", problems }, 422);
+
+  const workflow = await ctx.store.workflows.update(existing.id, { ...input });
+  await ctx.store.audit({
+    organizationId: ctx.organizationId,
+    actor: { kind: "user", id: c.get("actor").user.id },
+    action: "workflow.update",
+    targetType: "workflow",
+    targetId: existing.id,
+    metadata: { name: input.name, nodes: input.nodes.length },
+  });
+  return c.json(workflow);
+});
 
 /** List workflow definitions. */
 workflowRoutes.get("/workflows", async (c) => {

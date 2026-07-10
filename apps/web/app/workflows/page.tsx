@@ -77,11 +77,16 @@ export default async function WorkflowsPage() {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Workflows</h1>
-      <p className="text-sm text-muted">
-        Automations that route work through AI employees, approvals, and integrations.
-      </p>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-semibold">Workflows</h1>
+        <p className="text-sm text-muted">
+          Automations that route work through AI employees, approvals, and integrations.
+        </p>
+      </div>
+      <Link href="/workflows/new" className="btn shrink-0">
+        + New workflow
+      </Link>
     </div>
   );
 }

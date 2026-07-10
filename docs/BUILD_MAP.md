@@ -21,7 +21,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | Core objects & domain rules | `packages/core` | ✅ |
 | AI provider abstraction | `packages/agents` | ✅ |
 | Data layer / database | `packages/store` (+ `schema.sql`) | ✅ in-memory · ✅ Postgres (JSONB, ADR-0009, serverless-tuned; see docs/DEPLOYMENT.md) · ⬜ normalised SQL |
-| Workflow engine | `packages/workflow` | ✅ engine · 🟡 visual builder |
+| Workflow engine | `packages/workflow` | ✅ engine · ✅ visual builder |
 | Memory system | `packages/core` (scoring/pruning) + `packages/store` | ✅ scoring/pruning/timeline · ⬜ vector recall |
 | Knowledge system | `packages/knowledge` + `packages/store` | ✅ ingestion/embeddings/search/citations · ⬜ PDF/Word/connector sources |
 | Integrations | `packages/workflow/connectors` + `packages/integrations` | 🟡 framework · ✅ MCP client · ⬜ SaaS connectors |
@@ -62,7 +62,10 @@ Executable definitions with start / employee / decision / approval / notificatio
 integration / parallel / end nodes; retries, timeouts, conditions, loops (bounded),
 parallel fan-out/join, and **human approvals that pause & resume**. Seeded
 "Inbound Lead Handling" workflow runs end-to-end. ✅ *Scheduled triggers* (cron via
-the scheduler tick / `apps/worker`). 🟡 *Visual drag-and-drop builder* remains.
+the scheduler tick / `apps/worker`). ✅ *Visual builder* (ADR-0028): the console
+designs and edits the exact definition the engine runs — shared graph validation
+(`validateWorkflowGraph`) client and server, create/replace over `POST/PUT
+/v1/workflows`, tenancy-checked employee nodes.
 
 ### Memory system ✅ (core) / ⬜ (vector recall)
 Scoped memory with salience scoring (importance × recency half-life), scored
@@ -146,7 +149,7 @@ guardrails · the digital office floor · computer-use registered
 connector-tier. ✅ Billing↔accounting bridge (Stripe-confirmed payments
 posted as real revenue journal entries, retry-safe, closed-period aware) ·
 health-history snapshots with an honest dashboard trend (no history → no
-arrow). ⬜ SSO/OIDC, object storage, visual workflow builder,
+arrow). ✅ Visual workflow builder (ADR-0028). ⬜ SSO/OIDC, object storage,
 human-utilization split.
 
 ### Security 🟡 (hardening core shipped)

@@ -38,9 +38,17 @@ export default async function WorkflowDetailPage({
         ← All workflows
       </Link>
 
-      <div>
-        <h1 className="text-2xl font-semibold">{workflow.name}</h1>
-        <p className="text-sm text-muted">{workflow.description}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{workflow.name}</h1>
+          <p className="text-sm text-muted">{workflow.description}</p>
+        </div>
+        <Link
+          href={`/workflows/${workflow.id}/edit`}
+          className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-accent-soft"
+        >
+          ✎ Edit in builder
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
@@ -71,8 +79,8 @@ export default async function WorkflowDetailPage({
             ))}
           </ol>
           <p className="mt-3 text-xs text-muted">
-            Approval nodes pause the run for a human; decision nodes branch. A drag-and-drop
-            builder is on the roadmap — this graph reads the same definition it will edit.
+            Approval nodes pause the run for a human; decision nodes branch. Open the
+            builder above to change the graph — it edits this exact definition.
           </p>
         </div>
 
