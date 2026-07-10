@@ -14,8 +14,9 @@ export default async function AccountingPage() {
   let entries;
   let trail;
   let consolidated;
+  let bank;
   try {
-    [engine, statements, anomalies, periods, entries, trail, consolidated] = await Promise.all([
+    [engine, statements, anomalies, periods, entries, trail, consolidated, bank] = await Promise.all([
       api.accountingEngine(),
       api.accountingStatements(),
       api.accountingAnomalies(),
@@ -23,6 +24,7 @@ export default async function AccountingPage() {
       api.accountingEntries(),
       api.accountingAuditTrail(),
       api.accountingConsolidated(),
+      api.accountingBank(),
     ]);
   } catch {
     return <ApiDownNotice />;
@@ -67,7 +69,7 @@ export default async function AccountingPage() {
       )}
 
       <div className="card !p-0">
-        <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+        <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
           <Cell
             label="Current period"
             value={periods.current}
@@ -81,6 +83,11 @@ export default async function AccountingPage() {
             label="Closed periods"
             value={periods.data.filter((p) => p.status === "closed").length}
             sub={periods.data.filter((p) => p.status === "closed").map((p) => p.period).join(", ") || "none yet"}
+          />
+          <Cell
+            label="Bank reconciliation"
+            value={bank.total === 0 ? "no feed" : `${bank.matched}/${bank.total}`}
+            sub={bank.unmatched > 0 ? `${bank.unmatched} unmatched — review drafts` : "fully matched"}
           />
           <Cell label="Cash flow (net)" value={statements.cashFlow.net.toFixed(2)} sub={`in ${statements.cashFlow.inflow.toFixed(2)} / out ${statements.cashFlow.outflow.toFixed(2)}`} />
           <Cell

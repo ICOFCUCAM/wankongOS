@@ -62,3 +62,8 @@ period status). Multi-company is now in: each legal
 entity holds its own ledger under its own engine, and consolidation reports
 per-entity and per-currency results while explicitly declining to apply FX
 translation or intercompany eliminations until those are real.
+
+Bank feeds (same day): imported statements are records; reconciliation is
+deterministic (exact reference, or exact cash movement within five days);
+whatever doesn't match returns as drafted entries for human review — the
+system never posts to the ledger from a bank line on its own.

@@ -120,6 +120,8 @@ export const api = {
       byCurrency: Record<string, { revenue: number; netIncome: number; assets: number; entities: number }>;
       note: string;
     }>("/v1/accounting/consolidated"),
+  accountingBank: () =>
+    call<{ total: number; matched: number; unmatched: number }>("/v1/accounting/bank"),
   accountingAnomalies: () =>
     call<{ data: import("@wankong/core").AnomalyFinding[] }>("/v1/accounting/anomalies").then(
       (r) => r.data,
