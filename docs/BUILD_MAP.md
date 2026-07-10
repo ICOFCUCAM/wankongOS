@@ -106,7 +106,14 @@ Today ledger + disclosed value estimate, mission-control department lines,
 department workspaces, employee mission view, wall-clock timeline,
 conversation history, unfolding company map, analytics insights, five-step
 hiring wizard with real-permission authority, morning briefing endpoint +
-panel. ⬜ Real revenue (M6 billing), event push (websockets),
+panel. ✅ Production studios (ADR-0021): sixteen-studio catalog with derived
+availability, versioned asset store, brand kit (colors/tone → prompts +
+designs), builtin generators (invoice, SOP, minutes, NDA draft, spend
+report, SVG cards/banners/monograms, floor plans, landing pages,
+conversions), studio.produce employee tool, /studios + /assets pages.
+⬜ Connector-tier studios (video/audio/publishing/research/engineering)
+activate via Integration Hub; binary asset storage; DOCX/PDF renderers.
+⬜ Real revenue (M6 billing), event push (websockets),
 human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
