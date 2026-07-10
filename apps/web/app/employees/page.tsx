@@ -1,39 +1,38 @@
-import Link from "next/link";
-import type { Department, Employee } from "@wankong/core";
-import { api } from "@/lib/server-api";
+import type { Department } from "@wankong/core";
+import { api, type EmployeeSummary } from "@/lib/server-api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { OrgChart } from "@/components/OrgChart";
-import { Avatar } from "@/components/Avatar";
+import { EmployeeLiveCard } from "@/components/EmployeeLiveCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage() {
-  let employees: Employee[];
+  let summaries: EmployeeSummary[];
   let departments: Department[];
   let roots;
   try {
-    [employees, departments, roots] = await Promise.all([
-      api.employees(),
+    [summaries, departments, roots] = await Promise.all([
+      api.employeeSummaries(),
       api.departments(),
       api.orgChart(),
     ]);
   } catch {
     return (
       <div className="space-y-6">
-        <Header count={0} />
+        <Header count={0} working={0} />
         <ApiDownNotice />
       </div>
     );
   }
 
-  const deptName = new Map(departments.map((d) => [d.id, d.name]));
   const byDept = departments
-    .map((d) => ({ dept: d, people: employees.filter((e) => e.departmentId === d.id) }))
+    .map((d) => ({ dept: d, people: summaries.filter((s) => s.departmentId === d.id) }))
     .filter((g) => g.people.length > 0);
+  const working = summaries.filter((s) => s.activity === "working").length;
 
   return (
     <div className="space-y-6">
-      <Header count={employees.length} />
+      <Header count={summaries.length} working={working} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
@@ -41,39 +40,8 @@ export default async function EmployeesPage() {
             <section key={dept.id}>
               <h2 className="mb-3 text-sm font-medium text-muted">{dept.name}</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {people.map((e) => (
-                  <Link
-                    key={e.id}
-                    href={`/employees/${e.id}`}
-                    className="group card flex items-start gap-3 transition hover:border-accent"
-                  >
-                    <Avatar name={e.name} size={44} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="truncate font-medium group-hover:text-accent-soft">
-                          {e.name}
-                        </div>
-                        <span
-                          className={`pill ${
-                            e.status === "active"
-                              ? "border-success/40 text-success"
-                              : "text-muted"
-                          }`}
-                        >
-                          {e.status}
-                        </span>
-                      </div>
-                      <div className="truncate text-sm text-muted">{e.title}</div>
-                      <p className="mt-2 line-clamp-2 text-xs text-muted">{e.description}</p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {e.kpis.slice(0, 2).map((k) => (
-                          <span key={k.key} className="pill text-muted">
-                            {k.label}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </Link>
+                {people.map((s) => (
+                  <EmployeeLiveCard key={s.employeeId} summary={s} />
                 ))}
               </div>
             </section>
@@ -88,12 +56,14 @@ export default async function EmployeesPage() {
   );
 }
 
-function Header({ count }: { count: number }) {
+function Header({ count, working }: { count: number; working: number }) {
   return (
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-semibold">AI Employees</h1>
-        <p className="text-sm text-muted">{count} digital workers across your organization.</p>
+        <p className="text-sm text-muted">
+          {count} digital workers{working > 0 ? ` — ${working} working right now` : ""}.
+        </p>
       </div>
     </div>
   );
