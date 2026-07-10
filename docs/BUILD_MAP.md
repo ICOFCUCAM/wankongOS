@@ -113,8 +113,8 @@ report, SVG cards/banners/monograms, floor plans, landing pages,
 conversions), studio.produce employee tool, /studios + /assets pages.
 ⬜ Connector-tier studios (video/audio/publishing/research/engineering)
 activate via Integration Hub; binary asset storage; DOCX/PDF renderers.
-✅ Global Accounting & Compliance (ADR-0022): jurisdiction engines
-(NO/SE/UK/US/DE/CA), balanced-only journal ledger, derived trial balance /
+✅ Global Accounting & Compliance (ADR-0022): 18 jurisdiction engines
+(Nordics, Western Europe, UK/IE, US/CA, AU/NZ, SG/JP/KR, ZA), balanced-only journal ledger, derived trial balance /
 P&L / balance sheet, anomaly monitoring, 13-role department hire,
 VAT-return + trial-balance filing documents with the review safeguard,
 /accounting console page. ✅ Periods (controlled close/reopen), audit trail, cash flow, one-click

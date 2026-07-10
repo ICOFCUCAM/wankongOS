@@ -80,3 +80,9 @@ SV-Anteil, CPP+EI) at the STANDARD rate with simplifications disclosed in
 every response (zones, thresholds, caps not modeled). A run posts exactly
 one balanced journal entry, stores a payroll-register asset, refuses closed
 periods and duplicate runs, and follows the company's own engine.
+
+Registry expansion (same day): 18 engines now ship — DK, FI, FR, NL, BE,
+IE, AU, NZ, SG, JP, KR, ZA join the original six. Every engine carries a
+rulesVersion, a payroll rule with disclosed approximations, and its filing
+calendar; the registry test pins the full checklist. Adding jurisdiction
+#19 remains a data record plus tests.

@@ -74,3 +74,27 @@ describe("anomaly detection", () => {
     expect(us.some((f) => f.code === "vat_mismatch")).toBe(false);
   });
 });
+
+describe("expanded jurisdiction registry", () => {
+  it("ships 18 engines covering the initial checklist", () => {
+    expect(JURISDICTION_ENGINES).toHaveLength(18);
+    const codes = JURISDICTION_ENGINES.map((e) => e.code);
+    for (const c of ["NO","SE","DK","FI","DE","FR","NL","BE","UK","IE","US","CA","AU","NZ","SG","JP","KR","ZA"]) {
+      expect(codes).toContain(c);
+    }
+  });
+
+  it("spot-checks rates, currencies, and disclosed payroll approximations", () => {
+    expect(engineFor("FI")!.vatRate).toBe(0.255);
+    expect(engineFor("SG")!.vatRate).toBe(0.09);
+    expect(engineFor("AU")!.payroll.employerRate).toBe(0.12);
+    expect(engineFor("JP")!.currency).toBe("JPY");
+    expect(engineFor("ZA")!.filings.some((f) => f.id === "vat201")).toBe(true);
+    // Every engine discloses payroll simplifications and carries a rules version.
+    for (const e of JURISDICTION_ENGINES) {
+      expect(e.rulesVersion).toBe("2026.07");
+      expect(e.payroll.notes.length).toBeGreaterThan(0);
+      expect(e.chartOfAccounts.length).toBeGreaterThan(0);
+    }
+  });
+});
