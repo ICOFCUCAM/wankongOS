@@ -18,3 +18,22 @@ workerRoutes.post("/worker/tick", async (c) => {
   const work = await runWorkCycle(ctx);
   return c.json({ ...result, work });
 });
+
+/**
+ * Cron-friendly GET tick (Vercel Cron sends GET). When CRON_SECRET is set,
+ * the request must carry `Authorization: Bearer <CRON_SECRET>` (Vercel's
+ * convention); without one it falls back to the normal permission check.
+ */
+workerRoutes.get("/worker/tick", async (c) => {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const given = c.req.header("authorization")?.replace(/^Bearer\s+/i, "");
+    if (given !== secret) return c.json({ error: "Invalid cron secret" }, 401);
+  } else {
+    authorize(c, "workflow:run");
+  }
+  const ctx = c.get("ctx");
+  const result = await runScheduledWorkflows(ctx);
+  const work = await runWorkCycle(ctx);
+  return c.json({ ...result, work });
+});

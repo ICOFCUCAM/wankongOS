@@ -119,3 +119,20 @@ describe("approval decisions drive autonomy", () => {
     expect((await ctx.store.tasks.get(task.id))!.status).toBe("cancelled");
   });
 });
+
+describe("cron tick (GET)", () => {
+  it("runs the cycle via GET and enforces CRON_SECRET when set", async () => {
+    const ok = await app.request("/v1/worker/tick");
+    expect(ok.status).toBe(200);
+    expect((await ok.json()).work).toBeDefined();
+
+    process.env.CRON_SECRET = "s3cret";
+    try {
+      expect((await app.request("/v1/worker/tick")).status).toBe(401);
+      const authed = await app.request("/v1/worker/tick", { headers: { authorization: "Bearer s3cret" } });
+      expect(authed.status).toBe(200);
+    } finally {
+      delete process.env.CRON_SECRET;
+    }
+  });
+});
