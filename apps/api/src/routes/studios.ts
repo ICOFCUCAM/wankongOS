@@ -272,8 +272,21 @@ studioRoutes.post("/assets/:id/render-pdf", async (c) => {
   if (!source.mimeType.startsWith("text/")) {
     return c.json({ error: `Only text assets render to PDF (got ${source.mimeType}).` }, 422);
   }
-  const { buildSimplePdf, markdownToLines } = await import("../studios/pdf.js");
-  const pdf = buildSimplePdf(source.title, markdownToLines(source.content));
+  const { buildBrandedPdf, markdownToLines } = await import("../studios/pdf.js");
+  const [org, kit] = await Promise.all([
+    ctx.store.organizations.get(ctx.organizationId),
+    ctx.store.brandKits.list((b) => b.organizationId === ctx.organizationId).then((k) => k[0]),
+  ]);
+  const companyName = org?.name ?? "Company";
+  const pdf = buildBrandedPdf(source.title, markdownToLines(source.content), {
+    companyName,
+    tagline: kit?.tagline,
+    primaryHex: kit?.colors.primary ?? "#6d5efc",
+    legalLine: `${companyName} — generated from recorded data by WankongOS; document no. ${source.id}`,
+    docNumber: source.id,
+    dateIso: new Date().toISOString().slice(0, 10),
+    stamp: { line1: "COMPANY RECORD", line2: companyName.toUpperCase().slice(0, 28) },
+  });
   const asset = await ctx.store.assets.create({
     organizationId: ctx.organizationId,
     studioId: "document",

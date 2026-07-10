@@ -240,3 +240,27 @@ describe("binary asset upload", () => {
     expect(bad.status).toBe(400);
   });
 });
+
+describe("branded documents", () => {
+  it("stamps letterhead, footer, and company stamp onto rendered PDFs", async () => {
+    const src = await (
+      await app.request("/v1/studios/financial/generate", json({ kind: "spend_report" }))
+    ).json();
+    const res = await app.request(`/v1/assets/${src.id}/render-pdf`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(res.status).toBe(201);
+    const { id } = await res.json();
+    const dl = await app.request(`/v1/assets/${id}/download`);
+    const raw = Buffer.from(await dl.arrayBuffer()).toString("binary");
+    expect(raw.startsWith("%PDF-1.4")).toBe(true);
+    expect(raw).toContain("Helvetica-Bold"); // letterhead company name
+    expect(raw).toContain("Acme Robotics"); // real org name on the page
+    expect(raw).toContain(`Document no. ${src.id}`); // traceable to the record
+    expect(raw).toContain("COMPANY RECORD"); // stamp — never a government seal
+    expect(raw).toContain("Page 1 of 1");
+    expect(raw).toContain(" rg"); // brand color fill operators present
+  });
+});
