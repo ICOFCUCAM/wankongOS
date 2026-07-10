@@ -76,3 +76,46 @@ describe("autonomous work cycle (ADR-0024)", () => {
     expect(typeof body.work.scanned).toBe("number");
   });
 });
+
+describe("approval decisions drive autonomy", () => {
+  async function queueForLegal() {
+    return ctx.store.tasks.create({
+      organizationId: SEED_ORG_ID,
+      title: "Draft data processing addendum",
+      description: "",
+      status: "todo",
+      priority: "normal",
+      assignee: { kind: "employee", id: "emp_legal" },
+      createdBy: { kind: "user", id: "usr_ceo" },
+      labels: [],
+    });
+  }
+
+  it("an approved request lets the low-autonomy employee work next cycle", async () => {
+    const task = await queueForLegal();
+    await runWorkCycle(ctx, { maxTasks: 10 }); // creates the approval
+    const approval = (await ctx.store.approvals.list((a) => a.taskId === task.id))[0]!;
+    await app.request(`/v1/approvals/${approval.id}/decision`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approved" }),
+    });
+    const cycle = await runWorkCycle(ctx, { maxTasks: 10 });
+    expect(cycle.completed.some((c) => c.taskId === task.id)).toBe(true);
+    expect((await ctx.store.tasks.get(task.id))!.status).toBe("done");
+  });
+
+  it("a rejected request stands the task down", async () => {
+    const task = await queueForLegal();
+    await runWorkCycle(ctx, { maxTasks: 10 });
+    const approval = (await ctx.store.approvals.list((a) => a.taskId === task.id))[0]!;
+    await app.request(`/v1/approvals/${approval.id}/decision`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision: "rejected", reason: "Outside counsel handles this." }),
+    });
+    const cycle = await runWorkCycle(ctx, { maxTasks: 10 });
+    expect(cycle.skipped.some((s) => s.taskId === task.id && s.reason === "approval_rejected")).toBe(true);
+    expect((await ctx.store.tasks.get(task.id))!.status).toBe("cancelled");
+  });
+});

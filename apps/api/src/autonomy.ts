@@ -48,11 +48,26 @@ export async function runWorkCycle(
   result.scanned = queue.length;
 
   for (const { employee, task } of queue.slice(0, max)) {
-    // Governance gate 1: low autonomy asks first.
+    // Governance gate 1: low autonomy asks first — and honors the answer.
     if (employee.personality.autonomy === "low") {
-      const already = approvals.some(
-        (a) => a.status === "pending" && a.summary.includes(task.id),
-      );
+      const forTask = approvals.filter((a) => a.summary.includes(task.id) || a.taskId === task.id);
+      const approved = forTask.some((a) => a.status === "approved");
+      const rejected = forTask.some((a) => a.status === "rejected");
+      if (rejected) {
+        await ctx.store.tasks.update(task.id, { status: "cancelled" });
+        await ctx.store.audit({
+          organizationId: ctx.organizationId,
+          actor: { kind: "employee", id: employee.id },
+          action: "autonomy.task.stand_down",
+          targetType: "task",
+          targetId: task.id,
+          metadata: { title: task.title },
+        });
+        result.skipped.push({ employeeId: employee.id, taskId: task.id, reason: "approval_rejected" });
+        continue;
+      }
+      if (!approved) {
+      const already = forTask.some((a) => a.status === "pending");
       if (!already) {
         await ctx.store.approvals.create({
           organizationId: ctx.organizationId,
@@ -67,6 +82,8 @@ export async function runWorkCycle(
         result.skipped.push({ employeeId: employee.id, taskId: task.id, reason: "awaiting_approval" });
       }
       continue;
+      }
+      // Approved: fall through and work the task like any other.
     }
 
     // Governance gate 2: budget.
