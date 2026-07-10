@@ -126,6 +126,10 @@ export const api = {
     call<{ data: import("@wankong/core").AnomalyFinding[] }>("/v1/accounting/anomalies").then(
       (r) => r.data,
     ),
+  marketplacePacks: () =>
+    call<{ data: { id: string; name: string; glyph: string; description: string; roles: string[]; evalTasks: number }[]; note: string }>(
+      "/v1/marketplace/packs",
+    ),
   marketplaceTemplates: () =>
     call<{ data: (Omit<import("@wankong/core").RoleTemplate, "starterEvals"> & { evalTasks: number })[] }>(
       "/v1/marketplace/templates",

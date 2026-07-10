@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createSeededStore, SEED_ORG_ID } from "@wankong/store";
 import { ProviderRegistry } from "@wankong/agents";
-import { ROLE_TEMPLATES } from "@wankong/core";
+import { DEPARTMENT_PACKS, ROLE_TEMPLATES } from "@wankong/core";
 import { createApp } from "../src/app.js";
 import { createAppContext, type AppContext } from "../src/context.js";
 
@@ -35,5 +35,17 @@ describe("benchmark: every template earns activation", () => {
     const failed = results.filter((r) => !r.activated);
     expect(failed, `templates failing their own suite: ${failed.map((f) => f.template).join(", ")}`).toHaveLength(0);
     expect(results).toHaveLength(ROLE_TEMPLATES.length);
+  });
+
+  it("every department-pack role earns activation too", async () => {
+    for (const pack of DEPARTMENT_PACKS) {
+      const installed = await (await app.request("/v1/marketplace/install-pack", json({ packId: pack.id }))).json();
+      expect(installed.hired).toBe(pack.roles.length);
+      const employees = await ctx.store.employees.list((e) => e.departmentId === installed.department.id);
+      for (const e of employees) {
+        const res = await app.request(`/v1/employees/${e.id}/activate`, json({}));
+        expect(res.status, `${pack.id}/${e.title} failed its guardrail suite`).toBe(200);
+      }
+    }
   });
 });

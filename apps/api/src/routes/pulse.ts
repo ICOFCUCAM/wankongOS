@@ -49,6 +49,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.invoice.ingest": "ingested an invoice into the books",
   "recruiting.interview.schedule": "scheduled a candidate interview",
   "marketplace.hire": "was hired from a marketplace template",
+  "marketplace.install_pack": "installed an entire department from the marketplace",
   "meeting.executive": "held an executive meeting — minutes filed",
   "recruiting.interview.complete": "completed an interview and filed the report",
   "autonomy.task.complete": "autonomously completed an assigned task",
