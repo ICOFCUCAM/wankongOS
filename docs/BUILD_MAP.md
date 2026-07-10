@@ -117,8 +117,9 @@ activate via Integration Hub; binary asset storage; DOCX/PDF renderers.
 (NO/SE/UK/US/DE/CA), balanced-only journal ledger, derived trial balance /
 P&L / balance sheet, anomaly monitoring, 13-role department hire,
 VAT-return + trial-balance filing documents with the review safeguard,
-/accounting console page. ⬜ More jurisdictions, bank-feed import,
-payroll engines, e-filing connectors.
+/accounting console page. ✅ Periods (controlled close/reopen), audit trail, cash flow, one-click
+audit package. ⬜ More jurisdictions, bank-feed import, payroll engines,
+e-filing connectors, multi-company consolidation.
 ⬜ Real revenue (M6 billing), event push (websockets),
 human-utilization split.
 
