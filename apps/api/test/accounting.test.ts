@@ -149,3 +149,40 @@ describe("one-click audit package", () => {
     expect(asset.content).toContain("authorized accountant");
   });
 });
+
+describe("multi-company consolidation", () => {
+  it("keeps separate books per entity, each under its own engine", async () => {
+    const no = await (await app.request("/v1/accounting/companies", json({ name: "Acme Norway AS", jurisdiction: "NO" }))).json();
+    const uk = await (await app.request("/v1/accounting/companies", json({ name: "Acme UK Ltd", jurisdiction: "UK" }))).json();
+
+    await app.request("/v1/accounting/entries", json({ ...INVOICE, companyId: no.id, reference: "NO-1" }));
+    await app.request("/v1/accounting/entries", json({
+      date: "2026-07-02", source: "invoice", reference: "UK-1", companyId: uk.id,
+      lines: [{ accountCode: "1200", debit: 240 }, { accountCode: "4000", credit: 200 }, { accountCode: "2200", credit: 40 }],
+    }));
+
+    const noStmt = await (await app.request(`/v1/accounting/statements?companyId=${no.id}`)).json();
+    expect(noStmt.currency).toBe("NOK");
+    expect(noStmt.profitAndLoss.revenue).toBe(100);
+    const ukStmt = await (await app.request(`/v1/accounting/statements?companyId=${uk.id}`)).json();
+    expect(ukStmt.currency).toBe("GBP");
+    expect(ukStmt.profitAndLoss.revenue).toBe(200);
+  });
+
+  it("consolidates per currency and refuses to fake FX translation", async () => {
+    const no = await (await app.request("/v1/accounting/companies", json({ name: "Acme Norway AS", jurisdiction: "NO" }))).json();
+    await app.request("/v1/accounting/entries", json({ ...INVOICE, companyId: no.id, reference: "NO-2" }));
+    await app.request("/v1/accounting/entries", json(INVOICE)); // primary (US)
+
+    const cons = await (await app.request("/v1/accounting/consolidated")).json();
+    expect(cons.byCurrency.NOK.revenue).toBe(100);
+    expect(cons.byCurrency.USD.revenue).toBe(100);
+    expect(cons.note).toContain("NOT applied");
+    expect(cons.safeguard).toContain("authorized accountant");
+  });
+
+  it("rejects entities in jurisdictions without an engine", async () => {
+    const res = await app.request("/v1/accounting/companies", json({ name: "Acme Mars", jurisdiction: "MR" }));
+    expect(res.status).toBe(422);
+  });
+});

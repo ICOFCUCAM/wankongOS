@@ -32,6 +32,7 @@ export const ID_PREFIXES = {
   asset: "ast",
   journalEntry: "jnl",
   accountingPeriod: "prd",
+  company: "cmp",
   brand: "brd",
   employeeVersion: "empv",
 } as const;

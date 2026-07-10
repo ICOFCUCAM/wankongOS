@@ -14,6 +14,7 @@ import { authorize, parseBody } from "../http.js";
 
 const CreateEntry = z.object({
   date: z.string().min(8).max(30),
+  companyId: z.string().max(80).optional(),
   memo: z.string().max(500).optional(),
   source: z.enum(["manual", "invoice", "bank", "payroll", "inventory", "adjustment"]).optional(),
   reference: z.string().max(120).optional(),
@@ -106,8 +107,20 @@ accountingRoutes.get("/accounting/entries", async (c) => {
 accountingRoutes.get("/accounting/statements", async (c) => {
   authorize(c, "org:read");
   const ctx = c.get("ctx");
-  const engine = await engineOf(ctx);
-  const entries = await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId);
+  const companyId = c.req.query("companyId");
+  let engine = await engineOf(ctx);
+  if (companyId) {
+    const company = await ctx.store.companies.get(companyId);
+    if (!company || company.organizationId !== ctx.organizationId) {
+      return c.json({ error: "Unknown company" }, 404);
+    }
+    engine = engineFor(company.jurisdiction) ?? engine;
+  }
+  const entries = await ctx.store.journalEntries.list(
+    (e) =>
+      e.organizationId === ctx.organizationId &&
+      (companyId ? e.companyId === companyId : true),
+  );
   const tb = trialBalance(engine, entries);
   const sum = (types: string[]) => tb.filter((a) => types.includes(a.type)).reduce((n, a) => n + a.balance, 0);
   const revenue = sum(["revenue"]);
@@ -219,4 +232,74 @@ accountingRoutes.get("/accounting/audit-trail", async (c) => {
   );
   events.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return c.json({ data: events.slice(0, 100) });
+});
+
+const CreateCompany = z.object({
+  name: z.string().min(1).max(160),
+  jurisdiction: z.string().max(4),
+  parentCompanyId: z.string().max(80).optional(),
+});
+
+/** Legal entities under this organization, each with its own books. */
+accountingRoutes.get("/accounting/companies", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const companies = await ctx.store.companies.list((x) => x.organizationId === ctx.organizationId);
+  return c.json({ data: companies });
+});
+
+accountingRoutes.post("/accounting/companies", async (c) => {
+  authorize(c, "org:manage");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, CreateCompany);
+  if (!engineFor(input.jurisdiction)) {
+    return c.json({ error: `No jurisdiction engine for "${input.jurisdiction}" yet.` }, 422);
+  }
+  const company = await ctx.store.companies.create({ ...input, organizationId: ctx.organizationId });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.company.create", targetType: "company", targetId: company.id, metadata: { name: company.name, jurisdiction: company.jurisdiction } });
+  return c.json(company, 201);
+});
+
+/**
+ * Group consolidation: per-entity statements under each entity's own engine,
+ * combined ONLY within a single currency. Mixed currencies are reported
+ * per-currency with an explicit note — FX translation and intercompany
+ * eliminations are not yet applied, and the response says so.
+ */
+accountingRoutes.get("/accounting/consolidated", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const [companies, allEntries] = await Promise.all([
+    ctx.store.companies.list((x) => x.organizationId === ctx.organizationId),
+    ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId),
+  ]);
+  const orgEngine = await engineOf(ctx);
+  const units = [
+    { id: null as string | null, name: "Primary company", engine: orgEngine },
+    ...companies.map((co) => ({ id: co.id as string | null, name: co.name, engine: engineFor(co.jurisdiction) ?? orgEngine })),
+  ];
+  const perEntity = units.map((u) => {
+    const entries = allEntries.filter((e) => (u.id ? e.companyId === u.id : !e.companyId));
+    const tb = trialBalance(u.engine, entries);
+    const sum = (t: string[]) => tb.filter((a) => t.includes(a.type)).reduce((n, a) => n + a.balance, 0);
+    const revenue = sum(["revenue"]);
+    const netIncome = Math.round((revenue - sum(["expense"])) * 100) / 100;
+    return { companyId: u.id, name: u.name, currency: u.engine.currency, jurisdiction: u.engine.code, entries: entries.length, revenue, netIncome, assets: sum(["asset"]) };
+  }).filter((u) => u.entries > 0 || u.companyId === null);
+
+  const byCurrency: Record<string, { revenue: number; netIncome: number; assets: number; entities: number }> = {};
+  for (const u of perEntity) {
+    const b = (byCurrency[u.currency] ??= { revenue: 0, netIncome: 0, assets: 0, entities: 0 });
+    b.revenue += u.revenue; b.netIncome += u.netIncome; b.assets += u.assets; b.entities += 1;
+  }
+  const currencies = Object.keys(byCurrency);
+  return c.json({
+    perEntity,
+    byCurrency,
+    note:
+      currencies.length > 1
+        ? `Entities report in ${currencies.join(", ")}. FX translation and intercompany eliminations are NOT applied — totals are per currency and must not be summed across currencies.`
+        : "Single-currency group; intercompany eliminations are not yet applied.",
+    safeguard: ACCOUNTING_SAFEGUARD,
+  });
 });

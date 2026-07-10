@@ -89,6 +89,8 @@ export const JournalEntry = z
     date: z.string().min(8).max(30),
     memo: z.string().max(500).default(""),
     source: z.enum(["manual", "invoice", "bank", "payroll", "inventory", "adjustment"]).default("manual"),
+    /** Entity whose books this entry belongs to; absent = the primary company. */
+    companyId: Id.optional(),
     /** External reference (invoice #, bank tx id) — duplicate detection key. */
     reference: z.string().max(120).optional(),
     lines: z.array(JournalLine).min(2),
@@ -132,6 +134,19 @@ export function trialBalance(engine: JurisdictionEngine, entries: JournalEntry[]
   }
   return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code));
 }
+
+/** A legal entity holding its own ledger — subsidiaries under one org. */
+export const Company = z.object({
+  id: Id,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+  organizationId: Id,
+  name: z.string().min(1).max(160),
+  /** Jurisdiction engine code for THIS entity's books. */
+  jurisdiction: z.string().max(4),
+  parentCompanyId: Id.optional(),
+});
+export type Company = z.infer<typeof Company>;
 
 export const AccountingPeriod = z.object({
   id: Id,
