@@ -60,6 +60,8 @@ export const Organization = z.object({
       dataResidency: z.enum(["us", "eu", "global"]).default("global"),
       /** Jurisdiction code for the accounting engine (e.g. "NO", "UK", "US"). */
       jurisdiction: z.string().max(4).default("US"),
+      /** Purge conversational/audit data older than this many days (unset = keep forever). */
+      retentionDays: z.number().int().positive().optional(),
     })
     .default({ defaultProvider: "local", dataResidency: "global" }),
 });
