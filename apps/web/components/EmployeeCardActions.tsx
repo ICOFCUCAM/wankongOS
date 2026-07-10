@@ -23,6 +23,7 @@ export function EmployeeCardActions({
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   async function assignTask() {
     const trimmed = title.trim();
@@ -53,19 +54,26 @@ export function EmployeeCardActions({
     }
   }
 
-  async function lifecycle(action: "pause" | "resume") {
+  async function lifecycle(action: "pause" | "resume" | "activate" | "clone") {
     if (busy) return;
     setBusy(true);
     setNotice(null);
+    setMenuOpen(false);
     try {
       const res = await fetch(`${PUBLIC_API_URL}/v1/employees/${employeeId}/${action}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: "{}",
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+      const body = await res.json().catch(() => ({}));
+      if (res.status === 422) {
+        setNotice("Blocked: fails eval suite.");
+      } else if (!res.ok) {
         setNotice(body.error ?? `Failed (${res.status})`);
+      } else if (action === "clone" && body.id) {
+        router.push(`/employees/${body.id}`);
+        router.refresh();
+        return;
       } else {
         router.refresh();
       }
@@ -142,7 +150,45 @@ export function EmployeeCardActions({
           {busy ? "…" : "Resume"}
         </button>
       )}
+      <div className={`relative ${status === "active" || status === "paused" ? "" : "ml-auto"}`}>
+        <button
+          className="rounded-md px-2 py-1 text-muted transition hover:text-text"
+          onClick={() => setMenuOpen((v) => !v)}
+          disabled={busy}
+          aria-label="More actions"
+        >
+          ⋯
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-border bg-surface-2 py-1 shadow-xl">
+            {status === "training" && (
+              <MenuItem onClick={() => void lifecycle("activate")}>
+                Promote to active (runs evals)
+              </MenuItem>
+            )}
+            <MenuItem onClick={() => void lifecycle("clone")}>Clone this employee</MenuItem>
+            <MenuItem onClick={() => setMenuOpen(false)}>Close</MenuItem>
+          </div>
+        )}
+      </div>
       {notice && <span className="text-warn">{notice}</span>}
     </div>
+  );
+}
+
+function MenuItem({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      className="block w-full px-3 py-1.5 text-left text-xs text-text/90 transition hover:bg-surface hover:text-accent-soft"
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
