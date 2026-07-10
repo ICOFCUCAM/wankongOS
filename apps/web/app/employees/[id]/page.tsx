@@ -7,6 +7,7 @@ import { Chat } from "@/components/Chat";
 import { EvalPanel } from "@/components/EvalPanel";
 import { EmployeeControls } from "@/components/EmployeeControls";
 import { ReviewPanel } from "@/components/ReviewPanel";
+import { WorkTimeline } from "@/components/WorkTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +190,68 @@ function MissionAndToday({
   );
 }
 
+/** The office's live strip: presence, current thought, queue, waiting-on, connected apps. */
+function OfficeNow({
+  summary,
+  integrations,
+  employee,
+}: {
+  summary?: Awaited<ReturnType<typeof api.employeeSummaries>>[number];
+  integrations: Awaited<ReturnType<typeof api.integrations>>;
+  employee: Employee;
+}) {
+  if (!summary) return null;
+  const connected = integrations.filter((i) => i.status === "connected");
+  return (
+    <div className="card grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="min-w-0">
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-muted">Right now</h3>
+        {summary.currentTask ? (
+          <>
+            <div className="truncate text-sm text-text/90">▸ {summary.currentTask.title}</div>
+            {summary.currentTask.progress !== null && (
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${Math.round(summary.currentTask.progress * 100)}%` }} />
+              </div>
+            )}
+            {summary.currentStep && (
+              <div className="mt-1 truncate text-xs text-info">↻ {summary.currentStep}…</div>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-muted">Nothing in flight.</p>
+        )}
+        {summary.nextUp && <div className="mt-1 truncate text-xs text-muted">Next: {summary.nextUp}</div>}
+      </div>
+      <div className="min-w-0">
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-muted">Waiting on</h3>
+        {summary.waitingApprovals > 0 ? (
+          <p className="text-sm text-approval">
+            {summary.waitingApprovals} approval{summary.waitingApprovals === 1 ? "" : "s"} from you
+          </p>
+        ) : (
+          <p className="text-sm text-muted">Nothing — unblocked.</p>
+        )}
+        <p className="mt-1 text-xs text-muted">{summary.openTasks} open task(s) · {summary.completedToday} done today</p>
+      </div>
+      <div className="min-w-0">
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-muted">Connected</h3>
+        <div className="flex flex-wrap gap-1">
+          {employee.toolIds.slice(0, 4).map((t) => (
+            <span key={t} className="pill font-mono text-[10px] text-muted">{t}</span>
+          ))}
+          {connected.map((i) => (
+            <span key={i.id} className="pill text-[10px] text-success">{i.kind}</span>
+          ))}
+          {employee.toolIds.length === 0 && connected.length === 0 && (
+            <span className="text-sm text-muted">No tools granted yet.</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function EmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let employee: Employee;
@@ -199,8 +262,11 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   let reviews: Awaited<ReturnType<typeof api.employeeReviews>>;
   let conversations: Awaited<ReturnType<typeof api.employeeConversations>>;
   let allTasks: Awaited<ReturnType<typeof api.tasks>>;
+  let timeline: Awaited<ReturnType<typeof api.employeeTimeline>>;
+  let summaries: Awaited<ReturnType<typeof api.employeeSummaries>>;
+  let orgIntegrations: Awaited<ReturnType<typeof api.integrations>>;
   try {
-    [employee, goals, memories, evals, usage, reviews, conversations, allTasks] =
+    [employee, goals, memories, evals, usage, reviews, conversations, allTasks, timeline, summaries, orgIntegrations] =
       await Promise.all([
         api.employee(id),
         api.employeeGoals(id),
@@ -210,6 +276,9 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
         api.employeeReviews(id),
         api.employeeConversations(id),
         api.tasks(),
+        api.employeeTimeline(id),
+        api.employeeSummaries(),
+        api.integrations(),
       ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
@@ -251,6 +320,10 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           <IntelligencePanel employee={employee} evals={evals} memories={memories} />
 
           <MissionAndToday employee={employee} goals={goals} tasks={allTasks} />
+
+          <OfficeNow summary={summaries.find((x) => x.employeeId === employee.id)} integrations={orgIntegrations} employee={employee} />
+
+          <WorkTimeline items={timeline} />
 
           <div className="card grid grid-cols-1 gap-6 sm:grid-cols-2">
             <List title="Responsibilities" items={employee.responsibilities} />
