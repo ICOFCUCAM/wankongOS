@@ -23,6 +23,12 @@ export const systemClock: Clock = () => new Date().toISOString();
 export interface Repository<T extends BaseEntity> {
   get(id: string): Promise<T | null>;
   list(predicate?: (item: T) => boolean): Promise<T[]>;
+  /**
+   * Tenant-scoped listing. SQL backends push this down to an indexed
+   * WHERE organization_id = $1 instead of scanning every row; the
+   * in-memory backend filters. Optional in-process refinement runs after.
+   */
+  listByOrg(organizationId: string, predicate?: (item: T) => boolean): Promise<T[]>;
   create(input: CreateInput<T>): Promise<T>;
   /** Upsert a fully-formed entity verbatim (deterministic seeds, imports). */
   insert(entity: T): Promise<T> | T;
@@ -47,6 +53,14 @@ export class MemoryRepository<T extends BaseEntity> implements Repository<T> {
   async list(predicate?: (item: T) => boolean): Promise<T[]> {
     const all = [...this.items.values()];
     return predicate ? all.filter(predicate) : all;
+  }
+
+  async listByOrg(organizationId: string, predicate?: (item: T) => boolean): Promise<T[]> {
+    return this.list(
+      (item) =>
+        (item as T & { organizationId?: string }).organizationId === organizationId &&
+        (predicate ? predicate(item) : true),
+    );
   }
 
   async create(input: CreateInput<T>): Promise<T> {

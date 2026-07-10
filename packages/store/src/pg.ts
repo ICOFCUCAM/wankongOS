@@ -59,6 +59,15 @@ export class PgRepository<T extends BaseEntity> implements Repository<T> {
     return predicate ? all.filter(predicate) : all;
   }
 
+  async listByOrg(organizationId: string, predicate?: (item: T) => boolean): Promise<T[]> {
+    const { rows } = await this.client.query(
+      `SELECT data FROM ${this.table} WHERE organization_id = $1`,
+      [organizationId],
+    );
+    const all = rows.map((r) => r.data as T);
+    return predicate ? all.filter(predicate) : all;
+  }
+
   async create(input: CreateInput<T>): Promise<T> {
     const now = this.clock();
     const entity = { ...input, id: newId(this.kind), createdAt: now, updatedAt: now } as T;

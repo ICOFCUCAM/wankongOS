@@ -128,3 +128,22 @@ describe("accounting persists on real SQL", () => {
     expect(cons.presentation.missingRates).toHaveLength(0);
   });
 });
+
+describe("tenant queries push down to SQL", () => {
+  it("listByOrg returns only the org's rows via the indexed column", async () => {
+    const store = new PgStore(client);
+    const other = await store.organizations.create({
+      name: "Other Org", slug: "other-org", plan: "trial",
+      settings: { defaultProvider: "local", dataResidency: "global", jurisdiction: "US" },
+    });
+    await store.tasks.create({
+      organizationId: other.id, title: "foreign task", description: "", status: "todo",
+      priority: "normal", createdBy: { kind: "user", id: "usr_x" }, labels: [],
+    });
+    const seeded = await store.tasks.listByOrg(SEED_ORG_ID);
+    expect(seeded.length).toBeGreaterThan(0);
+    expect(seeded.every((t) => t.organizationId === SEED_ORG_ID)).toBe(true);
+    const foreign = await store.tasks.listByOrg(other.id);
+    expect(foreign).toHaveLength(1);
+  });
+});

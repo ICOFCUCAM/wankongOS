@@ -69,10 +69,10 @@ pulseRoutes.get("/pulse", async (c) => {
   const limit = Math.min(Number(c.req.query("limit") ?? 20), 100);
 
   const [employees, tasks, approvals, auditEvents] = await Promise.all([
-    ctx.store.employees.list((e) => e.organizationId === orgId),
-    ctx.store.tasks.list((t) => t.organizationId === orgId),
-    ctx.store.approvals.list((a) => a.organizationId === orgId),
-    ctx.store.auditEvents.list((e) => e.organizationId === orgId),
+    ctx.store.employees.listByOrg(orgId),
+    ctx.store.tasks.listByOrg(orgId),
+    ctx.store.approvals.listByOrg(orgId),
+    ctx.store.auditEvents.listByOrg(orgId),
   ]);
   const nameOf = new Map(employees.map((e) => [e.id, e.name]));
   const actorName = (a: Assignee) =>

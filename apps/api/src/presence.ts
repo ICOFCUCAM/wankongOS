@@ -33,9 +33,9 @@ export interface OrgPresence {
  */
 export async function deriveOrgPresence(store: Store, organizationId: string): Promise<OrgPresence> {
   const [employees, tasks, pendingApprovals, usage] = await Promise.all([
-    store.employees.list((e) => e.organizationId === organizationId),
-    store.tasks.list((t) => t.organizationId === organizationId),
-    store.approvals.list((a) => a.organizationId === organizationId && a.status === "pending"),
+    store.employees.listByOrg(organizationId),
+    store.tasks.listByOrg(organizationId),
+    store.approvals.listByOrg(organizationId, (a) => a.status === "pending"),
     perEmployeeUsage(store, organizationId),
   ]);
 

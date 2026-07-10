@@ -34,7 +34,7 @@ export async function perEmployeeUsage(
   organizationId: string,
 ): Promise<Map<string, UsageBucket>> {
   const [conversations, messages] = await Promise.all([
-    store.conversations.list((cv) => cv.organizationId === organizationId),
+    store.conversations.listByOrg(organizationId),
     store.messages.list(),
   ]);
   const employeeByConversation = new Map(conversations.map((cv) => [cv.id, cv.employeeId]));
