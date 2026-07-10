@@ -31,6 +31,7 @@ export const ID_PREFIXES = {
   evalReport: "evr",
   asset: "ast",
   journalEntry: "jnl",
+  accountingPeriod: "prd",
   brand: "brd",
   employeeVersion: "empv",
 } as const;

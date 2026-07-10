@@ -103,3 +103,35 @@ describe("filing documents from the ledger", () => {
     expect(asset.content).toContain("no national VAT");
   });
 });
+
+describe("accounting periods preserve integrity", () => {
+  it("blocks postings into a closed period; reopening needs a reason and is audited", async () => {
+    const close = await app.request("/v1/accounting/periods/2026-07/close", json({}));
+    expect(close.status).toBe(200);
+
+    const blocked = await app.request("/v1/accounting/entries", json(INVOICE));
+    expect(blocked.status).toBe(409);
+
+    const noReason = await app.request("/v1/accounting/periods/2026-07/reopen", json({}));
+    expect(noReason.status).toBe(400);
+
+    const reopened = await app.request(
+      "/v1/accounting/periods/2026-07/reopen",
+      json({ reason: "Late supplier invoice for July." }),
+    );
+    expect(reopened.status).toBe(200);
+    expect((await app.request("/v1/accounting/entries", json(INVOICE))).status).toBe(201);
+
+    const trail = await (await app.request("/v1/accounting/audit-trail")).json();
+    const actions = trail.data.map((e: { action: string }) => e.action);
+    expect(actions).toContain("accounting.period.close");
+    expect(actions).toContain("accounting.period.reopen");
+    expect(actions).toContain("accounting.entry.post");
+  });
+
+  it("statements include derived cash flow", async () => {
+    await app.request("/v1/accounting/entries", json({ ...INVOICE, reference: "INV-CF", lines: [{ accountCode: "1000", debit: 50 }, { accountCode: "4000", credit: 50 }] }));
+    const s = await (await app.request("/v1/accounting/statements")).json();
+    expect(s.cashFlow.net).toBe(50);
+  });
+});

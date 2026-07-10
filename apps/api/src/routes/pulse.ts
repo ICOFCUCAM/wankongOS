@@ -34,6 +34,10 @@ const AUDIT_PHRASES: Record<string, string> = {
   "document.injection_flagged": "flagged a suspicious document",
   "studio.generate": "produced a new asset in a studio",
   "asset.create": "stored a new asset",
+  "accounting.entry.post": "posted a journal entry",
+  "accounting.period.close": "closed an accounting period",
+  "accounting.period.reopen": "reopened an accounting period (with reason)",
+  "accounting.department.hire": "staffed the accounting department",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */

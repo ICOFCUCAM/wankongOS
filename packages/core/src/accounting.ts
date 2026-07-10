@@ -29,6 +29,8 @@ export interface FilingDef {
 
 export interface JurisdictionEngine {
   code: string;
+  /** Rules-package version — engines are versioned data, updated over time. */
+  rulesVersion: string;
   country: string;
   currency: string;
   /** Official filing language; internal copies may be translated. */
@@ -59,12 +61,12 @@ const BASE_COA: AccountDef[] = [
 ];
 
 export const JURISDICTION_ENGINES: JurisdictionEngine[] = [
-  { code: "NO", country: "Norway", currency: "NOK", language: "Norwegian", standard: "Norwegian Accounting Act (regnskapsloven) + Bookkeeping Act", vatRate: 0.25, vatName: "MVA", filings: [ { id: "saf-t", name: "SAF-T Financial export", period: "yearly" }, { id: "mva-melding", name: "MVA-melding (VAT return)", period: "bimonthly" }, { id: "arsregnskap", name: "Årsregnskap (annual accounts)", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Employer contributions (arbeidsgiveravgift) vary by region.", "Altinn is the filing portal."] },
-  { code: "SE", country: "Sweden", currency: "SEK", language: "Swedish", standard: "Bokföringslagen + K2/K3", vatRate: 0.25, vatName: "Moms", filings: [ { id: "momsdeklaration", name: "Momsdeklaration", period: "quarterly" }, { id: "arsredovisning", name: "Årsredovisning", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["BAS chart of accounts is the national convention."] },
-  { code: "UK", country: "United Kingdom", currency: "GBP", language: "English", standard: "UK GAAP (FRS 102) / IFRS", vatRate: 0.20, vatName: "VAT", filings: [ { id: "vat-return", name: "VAT Return (Making Tax Digital)", period: "quarterly" }, { id: "ct600", name: "Corporation Tax (CT600)", period: "yearly" }, { id: "annual-accounts", name: "Companies House annual accounts", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["PAYE for payroll; MTD requires digital VAT records."] },
-  { code: "US", country: "United States", currency: "USD", language: "English", standard: "US GAAP", vatRate: null, vatName: "Sales tax (state/local)", filings: [ { id: "form-1120", name: "Federal corporate return (1120)", period: "yearly" }, { id: "941", name: "Payroll tax (Form 941)", period: "quarterly" }, { id: "1099-w2", name: "1099 / W-2 information returns", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Sales tax is state/local — no federal VAT.", "Multi-state payroll requires per-state registration."] },
-  { code: "DE", country: "Germany", currency: "EUR", language: "German", standard: "HGB", vatRate: 0.19, vatName: "USt", filings: [ { id: "ust-va", name: "Umsatzsteuervoranmeldung", period: "monthly" }, { id: "jahresabschluss", name: "Jahresabschluss", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["SKR03/SKR04 charts are the national convention; ELSTER is the portal."] },
-  { code: "CA", country: "Canada", currency: "CAD", language: "English/French", standard: "ASPE / IFRS", vatRate: 0.05, vatName: "GST/HST", filings: [ { id: "gst-return", name: "GST/HST return", period: "quarterly" }, { id: "t2", name: "T2 corporate return", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["HST rates vary by province on top of federal GST."] },
+  { code: "NO", rulesVersion: "2026.07", country: "Norway", currency: "NOK", language: "Norwegian", standard: "Norwegian Accounting Act (regnskapsloven) + Bookkeeping Act", vatRate: 0.25, vatName: "MVA", filings: [ { id: "saf-t", name: "SAF-T Financial export", period: "yearly" }, { id: "mva-melding", name: "MVA-melding (VAT return)", period: "bimonthly" }, { id: "arsregnskap", name: "Årsregnskap (annual accounts)", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Employer contributions (arbeidsgiveravgift) vary by region.", "Altinn is the filing portal."] },
+  { code: "SE", rulesVersion: "2026.07", country: "Sweden", currency: "SEK", language: "Swedish", standard: "Bokföringslagen + K2/K3", vatRate: 0.25, vatName: "Moms", filings: [ { id: "momsdeklaration", name: "Momsdeklaration", period: "quarterly" }, { id: "arsredovisning", name: "Årsredovisning", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["BAS chart of accounts is the national convention."] },
+  { code: "UK", rulesVersion: "2026.07", country: "United Kingdom", currency: "GBP", language: "English", standard: "UK GAAP (FRS 102) / IFRS", vatRate: 0.20, vatName: "VAT", filings: [ { id: "vat-return", name: "VAT Return (Making Tax Digital)", period: "quarterly" }, { id: "ct600", name: "Corporation Tax (CT600)", period: "yearly" }, { id: "annual-accounts", name: "Companies House annual accounts", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["PAYE for payroll; MTD requires digital VAT records."] },
+  { code: "US", rulesVersion: "2026.07", country: "United States", currency: "USD", language: "English", standard: "US GAAP", vatRate: null, vatName: "Sales tax (state/local)", filings: [ { id: "form-1120", name: "Federal corporate return (1120)", period: "yearly" }, { id: "941", name: "Payroll tax (Form 941)", period: "quarterly" }, { id: "1099-w2", name: "1099 / W-2 information returns", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["Sales tax is state/local — no federal VAT.", "Multi-state payroll requires per-state registration."] },
+  { code: "DE", rulesVersion: "2026.07", country: "Germany", currency: "EUR", language: "German", standard: "HGB", vatRate: 0.19, vatName: "USt", filings: [ { id: "ust-va", name: "Umsatzsteuervoranmeldung", period: "monthly" }, { id: "jahresabschluss", name: "Jahresabschluss", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["SKR03/SKR04 charts are the national convention; ELSTER is the portal."] },
+  { code: "CA", rulesVersion: "2026.07", country: "Canada", currency: "CAD", language: "English/French", standard: "ASPE / IFRS", vatRate: 0.05, vatName: "GST/HST", filings: [ { id: "gst-return", name: "GST/HST return", period: "quarterly" }, { id: "t2", name: "T2 corporate return", period: "yearly" } ], chartOfAccounts: BASE_COA, notes: ["HST rates vary by province on top of federal GST."] },
 ];
 
 export function engineFor(code: string): JurisdictionEngine | undefined {
@@ -129,6 +131,32 @@ export function trialBalance(engine: JurisdictionEngine, entries: JournalEntry[]
     acc.credit = Math.round(acc.credit * 100) / 100;
   }
   return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code));
+}
+
+export const AccountingPeriod = z.object({
+  id: Id,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+  organizationId: Id,
+  /** Month key, e.g. "2026-07". */
+  period: z.string().regex(/^\d{4}-\d{2}$/),
+  status: z.enum(["open", "closed"]).default("open"),
+  closedBy: Id.optional(),
+  closedAt: Timestamp.optional(),
+  /** Controlled procedure: reopening requires a recorded reason. */
+  reopenedReason: z.string().max(500).optional(),
+});
+export type AccountingPeriod = z.infer<typeof AccountingPeriod>;
+
+/** Net cash movement derived from the cash account (1000) — never stored. */
+export function cashFlow(entries: JournalEntry[]): { inflow: number; outflow: number; net: number } {
+  let inflow = 0, outflow = 0;
+  for (const e of entries) for (const l of e.lines) {
+    if (!l.accountCode.startsWith("10")) continue;
+    inflow += l.debit; outflow += l.credit;
+  }
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return { inflow: r(inflow), outflow: r(outflow), net: r(inflow - outflow) };
 }
 
 export interface AnomalyFinding {

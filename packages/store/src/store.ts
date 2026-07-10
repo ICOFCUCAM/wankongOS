@@ -9,6 +9,7 @@ import {
   type Employee,
   type EmployeeVersion,
   type Asset,
+  type AccountingPeriod,
   type JournalEntry,
   type BrandKit,
   type EvalReport,
@@ -60,6 +61,7 @@ export interface StoreRepositories {
   readonly evalReports: Repository<EvalReport>;
   readonly assets: Repository<Asset>;
   readonly journalEntries: Repository<JournalEntry>;
+  readonly accountingPeriods: Repository<AccountingPeriod>;
   readonly brandKits: Repository<BrandKit>;
   readonly employeeVersions: Repository<EmployeeVersion>;
 }
@@ -90,6 +92,7 @@ export const STORE_ENTITY_KINDS = [
   "evalReport",
   "asset",
   "journalEntry",
+  "accountingPeriod",
   "brand",
   "employeeVersion",
 ] as const satisfies readonly EntityKind[];
@@ -119,6 +122,7 @@ const REPO_FIELDS = [
   "evalReports",
   "assets",
   "journalEntries",
+  "accountingPeriods",
   "brandKits",
   "employeeVersions",
 ] as const;
@@ -159,6 +163,7 @@ export abstract class BaseStore implements StoreRepositories {
   abstract readonly evalReports: Repository<EvalReport>;
   abstract readonly assets: Repository<Asset>;
   abstract readonly journalEntries: Repository<JournalEntry>;
+  abstract readonly accountingPeriods: Repository<AccountingPeriod>;
   abstract readonly brandKits: Repository<BrandKit>;
   abstract readonly employeeVersions: Repository<EmployeeVersion>;
 
@@ -225,6 +230,7 @@ export class MemoryStore extends BaseStore {
   readonly evalReports: MemoryRepository<EvalReport>;
   readonly assets: MemoryRepository<Asset>;
   readonly journalEntries: MemoryRepository<JournalEntry>;
+  readonly accountingPeriods: MemoryRepository<AccountingPeriod>;
   readonly brandKits: MemoryRepository<BrandKit>;
   readonly employeeVersions: MemoryRepository<EmployeeVersion>;
 
@@ -254,6 +260,7 @@ export class MemoryStore extends BaseStore {
     this.evalReports = new MemoryRepository("evalReport", clock);
     this.assets = new MemoryRepository("asset", clock);
     this.journalEntries = new MemoryRepository("journalEntry", clock);
+    this.accountingPeriods = new MemoryRepository("accountingPeriod", clock);
     this.brandKits = new MemoryRepository("brand", clock);
     this.employeeVersions = new MemoryRepository("employeeVersion", clock);
   }

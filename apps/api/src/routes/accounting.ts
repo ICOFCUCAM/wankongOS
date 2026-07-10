@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import {
   ACCOUNTING_SAFEGUARD,
+  cashFlow,
   detectAnomalies,
   engineFor,
   JournalEntry,
@@ -79,6 +80,14 @@ accountingRoutes.post("/accounting/entries", async (c) => {
   if (!check.success) {
     return c.json({ error: check.error.issues[0]?.message ?? "Invalid journal entry" }, 400);
   }
+  // Accounting integrity: no postings into a closed period.
+  const periodKey = check.data.date.slice(0, 7);
+  const period = (await ctx.store.accountingPeriods.list(
+    (p) => p.organizationId === ctx.organizationId && p.period === periodKey,
+  ))[0];
+  if (period?.status === "closed") {
+    return c.json({ error: `Period ${periodKey} is closed. Reopen it (a controlled, audited procedure) before posting.` }, 409);
+  }
   const { id: _i, createdAt: _c2, updatedAt: _u, ...data } = check.data;
   const entry = await ctx.store.journalEntries.create(data);
   await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.entry.post", targetType: "journalEntry", targetId: entry.id, metadata: { reference: entry.reference ?? null } });
@@ -110,6 +119,7 @@ accountingRoutes.get("/accounting/statements", async (c) => {
     trialBalance: tb,
     profitAndLoss: { revenue, expenses, netIncome },
     balanceSheet: { assets: sum(["asset"]), liabilities: sum(["liability"]), equity: sum(["equity"]) + netIncome },
+    cashFlow: cashFlow(entries),
     safeguard: ACCOUNTING_SAFEGUARD,
   });
 });
@@ -161,4 +171,52 @@ accountingRoutes.post("/accounting/hire-department", async (c) => {
   }
   await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.department.hire", targetType: "department", targetId: dept.id, metadata: { hired: hired.length } });
   return c.json({ department: dept, hired: hired.length, total: existing.length + hired.length }, 201);
+});
+
+/** Accounting periods with controlled close/reopen. */
+accountingRoutes.get("/accounting/periods", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const periods = await ctx.store.accountingPeriods.list((p) => p.organizationId === ctx.organizationId);
+  periods.sort((a, b) => b.period.localeCompare(a.period));
+  const current = new Date().toISOString().slice(0, 7);
+  return c.json({ current, data: periods });
+});
+
+accountingRoutes.post("/accounting/periods/:period/close", async (c) => {
+  authorize(c, "org:manage");
+  const ctx = c.get("ctx");
+  const key = c.req.param("period");
+  if (!/^\d{4}-\d{2}$/.test(key)) return c.json({ error: "Period must be YYYY-MM" }, 400);
+  const userId = c.get("actor").user.id;
+  const existing = (await ctx.store.accountingPeriods.list((p) => p.organizationId === ctx.organizationId && p.period === key))[0];
+  const now = new Date().toISOString();
+  const period = existing
+    ? await ctx.store.accountingPeriods.update(existing.id, { status: "closed", closedBy: userId, closedAt: now })
+    : await ctx.store.accountingPeriods.create({ organizationId: ctx.organizationId, period: key, status: "closed", closedBy: userId, closedAt: now });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: userId }, action: "accounting.period.close", targetType: "accountingPeriod", targetId: period.id, metadata: { period: key } });
+  return c.json(period);
+});
+
+accountingRoutes.post("/accounting/periods/:period/reopen", async (c) => {
+  authorize(c, "org:manage");
+  const ctx = c.get("ctx");
+  const key = c.req.param("period");
+  const { reason } = await parseBody(c, z.object({ reason: z.string().min(5).max(500) }));
+  const existing = (await ctx.store.accountingPeriods.list((p) => p.organizationId === ctx.organizationId && p.period === key))[0];
+  if (!existing || existing.status !== "closed") return c.json({ error: "Period is not closed" }, 409);
+  const period = await ctx.store.accountingPeriods.update(existing.id, { status: "open", reopenedReason: reason });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.period.reopen", targetType: "accountingPeriod", targetId: period.id, metadata: { period: key, reason } });
+  return c.json(period);
+});
+
+/** The department's own audit trail: every accounting action, attributable. */
+accountingRoutes.get("/accounting/audit-trail", async (c) => {
+  authorize(c, "audit:read");
+  const ctx = c.get("ctx");
+  const events = await ctx.store.auditEvents.list(
+    (e) => e.organizationId === ctx.organizationId && (e.action.startsWith("accounting.") || e.action === "studio.generate"),
+  );
+  events.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return c.json({ data: events.slice(0, 100) });
 });
