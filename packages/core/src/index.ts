@@ -28,3 +28,4 @@ export * from "./marketplace.js";
 export * from "./health.js";
 export * from "./dna.js";
 export * from "./composition.js";
+export * from "./quality.js";
