@@ -218,3 +218,22 @@ describe("real PDF output", () => {
     expect(buf.toString("binary")).toContain("Consulting");
   });
 });
+
+describe("binary asset upload", () => {
+  it("stores and round-trips a binary upload; rejects non-base64", async () => {
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+    const up = await app.request("/v1/assets/upload", json({
+      title: "logo.png", mimeType: "image/png", base64: bytes.toString("base64"), tags: ["brand"],
+    }));
+    expect(up.status).toBe(201);
+    const { id, bytes: size } = await up.json();
+    expect(size).toBeGreaterThanOrEqual(7);
+
+    const dl = await app.request(`/v1/assets/${id}/download`);
+    expect(dl.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await dl.arrayBuffer()).equals(bytes)).toBe(true);
+
+    const bad = await app.request("/v1/assets/upload", json({ title: "x", mimeType: "image/png", base64: "not base64 !!!" }));
+    expect(bad.status).toBe(400);
+  });
+});

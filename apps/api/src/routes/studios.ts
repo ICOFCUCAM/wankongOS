@@ -293,7 +293,7 @@ studioRoutes.get("/assets/:id/download", async (c) => {
   authorize(c, "org:read");
   const ctx = c.get("ctx");
   const asset = await findScoped(c, (id) => ctx.store.assets.get(id), c.req.param("id"));
-  const binary = asset.mimeType === "application/pdf";
+  const binary = !asset.mimeType.startsWith("text/") && !asset.mimeType.includes("json") && !asset.mimeType.includes("svg");
   const body = binary ? Buffer.from(asset.content, "base64") : asset.content;
   return new Response(body, {
     headers: {
@@ -301,4 +301,34 @@ studioRoutes.get("/assets/:id/download", async (c) => {
       "content-disposition": `attachment; filename="${asset.title.replace(/[^\w.-]+/g, "_")}"`,
     },
   });
+});
+
+const UploadInput = z.object({
+  title: z.string().min(1).max(200),
+  mimeType: z.string().min(3).max(100),
+  /** Base64 payload. Inline storage caps at ~350KB binary (500k chars); larger files need an object-storage connector. */
+  base64: z.string().min(4).max(500_000),
+  tags: z.array(z.string().max(40)).max(10).optional(),
+});
+
+/** Upload any file as a versioned asset (base64 inline; small-file floor). */
+studioRoutes.post("/assets/upload", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, UploadInput);
+  if (!/^[A-Za-z0-9+/=\r\n]+$/.test(input.base64)) {
+    return c.json({ error: "Payload must be base64" }, 400);
+  }
+  const asset = await ctx.store.assets.create({
+    organizationId: ctx.organizationId,
+    studioId: "assets",
+    kind: "upload",
+    title: input.title,
+    mimeType: input.mimeType,
+    content: input.base64,
+    version: 1,
+    tags: input.tags ?? ["upload"],
+    createdBy: { kind: "user", id: c.get("actor").user.id },
+  });
+  return c.json({ id: asset.id, title: asset.title, bytes: Math.floor(input.base64.length * 0.75) }, 201);
 });
