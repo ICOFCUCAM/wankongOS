@@ -243,6 +243,10 @@ export const Message = z.object({
     .optional(),
   tokensIn: z.number().int().nonnegative().optional(),
   tokensOut: z.number().int().nonnegative().optional(),
+  /** Observability: which backend answered and how long the turn took. */
+  provider: ProviderId.optional(),
+  model: z.string().max(120).optional(),
+  latencyMs: z.number().nonnegative().optional(),
 });
 export type Message = z.infer<typeof Message>;
 

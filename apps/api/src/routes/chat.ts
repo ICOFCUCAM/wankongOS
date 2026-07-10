@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import type { ChatMessage } from "@wankong/agents";
-import type { Employee } from "@wankong/core";
+import { redactPii, type Employee, type ProviderId } from "@wankong/core";
 import type { AppContext, Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
 import { buildGroundedEmployeeContext } from "../employee-context.js";
@@ -32,6 +32,7 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
     embedder: ctx.embedder,
   });
 
+  const startedAt = Date.now();
   const result = await ctx.runtime.complete({
     employee,
     context: grounded.context,
@@ -40,7 +41,11 @@ chatRoutes.post("/employees/:id/chat", async (c) => {
     tools: await toolsFor(ctx, employee),
   });
 
-  await recordExchange(ctx, employee, conversation.id, input, result.text, result.usage);
+  await recordExchange(ctx, employee, conversation.id, input, result.text, result.usage, {
+    provider: result.provider,
+    model: result.model,
+    latencyMs: Date.now() - startedAt,
+  });
 
   return c.json({
     conversationId: conversation.id,
@@ -71,6 +76,7 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
 
   return streamSSE(c, async (stream) => {
     await stream.writeSSE({ event: "start", data: JSON.stringify({ conversationId: conversation.id }) });
+    const startedAt = Date.now();
     let text = "";
     const usage = { inputTokens: 0, outputTokens: 0 };
     for await (const chunk of ctx.runtime.stream({
@@ -90,7 +96,11 @@ chatRoutes.post("/employees/:id/chat/stream", async (c) => {
         usage.outputTokens += chunk.usage.outputTokens;
       }
     }
-    await recordExchange(ctx, employee, conversation.id, input, text, usage);
+    await recordExchange(ctx, employee, conversation.id, input, text, usage, {
+      provider: ctx.registry.get(employee.provider).id,
+      model: employee.model ?? ctx.registry.get(employee.provider).defaultModel,
+      latencyMs: Date.now() - startedAt,
+    });
     await stream.writeSSE({
       event: "done",
       data: JSON.stringify({ usage, citations: grounded.citations }),
@@ -157,27 +167,37 @@ async function recordExchange(
   input: string,
   reply: string,
   usage: { inputTokens: number; outputTokens: number },
+  observed?: { provider: ProviderId; model: string; latencyMs: number },
 ) {
   await ctx.store.messages.create({
     conversationId,
     role: "user",
     content: input,
-    tokensIn: usage.inputTokens,
   });
+  // The assistant turn is the single accounting record for the exchange:
+  // both token counts live here, alongside provider/model/latency, so cost
+  // attribution prices input and output at the correct model's rates.
   await ctx.store.messages.create({
     conversationId,
     role: "assistant",
     authorId: employee.id,
     content: reply,
+    tokensIn: usage.inputTokens,
     tokensOut: usage.outputTokens,
+    provider: observed?.provider,
+    model: observed?.model,
+    latencyMs: observed?.latencyMs,
   });
   // Capture a lightweight episodic memory of the request for future context.
+  // PII is redacted at this boundary (§3.4) — memories must never hoard
+  // customer emails, card numbers, or phone numbers verbatim.
+  const redacted = redactPii(input.slice(0, 200));
   await ctx.store.memories.create({
     organizationId: ctx.organizationId,
     scope: "employee",
     kind: "event",
     ownerId: employee.id,
-    content: `Handled a request: "${input.slice(0, 200)}"`,
+    content: `Handled a request: "${redacted.text}"`,
     importance: 0.4,
     sourceConversationId: conversationId,
     lastAccessedAt: new Date().toISOString(),

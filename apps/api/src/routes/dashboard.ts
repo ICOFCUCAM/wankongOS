@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { estimateCostUsd, type ProviderId } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize } from "../http.js";
 
@@ -67,6 +68,23 @@ dashboardRoutes.get("/dashboard", async (c) => {
       conversations: conversations.length,
       tokensIn,
       tokensOut,
+      estimatedCostUsd:
+        Math.round(
+          messages
+            .filter((m) => m.role === "assistant")
+            .reduce(
+              (n, m) =>
+                n +
+                estimateCostUsd(
+                  (m.provider ?? "local") as ProviderId,
+                  m.model,
+                  m.tokensIn ?? 0,
+                  m.tokensOut ?? 0,
+                ),
+              0,
+            ) * 1_000_000,
+        ) / 1_000_000,
+      avgLatencyMs: avgLatency(messages),
       utilization: employees.length === 0 ? 0 : Math.round((activeEmployees / employees.length) * 100) / 100,
     },
     workflows: {
@@ -80,6 +98,14 @@ dashboardRoutes.get("/dashboard", async (c) => {
     },
   });
 });
+
+function avgLatency(messages: { role: string; latencyMs?: number }[]): number | null {
+  const samples = messages
+    .filter((m) => m.role === "assistant" && typeof m.latencyMs === "number")
+    .map((m) => m.latencyMs as number);
+  if (samples.length === 0) return null;
+  return Math.round(samples.reduce((n, l) => n + l, 0) / samples.length);
+}
 
 function countBy<T>(items: T[], key: (item: T) => string): Record<string, number> {
   const out: Record<string, number> = {};

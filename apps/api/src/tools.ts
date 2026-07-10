@@ -1,4 +1,5 @@
 import { ToolRegistry } from "@wankong/agents";
+import { redactPii } from "@wankong/core";
 import type { Embedder } from "@wankong/knowledge";
 import type { Store } from "@wankong/store";
 import { searchKnowledge } from "./retrieval.js";
@@ -93,7 +94,10 @@ export function buildToolRegistry(store: Store, organizationId: string, embedder
       triggers: ["\\b(remember|note down|don'?t forget|make a note)\\b"],
     },
     async run(args, ctx) {
-      const content = (str(args.content) ?? str(args.text) ?? "").slice(0, 4000);
+      // Memories never store PII verbatim (§3.4).
+      const content = redactPii(
+        (str(args.content) ?? str(args.text) ?? "").slice(0, 4000),
+      ).text;
       const memory = await store.memories.create({
         organizationId: ctx.organizationId,
         scope: "employee",

@@ -118,6 +118,11 @@ export default async function DashboardPage() {
             <Row label="Conversations" value={data.ai.conversations} />
             <Row label="Tokens in" value={data.ai.tokensIn.toLocaleString()} />
             <Row label="Tokens out" value={data.ai.tokensOut.toLocaleString()} />
+            <Row label="Est. AI cost" value={`$${data.ai.estimatedCostUsd.toFixed(4)}`} />
+            <Row
+              label="Avg latency"
+              value={data.ai.avgLatencyMs === null ? "—" : `${data.ai.avgLatencyMs} ms`}
+            />
             <Row
               label="Goal progress"
               value={`${Math.round(data.goals.averageProgress * 100)}%`}
