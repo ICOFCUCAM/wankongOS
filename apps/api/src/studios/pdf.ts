@@ -86,6 +86,13 @@ export interface Letterhead {
   /** Company stamp drawn on the last page. Deliberately labelled a COMPANY
    *  stamp — never a government seal or certification mark. */
   stamp?: { line1: string; line2: string };
+  /** Diagonal watermark: DRAFT / INTERNAL / CONFIDENTIAL / APPROVED. */
+  watermark?: string;
+  /** Verification code printed in the footer, checkable via /v1/verify. */
+  verification?: string;
+  /** Author line (AI employee + department) under the letterhead. */
+  author?: string;
+  reviewer?: string;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -132,6 +139,11 @@ export function buildBrandedPdf(title: string, lines: string[], head: Letterhead
 
   pages.forEach((pageLines, idx) => {
     let s = "";
+    // --- watermark (under everything) ----------------------------------------
+    if (head.watermark) {
+      const wm = escapePdfText(head.watermark.toUpperCase().slice(0, 14));
+      s += `q 0.93 0.93 0.95 rg BT /F2 64 Tf 0.7071 0.7071 -0.7071 0.7071 ${140} ${260} Tm (${wm}) Tj ET Q\n`;
+    }
     // --- letterhead ---------------------------------------------------------
     const tileY = PAGE_H - 30 - 30;
     s += col(primary, "rg") + `${MARGIN} ${tileY} 30 30 re f\n`;
@@ -145,6 +157,10 @@ export function buildBrandedPdf(title: string, lines: string[], head: Letterhead
     s += `BT ${col(gray, "rg").trim()} /F1 8 Tf ${PAGE_W - MARGIN - textW(meta1, 8)} ${tileY + 17} Td (${escapePdfText(meta1)}) Tj ET\n`;
     s += `BT ${col(gray, "rg").trim()} /F1 8 Tf ${PAGE_W - MARGIN - textW(meta2, 8)} ${tileY + 5} Td (${escapePdfText(meta2)}) Tj ET\n`;
     s += col(primary, "RG") + `2 w ${MARGIN} ${PAGE_H - HEAD_H} m ${PAGE_W - MARGIN} ${PAGE_H - HEAD_H} l S\n`;
+    if (head.author && idx === 0) {
+      const byline = `Prepared by ${head.author}${head.reviewer ? ` · Reviewer: ${head.reviewer}` : ""}`;
+      s += `BT ${col(gray, "rg").trim()} /F1 8 Tf ${MARGIN} ${PAGE_H - HEAD_H - 12} Td (${escapePdfText(byline.slice(0, 110))}) Tj ET\n`;
+    }
 
     // --- title + body -------------------------------------------------------
     s += `BT 0.08 0.09 0.12 rg /F2 ${TITLE_SIZE} Tf ${MARGIN} ${PAGE_H - HEAD_H - TITLE_SIZE - 8} Td (${escapePdfText(idx === 0 ? title : `${title} (p.${idx + 1})`)}) Tj ET\n`;
@@ -167,6 +183,10 @@ export function buildBrandedPdf(title: string, lines: string[], head: Letterhead
     // --- footer ---------------------------------------------------------------
     s += `0.85 0.86 0.88 RG 0.5 w ${MARGIN} ${FOOT_H} m ${PAGE_W - MARGIN} ${FOOT_H} l S\n`;
     s += `BT ${col(gray, "rg").trim()} /F1 7.5 Tf ${MARGIN} ${FOOT_H - 14} Td (${escapePdfText(head.legalLine.slice(0, 120))}) Tj ET\n`;
+    if (head.verification) {
+      const v = `Verify: ${head.verification}`;
+      s += `BT ${col(gray, "rg").trim()} /F1 7.5 Tf ${(PAGE_W - textW(v, 7.5)) / 2} ${FOOT_H - 14} Td (${escapePdfText(v)}) Tj ET\n`;
+    }
     const pageLabel = `Page ${idx + 1} of ${pages.length}`;
     s += `BT ${col(gray, "rg").trim()} /F1 7.5 Tf ${PAGE_W - MARGIN - textW(pageLabel, 7.5)} ${FOOT_H - 14} Td (${escapePdfText(pageLabel)}) Tj ET\n`;
 
