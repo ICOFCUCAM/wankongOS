@@ -22,6 +22,7 @@ function Node({
   byId: Map<string, EmployeeSummary>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [showWork, setShowWork] = useState(false);
   const e = node.employee;
   const summary = byId.get(e.id);
   const style = summary ? activityStyle(summary.activity) : null;
@@ -62,6 +63,15 @@ function Node({
             </span>
           )}
         </Link>
+        {summary && summary.openTasks > 0 && (
+          <button
+            className="shrink-0 rounded-md px-1 py-0.5 font-mono text-[10px] text-muted transition hover:text-accent-soft"
+            onClick={() => setShowWork((v) => !v)}
+            title={`${summary.openTasks} open task(s) — click to ${showWork ? "hide" : "show"}`}
+          >
+            ☰{summary.openTasks}
+          </button>
+        )}
         {node.reports.length > 0 && (
           <button
             className="shrink-0 rounded-md px-1 py-0.5 text-xs text-muted transition hover:text-text"
@@ -77,6 +87,21 @@ function Node({
           </button>
         )}
       </div>
+      {showWork && summary && (
+        <ul className="ml-11 mt-1.5 space-y-1 border-l border-border/60 pl-3">
+          {summary.workingOn.map((title) => (
+            <li key={title} className="flex items-center gap-1.5 text-xs text-muted">
+              <span className="live-dot h-1 w-1 rounded-full bg-success" />
+              <span className="truncate">{title}</span>
+            </li>
+          ))}
+          {summary.openTasks > summary.workingOn.length && (
+            <li className="text-[11px] text-muted/70">
+              +{summary.openTasks - summary.workingOn.length} queued
+            </li>
+          )}
+        </ul>
+      )}
       {node.reports.length > 0 && !collapsed && (
         <ul className="ml-5 mt-2 space-y-2 border-l border-border pl-4">
           {node.reports.map((child) => (
