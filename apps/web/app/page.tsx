@@ -105,7 +105,7 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2">
           <LiveWorkforceRow summaries={summaries} />
         </div>
-        <CompanyPulse items={pulse} />
+        <CompanyPulse items={pulse} showAllLink />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

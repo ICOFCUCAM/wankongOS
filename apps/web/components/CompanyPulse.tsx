@@ -22,13 +22,24 @@ function relativeTime(iso: string, now: number): string {
  * did — every line comes from /v1/pulse, which reads stored tasks,
  * approvals, and the audit trail. No synthetic activity.
  */
-export function CompanyPulse({ items }: { items: PulseItem[] }) {
+export function CompanyPulse({
+  items,
+  showAllLink = false,
+}: {
+  items: PulseItem[];
+  showAllLink?: boolean;
+}) {
   const now = Date.now();
   return (
     <div className="card">
       <div className="mb-3 flex items-center gap-2">
         <span className="live-dot h-2 w-2 rounded-full bg-accent" />
         <h2 className="font-medium">Company pulse</h2>
+        {showAllLink && (
+          <Link href="/pulse" className="ml-auto text-xs text-accent-soft hover:underline">
+            View all →
+          </Link>
+        )}
       </div>
       {items.length === 0 ? (
         <p className="text-sm text-muted">Quiet so far — activity shows up here as it happens.</p>
