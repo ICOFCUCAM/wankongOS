@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { detectPromptInjection } from "@wankong/core";
 import { embedChunks, prepareChunks } from "@wankong/knowledge";
 import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
@@ -104,7 +105,31 @@ knowledgeRoutes.post("/documents", async (c) => {
     metadata: { title: doc.title, version: doc.version, chunks: chunks.length },
   });
 
-  return c.json({ id: doc.id, title: doc.title, version: doc.version, chunkCount: chunks.length }, existing ? 200 : 201);
+  // Injection screening (defense in depth): suspect documents are flagged for
+  // review and audited — retrieval still fences all knowledge as data, so a
+  // flag is a review signal, not the only line of defense.
+  const scan = detectPromptInjection(input.content);
+  if (scan.suspicious) {
+    await ctx.store.audit({
+      organizationId: ctx.organizationId,
+      actor: { kind: "user", id: c.get("actor").user.id },
+      action: "document.injection_flagged",
+      targetType: "document",
+      targetId: doc.id,
+      metadata: { title: doc.title, findings: scan.findings },
+    });
+  }
+
+  return c.json(
+    {
+      id: doc.id,
+      title: doc.title,
+      version: doc.version,
+      chunkCount: chunks.length,
+      ...(scan.suspicious ? { injectionWarning: scan.findings } : {}),
+    },
+    existing ? 200 : 201,
+  );
 });
 
 /** Semantic search across the organization's knowledge, returning citations. */

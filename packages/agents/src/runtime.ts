@@ -1,4 +1,4 @@
-import type { Employee } from "@wankong/core";
+import type { Employee, ProviderId } from "@wankong/core";
 import type { ProviderRegistry } from "./registry.js";
 import { buildSystemPrompt, type PromptContext } from "./prompt.js";
 import { ToolError, type ToolContext, type ToolRegistry } from "./tools.js";
@@ -39,10 +39,15 @@ export interface ExecutedTool {
 
 export interface RunResult extends CompletionResult {
   executedTools: ExecutedTool[];
+  /** Set when the pinned provider failed and the run fell back to `local`. */
+  fallbackFrom?: ProviderId;
 }
 
-/** Runtime chunks: provider chunks plus executed-tool notifications. */
-export type RunChunk = CompletionChunk | { type: "tool_result"; tool: ExecutedTool };
+/** Runtime chunks: provider chunks plus tool and failover notifications. */
+export type RunChunk =
+  | CompletionChunk
+  | { type: "tool_result"; tool: ExecutedTool }
+  | { type: "provider_fallback"; from: ProviderId; to: ProviderId };
 
 const MAX_TOOL_ROUNDS = 3;
 
@@ -93,9 +98,17 @@ export class EmployeeRuntime {
     }
   }
 
-  /** Stream the employee's turn, including tool activity, chunk-by-chunk. */
+  /**
+   * Stream the employee's turn, including tool activity, chunk-by-chunk.
+   *
+   * Provider failover (§3.7): if the active provider fails BEFORE emitting any
+   * chunk (outage, bad credentials), the round retries once on the hermetic
+   * local provider — the workforce degrades instead of going dark. A failure
+   * mid-stream is not retried (partial output must not be silently repeated).
+   */
   async *stream(params: RunParams): AsyncIterable<RunChunk> {
-    const provider = this.registry.get(params.employee.provider);
+    let provider = this.registry.get(params.employee.provider);
+    const pinned = provider;
     const tools = this.toolDefinitions(params);
     const messages = this.buildMessages(params);
 
@@ -103,22 +116,39 @@ export class EmployeeRuntime {
       const pendingCalls: ToolCall[] = [];
       let finish: "stop" | "tool_calls" | "length" = "stop";
 
-      for await (const chunk of provider.stream({
-        messages,
-        model: params.employee.model,
-        temperature: params.employee.temperature,
-        maxTokens: params.maxTokens,
-        tools,
-        signal: params.signal,
-      })) {
-        if (chunk.type === "tool_call") {
-          pendingCalls.push(chunk.call);
-          yield chunk;
-        } else if (chunk.type === "done") {
-          finish = chunk.finishReason;
-          yield chunk;
-        } else {
-          yield chunk;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        pendingCalls.length = 0;
+        finish = "stop";
+        let emitted = false;
+        try {
+          for await (const chunk of provider.stream({
+            messages,
+            // The employee's pinned model belongs to the pinned provider only.
+            model: provider === pinned ? params.employee.model : undefined,
+            temperature: params.employee.temperature,
+            maxTokens: params.maxTokens,
+            tools,
+            signal: params.signal,
+          })) {
+            emitted = true;
+            if (chunk.type === "tool_call") {
+              pendingCalls.push(chunk.call);
+              yield chunk;
+            } else if (chunk.type === "done") {
+              finish = chunk.finishReason;
+              yield chunk;
+            } else {
+              yield chunk;
+            }
+          }
+          break;
+        } catch (err) {
+          const canFallback =
+            !emitted && attempt === 0 && provider.id !== "local" && this.registry.has("local");
+          if (!canFallback) throw err;
+          const fallback = this.registry.get("local");
+          yield { type: "provider_fallback", from: provider.id, to: fallback.id };
+          provider = fallback;
         }
       }
 
@@ -146,11 +176,16 @@ export class EmployeeRuntime {
     let text = "";
     let usage = { inputTokens: 0, outputTokens: 0 };
     let finishReason: CompletionResult["finishReason"] = "stop";
+    let activeProvider = this.registry.get(params.employee.provider);
+    let fallbackFrom: ProviderId | undefined;
 
     for await (const chunk of this.stream(params)) {
       if (chunk.type === "text") text += chunk.delta;
       else if (chunk.type === "tool_result") executedTools.push(chunk.tool);
-      else if (chunk.type === "done") {
+      else if (chunk.type === "provider_fallback") {
+        fallbackFrom = chunk.from;
+        activeProvider = this.registry.get(chunk.to);
+      } else if (chunk.type === "done") {
         usage = {
           inputTokens: usage.inputTokens + chunk.usage.inputTokens,
           outputTokens: usage.outputTokens + chunk.usage.outputTokens,
@@ -159,15 +194,17 @@ export class EmployeeRuntime {
       }
     }
 
-    const provider = this.registry.get(params.employee.provider);
     return {
       text,
       toolCalls: [],
       usage,
       finishReason,
-      provider: provider.id,
-      model: params.employee.model ?? provider.defaultModel,
+      provider: activeProvider.id,
+      model: fallbackFrom
+        ? activeProvider.defaultModel
+        : (params.employee.model ?? activeProvider.defaultModel),
       executedTools,
+      fallbackFrom,
     };
   }
 }
