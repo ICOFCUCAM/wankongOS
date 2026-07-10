@@ -73,6 +73,8 @@ export const User = z.object({
   role: UserRole,
   avatarUrl: z.string().url().optional(),
   status: z.enum(["active", "invited", "suspended"]).default("active"),
+  /** scrypt hash (see api auth-session); absent for SSO/demo users. */
+  passwordHash: z.string().max(300).optional(),
 });
 export type User = z.infer<typeof User>;
 
