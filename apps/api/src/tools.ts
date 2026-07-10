@@ -1,8 +1,9 @@
 import { ToolError, ToolRegistry, type EmployeeRuntime } from "@wankong/agents";
-import { findPolicies, redactPii, type Employee } from "@wankong/core";
+import { ComposedDoc, findPolicies, redactPii, type Employee } from "@wankong/core";
 import type { Embedder } from "@wankong/knowledge";
 import type { Store } from "@wankong/store";
 import { searchKnowledge } from "./retrieval.js";
+import { composeAndRender } from "./composition.js";
 import { buildGroundedEmployeeContext } from "./employee-context.js";
 
 /**
@@ -179,6 +180,62 @@ export function buildToolRegistry(
         if (e instanceof StudioError) return e.message;
         throw e;
       }
+    },
+  });
+
+  registry.register("doc.compose", {
+    definition: {
+      name: "doc.compose",
+      description:
+        "Produce a document through the Enterprise Composition Engine: quality-checked, branded, stored as a verifiable asset. Claims in briefs/contract drafts must cite a record (pass evidenceTaskId).",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          docType: { type: "string", description: "report | brief | memo | proposal" },
+          content: { type: "string", description: "The document body (paragraphs separated by blank lines)." },
+          evidenceTaskId: { type: "string", description: "Task id backing the document's claims." },
+        },
+        required: ["title", "content"],
+      },
+      triggers: ["\\b(compose|draft|write up|prepare)\\b[^.]*\\b(report|memo|brief|proposal|document)\\b"],
+    },
+    requires: "task:create",
+    async run(args, ctx) {
+      const title = str(args.title) ?? "Untitled";
+      const docTypeRaw = str(args.docType) ?? "report";
+      const docType = ["report", "brief", "memo", "proposal"].includes(docTypeRaw) ? docTypeRaw : "report";
+      const content = str(args.content) ?? "";
+      const evidenceTaskId = str(args.evidenceTaskId);
+      const evidence: { type: "task"; id: string; note: string }[] = [];
+      if (evidenceTaskId) {
+        const task = await store.tasks.get(evidenceTaskId);
+        if (task && task.organizationId === ctx.organizationId) {
+          evidence.push({ type: "task", id: task.id, note: "cited by the author" });
+        }
+      }
+      const author = await store.employees.get(ctx.employeeId);
+      if (!author) return "Could not resolve the authoring employee.";
+      const department = await store.departments.get(author.departmentId);
+      const doc = ComposedDoc.parse({
+        title,
+        docType,
+        status: "draft",
+        author: { employeeId: author.id, name: author.name, department: department?.name },
+        sections: content
+          .split(/\n\s*\n/)
+          .filter((p) => p.trim())
+          .slice(0, 40)
+          .map((p, i) => ({ kind: "paragraph" as const, text: p.trim(), evidence: i === 0 ? evidence : [] })),
+      });
+      const result = await composeAndRender(store, ctx.organizationId, doc, "markdown", {
+        kind: "employee",
+        id: author.id,
+      });
+      if (!result.ok) {
+        return `Composition blocked: ${result.problems.join("; ")}. Fix and retry.`;
+      }
+      return `Document released through the composition pipeline: asset ${result.assetId} (verification ${result.verification}). Watermarked DRAFT until approved.`;
     },
   });
 
