@@ -7,8 +7,13 @@ export const dynamic = "force-dynamic";
 export default async function HirePage() {
   let departments;
   let employees;
+  let tools;
   try {
-    [departments, employees] = await Promise.all([api.departments(), api.employees()]);
+    [departments, employees, tools] = await Promise.all([
+      api.departments(),
+      api.employees(),
+      api.tools(),
+    ]);
   } catch {
     return (
       <div className="space-y-6">
@@ -24,6 +29,7 @@ export default async function HirePage() {
       <HireForm
         departments={departments.map((d) => ({ id: d.id, label: d.name }))}
         managers={employees.map((e) => ({ id: e.id, label: `${e.name} — ${e.title}` }))}
+        tools={tools}
       />
     </div>
   );

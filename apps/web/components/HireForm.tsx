@@ -16,12 +16,20 @@ interface Option {
  * composes the system prompt from those answers. New hires start on
  * probation ("training") and must pass evals to activate.
  */
+interface ToolOption {
+  id: string;
+  description: string;
+  requires: string | null;
+}
+
 export function HireForm({
   departments,
   managers,
+  tools = [],
 }: {
   departments: Option[];
   managers: Option[];
+  tools?: ToolOption[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -36,6 +44,13 @@ export function HireForm({
   const [decisionSpeed, setDecisionSpeed] = useState("balanced");
   const [autonomy, setAutonomy] = useState("medium");
   const [dailyTokenBudget, setDailyTokenBudget] = useState("");
+  const [toolIds, setToolIds] = useState<string[]>([]);
+
+  function toggleTool(id: string) {
+    setToolIds((current) =>
+      current.includes(id) ? current.filter((t) => t !== id) : [...current, id],
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +76,7 @@ export function HireForm({
           systemPrompt,
           ...(managerId ? { managerId } : {}),
           ...(dailyTokenBudget ? { dailyTokenBudget: Number(dailyTokenBudget) } : {}),
+          toolIds,
           personality: { communicationStyle, decisionSpeed, autonomy },
         }),
       });
@@ -174,6 +190,39 @@ export function HireForm({
           </select>
         </Field>
       </div>
+
+      {tools.length > 0 && (
+        <Field label="Tools — what can they use?">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {tools.map((t) => (
+              <label
+                key={t.id}
+                className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 text-sm transition ${
+                  toolIds.includes(t.id)
+                    ? "border-accent bg-accent/5"
+                    : "border-border hover:border-accent/50"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={toolIds.includes(t.id)}
+                  onChange={() => toggleTool(t.id)}
+                />
+                <span>
+                  <span className="block font-mono text-xs">{t.id}</span>
+                  <span className="block text-xs text-muted">{t.description}</span>
+                  {t.requires && (
+                    <span className="block text-[11px] text-muted/70">
+                      needs permission: {t.requires}
+                    </span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        </Field>
+      )}
 
       <Field label="Daily token budget (optional)">
         <input

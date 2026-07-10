@@ -25,6 +25,17 @@ organizationRoutes.get("/org-chart", async (c) => {
   return c.json({ data: await ctx.store.orgChart(ctx.organizationId) });
 });
 
+/** The tool catalog: what employees can be granted, with required permissions. */
+organizationRoutes.get("/tools", (c) => {
+  const ctx = c.get("ctx");
+  const data = [...ctx.toolRegistry.entries()].map(([id, tool]) => ({
+    id,
+    description: tool.definition.description,
+    requires: tool.requires ?? null,
+  }));
+  return c.json({ data });
+});
+
 /** Immutable audit trail (requires audit:read). */
 organizationRoutes.get("/audit", async (c) => {
   authorize(c, "audit:read");

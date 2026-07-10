@@ -132,6 +132,17 @@ describe("API", () => {
     expect(typeof dash.automation.estimatedHoursSaved).toBe("number");
   });
 
+  it("lists the tool catalog", async () => {
+    const res = await app.request("/v1/tools");
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    const ids = data.map((t: { id: string }) => t.id);
+    expect(ids).toContain("task.create");
+    expect(ids).toContain("kb.search");
+    const taskTool = data.find((t: { id: string }) => t.id === "task.create");
+    expect(taskTool.requires).toBe("task:create");
+  });
+
   it("creates and lists tasks", async () => {
     const created = await app.request("/v1/tasks", {
       method: "POST",
