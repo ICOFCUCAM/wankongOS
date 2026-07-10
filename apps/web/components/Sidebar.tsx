@@ -8,6 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const NAV = [
   { href: "/", label: "Dashboard", icon: "▤" },
   { href: "/employees", label: "AI Workforce", icon: "◈" },
+  { href: "/office", label: "The Office", icon: "🏢" },
   { href: "/org", label: "Org Chart", icon: "☍" },
   { href: "/meetings", label: "Meetings", icon: "◈" },
   { href: "/workflows", label: "Workflows", icon: "⧉" },

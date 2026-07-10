@@ -24,7 +24,10 @@ const json = (body: unknown) => ({
 describe("production studios", () => {
   it("lists the catalog with derived availability", async () => {
     const { data } = await (await app.request("/v1/studios")).json();
-    expect(data.length).toBeGreaterThanOrEqual(16);
+    expect(data.length).toBeGreaterThanOrEqual(17);
+    const cu = data.find((s: { id: string }) => s.id === "computer-use");
+    expect(cu.active).toBe(false); // honestly gated until a connector exists
+    expect(cu.connectors).toContain("anthropic-computer-use");
     const doc = data.find((s: { id: string }) => s.id === "document");
     expect(doc.active).toBe(true); // builtin
     const video = data.find((s: { id: string }) => s.id === "video");

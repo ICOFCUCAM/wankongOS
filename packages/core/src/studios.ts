@@ -41,6 +41,7 @@ export const STUDIOS: StudioDef[] = [
   { id: "research", name: "Research Studio", tagline: "Browse and synthesize external information.", capabilities: ["competitor_research", "market_analysis"], formats: ["md"], availability: "connector", connectors: ["web-search", "mcp"], requiredPermission: "knowledge:read" },
   { id: "brand", name: "Brand Studio", tagline: "One brand kit every employee uses automatically.", capabilities: ["brand_kit", "tone_of_voice"], formats: ["json", "svg"], availability: "builtin", requiredPermission: "org:read" },
   { id: "conversion", name: "File Conversion Studio", tagline: "Markdown ↔ HTML, CSV ↔ JSON, and more.", capabilities: ["md_to_html", "html_to_md", "csv_to_json", "json_to_csv"], formats: ["md", "html", "csv", "json"], availability: "builtin", requiredPermission: "task:create" },
+  { id: "computer-use", name: "Computer Use", tagline: "Watch employees operate real applications — browser, forms, uploads.", capabilities: ["browser_automation", "form_filling", "file_upload", "ui_verification"], formats: ["screenshot", "session-log"], availability: "connector", connectors: ["anthropic-computer-use", "browserbase", "playwright"], requiredPermission: "task:create" },
   { id: "assets", name: "Asset Management Studio", tagline: "Versioned, tagged, searchable company assets.", capabilities: ["store", "version", "tag", "search", "preview"], formats: ["*"], availability: "builtin", requiredPermission: "org:read" },
 ];
 
