@@ -5,6 +5,8 @@ import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { WorkforceControls } from "@/components/WorkforceControls";
 import { AttentionBanner } from "@/components/AttentionBanner";
 import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
+import { CompanyPulse } from "@/components/CompanyPulse";
+import type { PulseItem } from "@/lib/server-api";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +50,13 @@ function Bar({ label, value, total }: { label: string; value: number; total: num
 export default async function DashboardPage() {
   let data: DashboardData;
   let summaries: EmployeeSummary[];
+  let pulse: PulseItem[];
   try {
-    [data, summaries] = await Promise.all([api.dashboard(), api.employeeSummaries()]);
+    [data, summaries, pulse] = await Promise.all([
+      api.dashboard(),
+      api.employeeSummaries(),
+      api.pulse(12),
+    ]);
   } catch {
     return (
       <div className="space-y-6">
@@ -92,7 +99,12 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <LiveWorkforceRow summaries={summaries} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <LiveWorkforceRow summaries={summaries} />
+        </div>
+        <CompanyPulse items={pulse} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card lg:col-span-2">
