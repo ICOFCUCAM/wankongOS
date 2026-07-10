@@ -34,6 +34,7 @@ import { briefingRoutes } from "./routes/briefing.js";
 import { studioRoutes } from "./routes/studios.js";
 import { accountingRoutes } from "./routes/accounting.js";
 import { recruitingRoutes } from "./routes/recruiting.js";
+import { authRoutes } from "./routes/auth.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
@@ -85,6 +86,22 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
       return next();
     }
 
+    // Human sessions: a signed wks_ token pins BOTH the user and the tenant —
+    // the request runs against that organization, isolated by the same
+    // organizationId filters every query already applies.
+    if (bearer?.startsWith("wks_")) {
+      const { verifySession } = await import("./auth-session.js");
+      const claims = verifySession(bearer);
+      if (!claims) return c.json({ error: "Invalid or expired session" }, 401);
+      const user = await context.store.users.get(claims.userId);
+      if (!user || user.status !== "active" || user.organizationId !== claims.organizationId) {
+        return c.json({ error: "Invalid or expired session" }, 401);
+      }
+      c.set("ctx", { ...context, organizationId: claims.organizationId });
+      c.set("actor", actorFor(user));
+      return next();
+    }
+
     const owner = (await context.store.users.list((u) => u.role === "owner"))[0];
     const fallback = owner ?? {
       id: "usr_system",
@@ -110,6 +127,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   app.get("/health", (c) => c.json({ status: "ok", service: "wankong-api" }));
 
   const v1 = new Hono<Env>();
+  v1.route("/", authRoutes);
   v1.route("/", organizationRoutes);
   // Before employeeRoutes: /employees/summaries must beat /employees/:id.
   v1.route("/", summaryRoutes);
