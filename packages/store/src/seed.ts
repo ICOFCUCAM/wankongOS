@@ -459,6 +459,28 @@ export function buildSeedData(): SeedData {
   return { organization, owner, departments, employees, goals, tasks, knowledgeBases };
 }
 
+
+/** The demo org's Company DNA — the operating context every employee consults. */
+function seedDnaData() {
+  return {
+    organizationId: ORG_ID,
+    mission: "Ship dependable robotics tooling that small manufacturers can actually afford.",
+    vision: "Every workshop runs with the operational discipline of a Fortune 500 plant.",
+    values: ["Evidence over opinion", "Escalate early", "Customers read everything we write"],
+    style: { register: "formal" as const, notes: "Plain sentences, no hype, numbers cited with sources." },
+    riskAppetite: { level: "low" as const, notes: "Regulated customers; when in doubt, escalate." },
+    decisionRules: ["Never commit spend without an approval", "Legal reviews anything customer-facing"],
+    approvalLimits: { autoApproveBelowUsd: 0, alwaysEscalateAboveUsd: 500, notes: "Board-set limits." },
+    preferredSuppliers: ["Nordic Steel AS", "Precision Parts GmbH"],
+    industryStandards: ["ISO 9001", "CE marking"],
+    policies: [
+      { id: "expense", name: "Expense Policy", kind: "expense" as const, version: 1, rules: ["Expenses above $500 require pre-approval", "No alcohol on company expenses", "Receipts are mandatory for every claim"] },
+      { id: "brand", name: "Brand Policy", kind: "brand" as const, version: 1, rules: ["The company name is always written as Acme Robotics", "No superlatives without a cited benchmark"] },
+      { id: "security", name: "Security Policy", kind: "security" as const, version: 1, rules: ["Never share credentials in documents or chat", "Customer data leaves the system only via approved exports"] },
+    ],
+  };
+}
+
 /** Load the seed dataset into a store. Returns the same store for chaining. */
 export function seedStore(store: MemoryStore): MemoryStore {
   const data = buildSeedData();
@@ -471,6 +493,7 @@ export function seedStore(store: MemoryStore): MemoryStore {
   for (const t of data.tasks) store.tasks.create(t);
   for (const doc of buildSeedDocuments()) store.documents.insert(doc);
   for (const suite of buildSeedEvalSuites()) store.evalSuites.insert(suite);
+  store.companyDnas.create(seedDnaData());
   return store;
 }
 
@@ -494,6 +517,9 @@ export async function seedStoreAsync(store: import("./store.js").Store): Promise
   for (const t of data.tasks) await store.tasks.create(t);
   for (const doc of buildSeedDocuments()) await store.documents.insert(doc);
   for (const suite of buildSeedEvalSuites()) await store.evalSuites.insert(suite);
+  if ((await store.companyDnas.listByOrg(ORG_ID)).length === 0) {
+    await store.companyDnas.create(seedDnaData());
+  }
 }
 
 export const SEED_ORG_ID = ORG_ID;
