@@ -93,7 +93,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     // Seed the demo workflow (kept out of @wankong/store so the store carries
     // no AI dependency). Fixed id → idempotent upsert on every boot.
     await context.store.workflows.insert(buildSeedWorkflow(organizationId));
-    context.toolRegistry = buildToolRegistry(context.store, organizationId, embedder);
+    context.toolRegistry = buildToolRegistry(context.store, organizationId, embedder, runtime);
   })();
 
   context.workflowEngine = new WorkflowEngine({

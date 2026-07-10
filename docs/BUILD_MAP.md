@@ -52,8 +52,10 @@ and web org chart.
 Identity, role, department, manager, description, responsibilities, objectives, KPIs,
 tools, permissions, knowledge refs, availability, escalation & approval rules — all
 modelled, seeded, and editable via the API. Employees run through the provider-agnostic
-runtime. 🟡 *Performance history* (KPI readings over time) and 🟡 *inter-employee
-messaging* beyond workflow delegation are next.
+runtime. ✅ *AI collaboration*: employees delegate to colleagues via the `delegate`
+tool — the delegatee answers with its own grounding (one hop deep by construction),
+and every delegation is a recorded conversation + completed task + audit entry.
+🟡 *Performance history* (KPI readings over time) remains.
 
 ### Workflow engine ✅
 Executable definitions with start / employee / decision / approval / notification /
