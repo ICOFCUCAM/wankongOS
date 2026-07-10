@@ -108,6 +108,16 @@ export const api = {
     call<{ suite: EvalSuite | null; reports: EvalReport[] }>(`/v1/employees/${id}/evals`),
   employeeReviews: (id: string) =>
     call<{ data: Report[] }>(`/v1/employees/${id}/reviews`).then((r) => r.data),
+  employeeConversations: (id: string) =>
+    call<{
+      data: {
+        id: string;
+        title: string;
+        updatedAt: string;
+        messageCount: number;
+        lastMessage: string | null;
+      }[];
+    }>(`/v1/employees/${id}/conversations`).then((r) => r.data),
   employeeUsage: (id: string) =>
     call<{ todayTokens: number; dailyTokenBudget: number | null; remaining: number | null }>(
       `/v1/employees/${id}/usage`,

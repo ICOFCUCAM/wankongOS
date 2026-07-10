@@ -131,6 +131,64 @@ function IntelligencePanel({
   );
 }
 
+/**
+ * Level 6: the workspace opens with the mission (top goal or first
+ * objective) and what was actually shipped today — both from records.
+ */
+function MissionAndToday({
+  employee,
+  goals,
+  tasks,
+}: {
+  employee: Employee;
+  goals: Goal[];
+  tasks: Awaited<ReturnType<typeof api.tasks>>;
+}) {
+  const mission = goals[0]?.title ?? employee.objectives[0] ?? null;
+  const today = new Date().toISOString().slice(0, 10);
+  const doneToday = tasks.filter(
+    (t) =>
+      t.assignee?.kind === "employee" &&
+      t.assignee.id === employee.id &&
+      t.status === "done" &&
+      t.updatedAt.startsWith(today),
+  );
+  if (!mission && doneToday.length === 0) return null;
+  return (
+    <div className="card grid grid-cols-1 gap-5 sm:grid-cols-2">
+      {mission && (
+        <div>
+          <h3 className="mb-2 text-xs uppercase tracking-wide text-muted">Current mission</h3>
+          <p className="text-sm text-text/90">{mission}</p>
+          {goals[0] && (
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+              <div
+                className="bar-fill h-full rounded-full bg-accent"
+                style={{ width: `${Math.round(goals[0].progress * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+      <div>
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-muted">Today&apos;s work</h3>
+        {doneToday.length === 0 ? (
+          <p className="text-sm text-muted">Nothing shipped yet today.</p>
+        ) : (
+          <ul className="space-y-1">
+            {doneToday.slice(0, 5).map((t) => (
+              <li key={t.id} className="flex gap-2 text-sm">
+                <span className="text-success">✓</span>
+                <span className="truncate">{t.title}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default async function EmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let employee: Employee;
@@ -139,15 +197,20 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   let evals: Awaited<ReturnType<typeof api.employeeEvals>>;
   let usage: Awaited<ReturnType<typeof api.employeeUsage>>;
   let reviews: Awaited<ReturnType<typeof api.employeeReviews>>;
+  let conversations: Awaited<ReturnType<typeof api.employeeConversations>>;
+  let allTasks: Awaited<ReturnType<typeof api.tasks>>;
   try {
-    [employee, goals, memories, evals, usage, reviews] = await Promise.all([
-      api.employee(id),
-      api.employeeGoals(id),
-      api.employeeMemories(id),
-      api.employeeEvals(id),
-      api.employeeUsage(id),
-      api.employeeReviews(id),
-    ]);
+    [employee, goals, memories, evals, usage, reviews, conversations, allTasks] =
+      await Promise.all([
+        api.employee(id),
+        api.employeeGoals(id),
+        api.employeeMemories(id),
+        api.employeeEvals(id),
+        api.employeeUsage(id),
+        api.employeeReviews(id),
+        api.employeeConversations(id),
+        api.tasks(),
+      ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
     throw e;
@@ -186,6 +249,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_420px]">
         <div className="space-y-6">
           <IntelligencePanel employee={employee} evals={evals} memories={memories} />
+
+          <MissionAndToday employee={employee} goals={goals} tasks={allTasks} />
 
           <div className="card grid grid-cols-1 gap-6 sm:grid-cols-2">
             <List title="Responsibilities" items={employee.responsibilities} />
@@ -241,6 +306,31 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           <EvalPanel employeeId={employee.id} suite={evals.suite} initialReports={evals.reports} />
 
           <ReviewPanel employeeId={employee.id} initialReviews={reviews} />
+
+          <div className="card">
+            <h3 className="mb-3 text-xs uppercase tracking-wide text-muted">Conversations</h3>
+            {conversations.length === 0 ? (
+              <p className="text-sm text-muted">
+                No conversations yet — start one in the chat panel.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {conversations.slice(0, 5).map((cv) => (
+                  <li key={cv.id} className="rounded-lg border border-border bg-surface-2 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="truncate">{cv.title}</span>
+                      <span className="shrink-0 text-xs text-muted">
+                        {cv.messageCount} msg · {new Date(cv.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {cv.lastMessage && (
+                      <p className="mt-0.5 truncate text-xs text-muted">{cv.lastMessage}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <div className="card scroll-mt-6" id="memory">
             <h3 className="mb-3 text-xs uppercase tracking-wide text-muted">Memory timeline</h3>
