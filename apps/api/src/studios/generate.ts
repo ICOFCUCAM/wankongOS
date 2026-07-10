@@ -124,8 +124,7 @@ export async function generate(
         return { kind: input.kind, title, mimeType: "text/markdown", tags: ["accounting", "tax"], content: `# ${engine.vatName} note — ${orgName}
 
 ${engine.country} has no national VAT; indirect tax is sub-national. Consult the engine notes:
-${engine.notes.map((n) => `- ${n}`).join("
-")}
+${engine.notes.map((n) => `- ${n}`).join("\n")}
 
 > ${ACCOUNTING_SAFEGUARD}
 ` };
@@ -147,9 +146,7 @@ Period generated: ${today}
 | ${engine.vatName} at ${(engine.vatRate * 100).toFixed(0)}% (expected) | ${(revenue * engine.vatRate).toFixed(2)} |
 | ${engine.vatName} payable (ledger 2200) | ${Math.abs(vatPayable).toFixed(2)} |
 
-${Math.abs(Math.abs(vatPayable) - revenue * engine.vatRate) > 0.5 ? "**⚠ Ledger VAT differs from the expected rate — review before filing.**
-
-" : ""}> ${ACCOUNTING_SAFEGUARD}
+${Math.abs(Math.abs(vatPayable) - revenue * engine.vatRate) > 0.5 ? "**⚠ Ledger VAT differs from the expected rate — review before filing.**\n\n" : ""}> ${ACCOUNTING_SAFEGUARD}
 `,
       };
     }
@@ -158,8 +155,7 @@ ${Math.abs(Math.abs(vatPayable) - revenue * engine.vatRate) > 0.5 ? "**⚠ Ledge
       const engine = engineFor(org?.settings.jurisdiction ?? "US") ?? engineFor("US")!;
       const entries = await ctx.store.journalEntries.list((e) => e.organizationId === ctx.organizationId);
       const tb = trialBalance(engine, entries).filter((a) => a.debit !== 0 || a.credit !== 0);
-      const body = tb.map((a) => `| ${a.code} | ${a.name} | ${a.debit.toFixed(2)} | ${a.credit.toFixed(2)} |`).join("
-");
+      const body = tb.map((a) => `| ${a.code} | ${a.name} | ${a.debit.toFixed(2)} | ${a.credit.toFixed(2)} |`).join("\n");
       return { kind: input.kind, title: input.title ?? `Trial balance ${today}`, mimeType: "text/markdown", tags: ["accounting"], content: `# Trial balance — ${orgName} (${engine.currency}, ${engine.standard})
 
 | Code | Account | Debit | Credit |
