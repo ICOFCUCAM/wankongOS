@@ -22,6 +22,27 @@ export interface DomainEvent {
 
 const DELIVERY_TIMEOUT_MS = 3000;
 
+/**
+ * In-process live subscribers (SSE): per-organization listener sets. Serverless
+ * note: subscribers live per warm instance — the console still polls as a
+ * floor, and the stream upgrades freshness when the instance allows it.
+ */
+type LiveListener = (event: DomainEvent) => void;
+const liveListeners = new Map<string, Set<LiveListener>>();
+
+export function subscribeLive(organizationId: string, listener: LiveListener): () => void {
+  let set = liveListeners.get(organizationId);
+  if (!set) liveListeners.set(organizationId, (set = new Set()));
+  set.add(listener);
+  return () => set!.delete(listener);
+}
+
+function fanOutLive(organizationId: string, event: DomainEvent): void {
+  for (const l of liveListeners.get(organizationId) ?? []) {
+    try { l(event); } catch { /* one bad listener never breaks the emit */ }
+  }
+}
+
 export function signBody(secret: string, body: string): string {
   return `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
 }
@@ -31,6 +52,15 @@ export async function emitEvent(
   type: string,
   data: Record<string, unknown>,
 ): Promise<void> {
+  const event: DomainEvent = {
+    id: newId("auditEvent"),
+    type,
+    createdAt: new Date().toISOString(),
+    organizationId: ctx.organizationId,
+    data,
+  };
+  fanOutLive(ctx.organizationId, event);
+
   const hooks = await ctx.store.webhooks.list(
     (w) =>
       w.organizationId === ctx.organizationId &&
@@ -39,13 +69,6 @@ export async function emitEvent(
   );
   if (hooks.length === 0) return;
 
-  const event: DomainEvent = {
-    id: newId("auditEvent"),
-    type,
-    createdAt: new Date().toISOString(),
-    organizationId: ctx.organizationId,
-    data,
-  };
   const body = JSON.stringify(event);
 
   await Promise.all(
