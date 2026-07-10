@@ -29,7 +29,13 @@ export interface EmployeeSummary {
     tokensOut: number;
     estCostUsd: number;
     avgLatencyMs: number | null;
+    /** Today's slice, for the card's mini dashboard. */
+    costTodayUsd: number;
+    requestsToday: number;
+    avgLatencyTodayMs: number | null;
   };
+  /** Manager's name, when the employee reports to someone. */
+  reportsTo: string | null;
   /** Eval-evidence confidence in [0,1], or null when no eval reports exist. */
   confidence: number | null;
   personality: Employee["personality"];
@@ -57,6 +63,7 @@ summaryRoutes.get("/employees/summaries", async (c) => {
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
+  const nameOf = new Map(employees.map((e) => [e.id, e.name]));
 
   const data: EmployeeSummary[] = employees.map((e) => {
     const mine = tasks.filter((t) => t.assignee?.kind === "employee" && t.assignee.id === e.id);
@@ -76,7 +83,11 @@ summaryRoutes.get("/employees/summaries", async (c) => {
       title: e.title,
       departmentId: e.departmentId,
       status: e.status,
-      activity: deriveActivityStatus(e, { tasks: mine, pendingApprovals: pending }),
+      activity: deriveActivityStatus(e, {
+        tasks: mine,
+        pendingApprovals: pending,
+        lastAssistantAt: u?.lastAssistantAt,
+      }),
       workingOn: inProgress.slice(0, 3).map((t: Task) => t.title),
       currentTask: current
         ? { title: current.title, progress: current.progress ?? null }
@@ -91,7 +102,11 @@ summaryRoutes.get("/employees/summaries", async (c) => {
         tokensOut: u?.tokensOut ?? 0,
         estCostUsd: round6(u?.estCostUsd ?? 0),
         avgLatencyMs: avgOf(u?.latencies ?? []),
+        costTodayUsd: round6(u?.todayCostUsd ?? 0),
+        requestsToday: u?.todayRequests ?? 0,
+        avgLatencyTodayMs: avgOf(u?.todayLatencies ?? []),
       },
+      reportsTo: e.managerId ? (nameOf.get(e.managerId) ?? null) : null,
       confidence:
         myReports.length === 0
           ? null

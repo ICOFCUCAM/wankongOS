@@ -139,7 +139,11 @@ describe("console: employee summaries", () => {
     expect(data).toHaveLength(11);
 
     const ava = data.find((s: { employeeId: string }) => s.employeeId === "emp_exec_assistant");
-    expect(ava.activity).toBe("working"); // seeded in-progress board deck
+    // She just answered a chat: presence shows "thinking" (fresh assistant message).
+    expect(ava.activity).toBe("thinking");
+    expect(ava.metrics.requestsToday).toBe(1);
+    expect(ava.metrics.costTodayUsd).toBeGreaterThanOrEqual(0);
+    expect(ava.reportsTo).toBeNull(); // Ava reports to the human CEO
     expect(ava.workingOn[0]).toContain("board deck");
     expect(ava.currentTask.progress).toBe(0.72);
     expect(ava.metrics.requests).toBe(1);
