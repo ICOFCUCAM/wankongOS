@@ -92,8 +92,12 @@ OAuth flows, inbound webhooks.
 
 ### Dashboard ✅
 Live CEO dashboard: workforce, tasks pipeline, approvals, goals, AI utilization,
-workflow runs, estimated hours saved (transparent formula). ⬜ Revenue, live event
-stream, human-utilization split.
+workflow runs, estimated hours saved (transparent formula). ✅ Living console
+(ADR-0018): attention banner, workforce-right-now row, company pulse feed
+(`/v1/pulse` + `/pulse` page), per-employee live cards with derived status /
+progress / cost / confidence, department strip + containers, live org chart,
+hire flow with tool catalog, clone endpoint, analytics page, 15s auto-refresh.
+⬜ Revenue, event push (websockets), human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
 Permission-based least-privilege access on every route; per-tenant scoping (404 on
