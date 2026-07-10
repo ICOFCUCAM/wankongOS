@@ -10,6 +10,8 @@ export interface PromptContext {
   knowledge?: { title: string; text: string }[];
   /** Names of the employee's available tools. */
   toolNames?: string[];
+  /** Org brand tone of voice — applied to every employee automatically. */
+  brandVoice?: string;
 }
 
 /**
@@ -65,6 +67,9 @@ export function buildSystemPrompt(employee: Employee, ctx: PromptContext): strin
     );
   }
 
+  if (ctx.brandVoice) {
+    sections.push(`Brand voice (apply to all external communication): ${ctx.brandVoice}`);
+  }
   if (ctx.toolNames?.length) {
     sections.push(`Tools available to you: ${ctx.toolNames.join(", ")}.`);
   }

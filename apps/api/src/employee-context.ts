@@ -31,10 +31,11 @@ export async function buildGroundedEmployeeContext(
   employee: Employee,
   options: GroundingOptions = {},
 ): Promise<GroundedContext> {
-  const [org, department, manager] = await Promise.all([
+  const [org, department, manager, brandKits] = await Promise.all([
     store.organizations.get(organizationId),
     store.departments.get(employee.departmentId),
     employee.managerId ? store.employees.get(employee.managerId) : Promise.resolve(null),
+    store.brandKits.list((b) => b.organizationId === organizationId),
   ]);
 
   const memories = rankMemories(
@@ -72,6 +73,7 @@ export async function buildGroundedEmployeeContext(
       memories,
       knowledge,
       toolNames: employee.toolIds,
+      brandVoice: brandKits[0]?.toneOfVoice,
     },
   };
 }
