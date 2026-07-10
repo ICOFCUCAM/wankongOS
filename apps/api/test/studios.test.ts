@@ -170,3 +170,32 @@ describe("publishing studio goes live over Slack", () => {
     }
   });
 });
+
+describe("engineering studio files real GitHub issues", () => {
+  it("gated without a token; files, records, and audits with one", async () => {
+    const gated = await app.request("/v1/studios/engineering/issue", json({ repo: "acme/robots", title: "Fix gripper drift" }));
+    expect(gated.status).toBe(422);
+
+    const realFetch = globalThis.fetch;
+    let captured: { url: string; auth: string | undefined } | null = null;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      captured = { url: String(url), auth: (init?.headers as Record<string, string>)?.authorization };
+      return new Response(JSON.stringify({ number: 42, html_url: "https://github.com/acme/robots/issues/42" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    try {
+      await app.request("/v1/integrations", json({ kind: "github", name: "Acme repos", config: { token: "ghp_test" } }));
+      const res = await app.request("/v1/studios/engineering/issue", json({ repo: "acme/robots", title: "Fix gripper drift", body: "Drifts 2mm under load." }));
+      expect(res.status).toBe(201);
+      const { asset, issue } = await res.json();
+      expect(issue.number).toBe(42);
+      expect(asset.title).toContain("acme/robots#42");
+      expect(captured!.url).toBe("https://api.github.com/repos/acme/robots/issues");
+      expect(captured!.auth).toBe("Bearer ghp_test");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});

@@ -203,3 +203,63 @@ studioRoutes.post("/studios/publishing/publish", async (c) => {
   });
   return c.json({ asset, delivery }, 201);
 });
+
+const IssueInput = z.object({
+  repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+  title: z.string().min(1).max(250),
+  body: z.string().max(20000).optional(),
+});
+
+/**
+ * Engineering Studio, live: file a GitHub issue through a connected
+ * integration (config: { token }). The created issue is recorded as an
+ * asset with its URL. No integration → honest 422.
+ */
+studioRoutes.post("/studios/engineering/issue", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, IssueInput);
+  const integration = (
+    await ctx.store.integrations.list(
+      (i) => i.organizationId === ctx.organizationId && i.kind === "github" && i.status === "connected",
+    )
+  )[0];
+  const token = (integration?.config as { token?: string } | undefined)?.token;
+  if (!token) {
+    return c.json({ error: "No connected GitHub integration. Connect one (config: { token }) in the Integration Hub." }, 422);
+  }
+  const res = await fetch(`https://api.github.com/repos/${input.repo}/issues`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/vnd.github+json",
+      "content-type": "application/json",
+      "user-agent": "wankongos",
+    },
+    body: JSON.stringify({ title: input.title, body: input.body ?? "" }),
+  });
+  if (!res.ok) {
+    return c.json({ error: `GitHub responded ${res.status}`, detail: (await res.text()).slice(0, 300) }, 502);
+  }
+  const issue = (await res.json()) as { number: number; html_url: string };
+  const asset = await ctx.store.assets.create({
+    organizationId: ctx.organizationId,
+    studioId: "engineering",
+    kind: "issue",
+    title: `${input.repo}#${issue.number}: ${input.title}`,
+    mimeType: "text/markdown",
+    content: `# ${input.title}\n\n${input.body ?? ""}\n\nFiled: ${issue.html_url}`,
+    version: 1,
+    tags: ["engineering", "github"],
+    createdBy: { kind: "user", id: c.get("actor").user.id },
+  });
+  await ctx.store.audit({
+    organizationId: ctx.organizationId,
+    actor: { kind: "user", id: c.get("actor").user.id },
+    action: "studio.engineering.issue",
+    targetType: "asset",
+    targetId: asset.id,
+    metadata: { repo: input.repo, issue: issue.number },
+  });
+  return c.json({ asset, issue: { number: issue.number, url: issue.html_url } }, 201);
+});
