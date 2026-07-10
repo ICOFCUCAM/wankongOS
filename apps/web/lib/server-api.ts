@@ -4,6 +4,7 @@ import {
   createApp,
   createAppContext,
   type AnalyticsData,
+  type Briefing,
   type DepartmentPulse,
   type EmployeeSummary,
   type PulseItem,
@@ -80,6 +81,7 @@ export const api = {
   pulse: (limit = 12) => call<{ data: PulseItem[] }>(`/v1/pulse?limit=${limit}`).then((r) => r.data),
   analytics: () => call<AnalyticsData>("/v1/analytics"),
   workforceHealth: () => call<WorkforceHealth>("/v1/workforce/health"),
+  briefing: () => call<Briefing>("/v1/briefing"),
   tools: () =>
     call<{ data: { id: string; description: string; requires: string | null }[] }>(
       "/v1/tools",
@@ -134,4 +136,11 @@ export interface DocumentMeta {
 }
 
 export { EmbeddedApiError as ApiError };
-export type { AnalyticsData, DepartmentPulse, EmployeeSummary, PulseItem, WorkforceHealth };
+export type {
+  AnalyticsData,
+  Briefing,
+  DepartmentPulse,
+  EmployeeSummary,
+  PulseItem,
+  WorkforceHealth,
+};

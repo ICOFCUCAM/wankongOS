@@ -9,7 +9,8 @@ import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
 import { DepartmentStatusList } from "@/components/DepartmentStatusList";
-import type { PulseItem, WorkforceHealth } from "@/lib/server-api";
+import { BriefingPanel } from "@/components/BriefingPanel";
+import type { Briefing, PulseItem, WorkforceHealth } from "@/lib/server-api";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,14 @@ export default async function DashboardPage() {
   let summaries: EmployeeSummary[];
   let pulse: PulseItem[];
   let health: WorkforceHealth;
+  let briefing: Briefing;
   try {
-    [data, summaries, pulse, health] = await Promise.all([
+    [data, summaries, pulse, health, briefing] = await Promise.all([
       api.dashboard(),
       api.employeeSummaries(),
       api.pulse(12),
       api.workforceHealth(),
+      api.briefing(),
     ]);
   } catch {
     return (
@@ -59,6 +62,8 @@ export default async function DashboardPage() {
       <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />
 
       <WorkforceHealthBar health={health} />
+
+      <BriefingPanel briefing={briefing} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
