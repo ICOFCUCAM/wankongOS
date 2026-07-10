@@ -10,11 +10,17 @@ export default async function AccountingPage() {
   let engine;
   let statements;
   let anomalies;
+  let periods;
+  let entries;
+  let trail;
   try {
-    [engine, statements, anomalies] = await Promise.all([
+    [engine, statements, anomalies, periods, entries, trail] = await Promise.all([
       api.accountingEngine(),
       api.accountingStatements(),
       api.accountingAnomalies(),
+      api.accountingPeriods(),
+      api.accountingEntries(),
+      api.accountingAuditTrail(),
     ]);
   } catch {
     return <ApiDownNotice />;
@@ -58,6 +64,31 @@ export default async function AccountingPage() {
         </div>
       )}
 
+      <div className="card !p-0">
+        <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          <Cell
+            label="Current period"
+            value={periods.current}
+            sub={
+              periods.data.find((p) => p.period === periods.current)?.status === "closed"
+                ? "closed"
+                : "open"
+            }
+          />
+          <Cell
+            label="Closed periods"
+            value={periods.data.filter((p) => p.status === "closed").length}
+            sub={periods.data.filter((p) => p.status === "closed").map((p) => p.period).join(", ") || "none yet"}
+          />
+          <Cell label="Cash flow (net)" value={statements.cashFlow.net.toFixed(2)} sub={`in ${statements.cashFlow.inflow.toFixed(2)} / out ${statements.cashFlow.outflow.toFixed(2)}`} />
+          <Cell
+            label="Filing calendar"
+            value={e.filings.length}
+            sub={e.filings.map((f) => `${f.name} (${f.period})`).join(" · ")}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card">
           <h2 className="mb-3 font-medium">Profit &amp; loss</h2>
@@ -99,6 +130,46 @@ export default async function AccountingPage() {
             </tbody>
           </table>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="card overflow-x-auto">
+          <h2 className="mb-3 font-medium">General ledger</h2>
+          {entries.length === 0 ? (
+            <p className="text-sm text-muted">No journal entries yet.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {entries.slice(0, 8).map((en) => (
+                <li key={en.id} className="rounded-lg border border-border bg-surface-2 px-3 py-2">
+                  <div className="flex justify-between gap-2">
+                    <span className="font-mono text-xs text-muted">{en.date}</span>
+                    <span className="text-xs text-muted">{en.reference ?? en.source}</span>
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted">
+                    {en.lines.map((l) => `${l.accountCode} ${l.debit ? `D${l.debit}` : `C${l.credit}`}`).join(" · ")}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="card">
+          <h2 className="mb-3 font-medium">Audit trail</h2>
+          {trail.length === 0 ? (
+            <p className="text-sm text-muted">Accounting actions appear here, attributable.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {trail.slice(0, 8).map((ev, i) => (
+                <li key={i} className="flex items-baseline gap-2">
+                  <span className="shrink-0 font-mono text-xs text-muted">
+                    {new Date(ev.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="truncate text-text/90">{ev.action}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <p className="text-xs text-muted">{engine.safeguard}</p>

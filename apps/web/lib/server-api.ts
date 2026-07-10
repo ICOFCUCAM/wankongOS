@@ -95,8 +95,21 @@ export const api = {
       trialBalance: import("@wankong/core").AccountBalance[];
       profitAndLoss: { revenue: number; expenses: number; netIncome: number };
       balanceSheet: { assets: number; liabilities: number; equity: number };
+      cashFlow: { inflow: number; outflow: number; net: number };
       safeguard: string;
     }>("/v1/accounting/statements"),
+  accountingPeriods: () =>
+    call<{ current: string; data: import("@wankong/core").AccountingPeriod[] }>(
+      "/v1/accounting/periods",
+    ),
+  accountingEntries: () =>
+    call<{ data: import("@wankong/core").JournalEntry[] }>("/v1/accounting/entries").then(
+      (r) => r.data,
+    ),
+  accountingAuditTrail: () =>
+    call<{ data: { createdAt: string; action: string; metadata: Record<string, unknown> }[] }>(
+      "/v1/accounting/audit-trail",
+    ).then((r) => r.data),
   accountingAnomalies: () =>
     call<{ data: import("@wankong/core").AnomalyFinding[] }>("/v1/accounting/anomalies").then(
       (r) => r.data,
