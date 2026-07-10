@@ -3,6 +3,7 @@ import { api, type EmployeeSummary } from "@/lib/server-api";
 import { ApiDownNotice } from "@/components/ApiDownNotice";
 import { OrgChart } from "@/components/OrgChart";
 import { EmployeeLiveCard } from "@/components/EmployeeLiveCard";
+import { DepartmentStrip } from "@/components/DepartmentStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,12 @@ export default async function EmployeesPage() {
     <div className="space-y-6">
       <Header count={summaries.length} working={working} />
 
+      <DepartmentStrip departments={departments} summaries={summaries} />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           {byDept.map(({ dept, people }) => (
-            <section key={dept.id}>
+            <section key={dept.id} id={`dept-${dept.id}`} className="scroll-mt-6">
               <h2 className="mb-3 text-sm font-medium text-muted">{dept.name}</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {people.map((s) => (
