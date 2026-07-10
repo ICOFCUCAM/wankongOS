@@ -34,7 +34,14 @@ export interface DashboardData {
   tasks: { total: number; open: number; completed: number; byStatus: Record<string, number> };
   approvals: { pending: number };
   goals: { total: number; byStatus: Record<string, number>; averageProgress: number };
-  ai: { conversations: number; tokensIn: number; tokensOut: number; utilization: number };
+  ai: {
+    conversations: number;
+    tokensIn: number;
+    tokensOut: number;
+    estimatedCostUsd: number;
+    avgLatencyMs: number | null;
+    utilization: number;
+  };
   workflows: { defined: number; runs: number; byStatus: Record<string, number> };
   automation: { estimatedHoursSaved: number; formula: string };
 }

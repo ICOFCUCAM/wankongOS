@@ -30,7 +30,7 @@ tightly coupled and each is replaceable. `apps → packages`; `agents/store/work
 | Billing | `packages/billing` | ⬜ |
 | AI QA / evaluations (§3.2) | `packages/evals` | ✅ golden suites + regression gate · ⬜ drift detection |
 | Trust & governance (§3.1, §3.5) | `packages/core` policies + API/web | ✅ probation/kill switch/budgets/versioning · ⬜ reviews/canary |
-| Analytics / observability | `packages/analytics` + API instrumentation | 🟡 dashboard · ⬜ tracing/cost |
+| Analytics / observability | API instrumentation + `/v1/analytics` | ✅ cost/latency per employee · ⬜ tracing exporters |
 | Design system / UI kit | `packages/design-system`, `packages/ui` | 🟡 in web · ⬜ extracted |
 | REST API | `apps/api` | ✅ |
 | Web console | `apps/web` | ✅ |
@@ -98,9 +98,11 @@ Permission-based least-privilege access on every route; per-tenant scoping (404 
 cross-org); audit log on mutations; `schema.sql` with RLS. ⬜ Encryption at rest,
 secrets manager, rate limiting, prompt-injection defenses, backups/DR.
 
-### Observability 🟡
-Structured audit trail, workflow run/step history, token accounting per message.
-⬜ Metrics/tracing exporters, AI cost & latency dashboards, failure analytics.
+### Observability ✅ (core) / ⬜ (exporters)
+Structured audit trail, workflow run/step history; every assistant turn records
+provider, model, token counts, and latency; per-employee cost & latency analytics
+(`GET /v1/analytics`) and dashboard cost/latency rows. ⬜ Metrics/tracing exporters,
+failure analytics.
 
 ### APIs ✅ (core) / ⬜ (surface)
 Versioned `/v1` REST for every object. ⬜ OpenAPI doc generation, API-key auth,
@@ -150,13 +152,17 @@ Token counts are already recorded; turn them into money. *Boundary:
   (extending the transparent hours-saved formula already on the dashboard).
 - **Budget enforcement** — caps from §3.1 surfaced as forecasts and alerts.
 
-### 3.4 Compliance Pack — audit you can hand to an auditor ⬜ → M5
+### 3.4 Compliance Pack — audit you can hand to an auditor 🟡 (evidence + PII shipped)
 The audit trail and RLS design exist; package them for the compliance officer.
 *Boundary: `packages/analytics` + `apps/api` export endpoints.*
-- **Evidence exports** — one-click SOC 2 / GDPR evidence packs (who approved what,
-  which data each employee touched, full delegation chains).
+- ✅ **Evidence exports** — `GET /v1/compliance/evidence`: access control (human +
+  AI permissions and governance rules), approvals with deciders, eval reports,
+  config-change history, machine-access inventory, and the full audit trail —
+  structurally free of secrets.
 - **Retention policies** per data class (conversations, memories, documents).
-- **PII redaction** at the memory/knowledge boundary before storage.
+- ✅ **PII redaction** at the memory boundary: emails, Luhn-valid cards, SSNs, and
+  unambiguous phone formats become typed placeholders before storage (episodic
+  memories and the memory.save tool).
 - **Human-accountability chain** — every consequential AI action names the human
   who authorized the rule that permitted it.
 
@@ -228,9 +234,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
   Slack connectors — connecting an integration makes workflow integration nodes
   deliver for real (headers redacted from reads), disconnecting reverts to the
   hermetic default. ⬜ OAuth flows, SCIM, queued retrying webhook dispatcher.
-- **M5 — Observability, compliance & hardening** → tracing, cost/latency analytics,
-  rate limiting, prompt-injection defenses, backups; evidence exports, retention
-  policies, PII redaction (§3.4); provider failover + degraded mode (§3.7).
+- **M5a — Observability & compliance core** ✅ per-employee AI cost (list-price
+  estimates from recorded provider/model/tokens) and latency analytics
+  (`GET /v1/analytics` + dashboard); compliance evidence pack (§3.4); PII
+  redaction at the memory boundary (§3.4).
+- **M5b — Hardening** → rate limiting, prompt-injection defenses, retention
+  policies, backups; provider failover + degraded mode (§3.7); tracing exporters.
 - **M6 — Commercial surface** → billing, marketplace, `apps/admin`, `apps/mobile`;
   sandbox trials for marketplace employees (§3.1).
 
