@@ -48,6 +48,12 @@ export class ProviderRegistry {
     });
   }
 
+  /** Register (or replace) a provider — custom backends, tests, gateways. */
+  register(provider: AIProvider): this {
+    this.providers.set(provider.id, provider);
+    return this;
+  }
+
   has(id: ProviderId): boolean {
     return this.providers.has(id);
   }

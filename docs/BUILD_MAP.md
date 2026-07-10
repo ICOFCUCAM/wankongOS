@@ -95,10 +95,13 @@ Live CEO dashboard: workforce, tasks pipeline, approvals, goals, AI utilization,
 workflow runs, estimated hours saved (transparent formula). ⬜ Revenue, live event
 stream, human-utilization split.
 
-### Security 🟡
+### Security 🟡 (hardening core shipped)
 Permission-based least-privilege access on every route; per-tenant scoping (404 on
-cross-org); audit log on mutations; `schema.sql` with RLS. ⬜ Encryption at rest,
-secrets manager, rate limiting, prompt-injection defenses, backups/DR.
+cross-org); audit log on mutations; `schema.sql` with RLS. ✅ Rate limiting
+(sliding window per actor, chat vs default classes, Retry-After). ✅ Prompt-
+injection defenses: retrieved knowledge/memories fenced as untrusted DATA in
+prompts, plus ingestion-time heuristics that flag + audit suspect documents.
+⬜ Encryption at rest, secrets manager, backups/DR.
 
 ### Observability ✅ (core) / ⬜ (exporters)
 Structured audit trail, workflow run/step history; every assistant turn records
@@ -190,12 +193,13 @@ The audit trail and RLS design exist; package them for the compliance officer.
   HMAC-SHA256 signatures; wildcard or filtered subscriptions; failures audited,
   never breaking the emitting operation. ⬜ queued retrying dispatcher (worker).
 
-### 3.7 Business Continuity ⬜ → M5
+### 3.7 Business Continuity 🟡 (failover shipped)
 *Boundary: `packages/agents`.*
-- **Provider failover** — automatic retry on a secondary provider on outage, with
-  the hermetic local provider as the always-available floor.
-- **Degraded mode** — read-only workforce visibility even when model providers or
-  connectors are down.
+- ✅ **Provider failover** — a provider failing before its first chunk retries the
+  round on the hermetic local provider (never mid-stream); the fallback is
+  explicit in results and recorded messages. The workforce degrades, not darkens.
+- ⬜ **Degraded mode** — read-only workforce visibility when connectors are down
+  (model outages already covered by failover).
 
 ---
 
@@ -240,8 +244,12 @@ The audit trail and RLS design exist; package them for the compliance officer.
   estimates from recorded provider/model/tokens) and latency analytics
   (`GET /v1/analytics` + dashboard); compliance evidence pack (§3.4); PII
   redaction at the memory boundary (§3.4).
-- **M5b — Hardening** → rate limiting, prompt-injection defenses, retention
-  policies, backups; provider failover + degraded mode (§3.7); tracing exporters.
+- **M5b — Hardening** ✅ per-actor sliding-window rate limits (chat vs default
+  classes, Retry-After, per-instance state documented); provider failover — an
+  employee pinned to a dead provider degrades to `local` before the first chunk,
+  reported explicitly (§3.7); prompt-injection defense in depth (untrusted-data
+  fencing + ingestion flagging with audit). *Remaining for M5c:* retention
+  policies, backups/DR, secrets manager, tracing exporters.
 - **M6 — Commercial surface** → billing, marketplace, `apps/admin`, `apps/mobile`;
   sandbox trials for marketplace employees (§3.1).
 

@@ -28,11 +28,14 @@ import { workerRoutes } from "./routes/worker.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { complianceRoutes } from "./routes/compliance.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
+import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
 export interface CreateAppOptions {
   context?: AppContext;
   /** Disable request logging (used in tests). */
   quiet?: boolean;
+  /** Override rate limits (tests, high-traffic deployments). */
+  rateLimit?: RateLimitOptions;
 }
 
 /**
@@ -93,6 +96,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
 
     await next();
   });
+
+  // Rate limiting runs after auth so limits are per authenticated actor.
+  app.use("/v1/*", rateLimit(options.rateLimit));
 
   app.get("/health", (c) => c.json({ status: "ok", service: "wankong-api" }));
 
