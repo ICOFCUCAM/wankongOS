@@ -63,6 +63,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.revenue.skipped_closed_period": "held a subscription payment for manual posting (period closed)",
   "billing.plan.paid": "upgraded the plan — payment confirmed by Stripe",
   "dna.update": "updated the Company DNA",
+  "compose.render": "released a document through the composition pipeline",
   "dna.policy.create": "added a company policy to the DNA",
   "dna.policy.update": "revised a company policy (version bumped)",
   "studio.publish": "published a post through a connected channel",
