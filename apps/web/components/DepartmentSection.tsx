@@ -39,12 +39,13 @@ export function DepartmentSection({
       id={`dept-${pulse.departmentId}`}
       className="scroll-mt-6 rounded-2xl border border-border/70 bg-surface/40"
     >
-      <button
-        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        <span className="text-sm font-semibold">{pulse.name}</span>
+      <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left">
+        <Link
+          href={`/departments/${pulse.departmentId}`}
+          className="text-sm font-semibold hover:text-accent-soft"
+        >
+          {pulse.name}
+        </Link>
         <span className={`pill ${badge.className}`}>{badge.label}</span>
         <span className="text-xs text-muted">
           {pulse.employees} employee{pulse.employees === 1 ? "" : "s"}
@@ -53,11 +54,17 @@ export function DepartmentSection({
           {pulse.openTasks > 0 ? ` · ${pulse.openTasks} open` : ""}
           {pulse.costTodayUsd > 0 ? ` · ${money(pulse.costTodayUsd)} today` : ""}
         </span>
-        <span className="ml-auto text-xs text-muted">{expanded ? "▾" : `▸ ${pulse.employees}`}</span>
+        <button
+          className="ml-auto px-1 text-xs text-muted hover:text-text"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+        >
+          {expanded ? "▾" : `▸ ${pulse.employees}`}
+        </button>
         {description && expanded && (
           <span className="w-full text-xs text-muted/80">{description}</span>
         )}
-      </button>
+      </div>
 
       {expanded && (
         <div className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2">

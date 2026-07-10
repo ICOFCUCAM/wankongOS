@@ -37,7 +37,7 @@ export function DepartmentStatusList({ health }: { health: WorkforceHealth }) {
           return (
             <li key={d.departmentId}>
               <Link
-                href={`/employees#dept-${d.departmentId}`}
+                href={`/departments/${d.departmentId}`}
                 className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-surface-2"
               >
                 <span

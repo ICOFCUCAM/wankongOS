@@ -58,7 +58,7 @@ export function CompanyPulsePanel({ health }: { health: WorkforceHealth }) {
         <h2 className="mb-3 font-medium">Company pulse</h2>
         <div className="space-y-2.5">
           {depts.map((d) => (
-            <a key={d.departmentId} href={`#dept-${d.departmentId}`} className="block group">
+            <a key={d.departmentId} href={`/departments/${d.departmentId}`} className="block group">
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-muted group-hover:text-text">{d.name}</span>
                 <span className="font-mono text-muted">
