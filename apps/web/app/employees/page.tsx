@@ -42,16 +42,38 @@ export default async function EmployeesPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
-          {byDept.map(({ dept, people }) => (
-            <section key={dept.id} id={`dept-${dept.id}`} className="scroll-mt-6">
-              <h2 className="mb-3 text-sm font-medium text-muted">{dept.name}</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {people.map((s) => (
-                  <EmployeeLiveCard key={s.employeeId} summary={s} />
-                ))}
-              </div>
-            </section>
-          ))}
+          {byDept.map(({ dept, people }) => {
+            const head = dept.headEmployeeId
+              ? people.find((p) => p.employeeId === dept.headEmployeeId)
+              : undefined;
+            const workingHere = people.filter((p) => p.activity === "working").length;
+            const doneToday = people.reduce((n, p) => n + p.completedToday, 0);
+            return (
+              <section
+                key={dept.id}
+                id={`dept-${dept.id}`}
+                className="scroll-mt-6 rounded-2xl border border-border/70 bg-surface/40 p-4"
+              >
+                <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h2 className="text-sm font-semibold">{dept.name}</h2>
+                  <span className="text-xs text-muted">
+                    {people.length} employee{people.length === 1 ? "" : "s"}
+                    {head ? ` · led by ${head.name}` : ""}
+                    {workingHere > 0 ? ` · ${workingHere} working` : ""}
+                    {doneToday > 0 ? ` · ${doneToday} done today` : ""}
+                  </span>
+                  {dept.description && (
+                    <span className="w-full text-xs text-muted/80">{dept.description}</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {people.map((s) => (
+                    <EmployeeLiveCard key={s.employeeId} summary={s} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
 
         <div className="lg:sticky lg:top-8 lg:self-start">
