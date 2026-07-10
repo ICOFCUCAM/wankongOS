@@ -18,23 +18,42 @@ export function AttentionBanner({
   if (pendingApprovals === 0 && blocked.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-warn/40 bg-warn/5 px-5 py-3.5">
-      <span className="text-sm font-semibold text-warn">Needs your attention</span>
-      {pendingApprovals > 0 && (
-        <Link href="/tasks" className="text-sm text-text hover:text-warn">
-          {pendingApprovals} approval{pendingApprovals === 1 ? "" : "s"} waiting on you →
-        </Link>
-      )}
-      {blocked.map((s) => (
-        <Link
-          key={s.employeeId}
-          href={`/employees/${s.employeeId}`}
-          className="text-sm text-text hover:text-danger"
-        >
-          <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-danger align-middle" />
-          {s.name} is blocked{s.currentTask ? ` on “${s.currentTask.title}”` : ""} →
-        </Link>
-      ))}
+    <div className="rounded-xl border border-warn/50 border-l-4 border-l-warn bg-warn/5 px-5 py-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-warn">
+        <span>⚠</span> Needs Your Attention
+        <span className="pill ml-1 border-warn/50 text-warn">
+          {pendingApprovals + blocked.length}
+        </span>
+      </div>
+      <ul className="space-y-1.5">
+        {pendingApprovals > 0 && (
+          <li className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-text">
+              {pendingApprovals} approval{pendingApprovals === 1 ? "" : "s"} waiting on your decision
+            </span>
+            <Link href="/tasks" className="shrink-0 text-xs font-medium text-warn hover:underline">
+              Review →
+            </Link>
+          </li>
+        )}
+        {blocked.map((s) => (
+          <li key={s.employeeId} className="flex items-center justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate text-text">
+              <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-danger align-middle" />
+              {s.name} is blocked
+              {s.currentTask ? (
+                <span className="text-muted"> — waiting on “{s.currentTask.title}”</span>
+              ) : null}
+            </span>
+            <Link
+              href={`/employees/${s.employeeId}`}
+              className="shrink-0 text-xs font-medium text-danger hover:underline"
+            >
+              Review →
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

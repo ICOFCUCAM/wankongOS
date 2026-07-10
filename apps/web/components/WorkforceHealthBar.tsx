@@ -63,7 +63,16 @@ export function WorkforceHealthBar({ health }: { health: WorkforceHealth }) {
           value={h.avgResponseMs === null ? "—" : `${(h.avgResponseMs / 1000).toFixed(1)}s`}
           href="/analytics"
         />
-        <Cell label="AI Cost Today" value={money(h.costTodayUsd)} href="/analytics" />
+        <Cell
+          label="AI Cost Today"
+          value={money(h.costTodayUsd)}
+          sub={
+            h.costTodayUsd > 0
+              ? `run-rate ≈ ${money(Math.round((h.costTodayUsd / Math.max(0.04, new Date().getUTCHours() / 24 + new Date().getUTCMinutes() / 1440)) * 100) / 100)}/day (estimate)`
+              : "spend appears as employees work"
+          }
+          href="/analytics"
+        />
         <Cell
           label="Approvals"
           value={h.pendingApprovals}

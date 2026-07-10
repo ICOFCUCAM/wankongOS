@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { DepartmentPulse } from "@/lib/server-api";
+import { deptEmoji } from "@/lib/activity";
 
 const HEALTH_BADGE: Record<DepartmentPulse["health"], { label: string; className: string }> = {
   healthy: { label: "● Healthy", className: "border-success/40 text-success" },
@@ -44,7 +45,7 @@ export function DepartmentSection({
           href={`/departments/${pulse.departmentId}`}
           className="text-sm font-semibold hover:text-accent-soft"
         >
-          {pulse.name}
+          {deptEmoji(pulse.name)} {pulse.name}
         </Link>
         <span className={`pill ${badge.className}`}>{badge.label}</span>
         <span className="text-xs text-muted">

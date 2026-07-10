@@ -60,3 +60,19 @@ export const ACTIVITY_ORDER: ActivityStatus[] = [
   "idle",
   "offline",
 ];
+
+/** Department glyph from its name — scanning aid, nothing more. */
+export function deptEmoji(name: string): string {
+  const n = name.toLowerCase();
+  if (/exec/.test(n)) return "👔";
+  if (/financ|account/.test(n)) return "💰";
+  if (/sale/.test(n)) return "📈";
+  if (/market|social|content/.test(n)) return "📣";
+  if (/legal|compliance/.test(n)) return "⚖️";
+  if (/engineer|tech|it/.test(n)) return "💻";
+  if (/opera|procure|logisti/.test(n)) return "📦";
+  if (/support|success|service/.test(n)) return "🎧";
+  if (/hr|people|talent|recruit/.test(n)) return "🤝";
+  if (/research|data/.test(n)) return "🔬";
+  return "🏢";
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { WorkforceHealth } from "@/lib/server-api";
-import { ACTIVITY_ORDER, activityStyle, type ActivityStatus } from "@/lib/activity";
+import { ACTIVITY_ORDER, activityStyle, deptEmoji, type ActivityStatus } from "@/lib/activity";
 
 /** The verb a CEO reads per department, from its most urgent present state. */
 const VERB: Record<ActivityStatus, string> = {
@@ -43,7 +43,7 @@ export function DepartmentStatusList({ health }: { health: WorkforceHealth }) {
                 <span
                   className={`h-2 w-2 shrink-0 rounded-full ${style.dot} ${style.live ? "live-dot" : ""}`}
                 />
-                <span className="w-40 truncate text-sm">{d.name}</span>
+                <span className="w-44 truncate text-sm">{deptEmoji(d.name)} {d.name}</span>
                 <span className={`w-28 shrink-0 text-xs font-medium ${style.text}`}>
                   {VERB[status]}
                 </span>
