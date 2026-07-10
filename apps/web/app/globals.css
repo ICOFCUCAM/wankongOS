@@ -54,6 +54,24 @@ body {
   transition: width 0.9s ease;
 }
 
+/* The newest pulse entries ease in on each refresh — the feed visibly breathes. */
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.pulse-list > li:first-child {
+  animation: feed-in 0.6s ease;
+}
+.pulse-list > li:nth-child(2) {
+  animation: feed-in 0.8s ease;
+}
+
 @keyframes pulse-dot {
   0%,
   100% {

@@ -44,7 +44,7 @@ export function CompanyPulse({
       {items.length === 0 ? (
         <p className="text-sm text-muted">Quiet so far — activity shows up here as it happens.</p>
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="pulse-list space-y-2.5">
           {items.map((item, i) => {
             const line = (
               <span className="flex items-baseline gap-2.5">
