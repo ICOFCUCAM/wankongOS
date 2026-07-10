@@ -28,6 +28,7 @@ import { workerRoutes } from "./routes/worker.js";
 import { analyticsRoutes } from "./routes/analytics.js";
 import { complianceRoutes } from "./routes/compliance.js";
 import { summaryRoutes } from "./routes/summaries.js";
+import { pulseRoutes } from "./routes/pulse.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
@@ -123,6 +124,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", workerRoutes);
   v1.route("/", analyticsRoutes);
   v1.route("/", complianceRoutes);
+  v1.route("/", pulseRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

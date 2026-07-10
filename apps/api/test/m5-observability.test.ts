@@ -156,3 +156,41 @@ describe("console: employee summaries", () => {
     expect(noEvals.confidence).toBeNull();
   });
 });
+
+describe("console: company pulse", () => {
+  it("builds a human-readable feed from tasks, approvals, and the audit trail", async () => {
+    // Real events: hire someone (audit) — the seed already has done/blocked tasks.
+    await app.request(
+      "/v1/employees",
+      json({
+        departmentId: "dept_sales",
+        name: "Pulse Probe",
+        title: "SDR",
+        description: "probe",
+        systemPrompt: "p",
+      }),
+    );
+
+    const res = await app.request("/v1/pulse?limit=50");
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.length).toBeGreaterThan(3);
+
+    // Newest first.
+    const times = data.map((i: { at: string }) => i.at);
+    expect([...times].sort().reverse()).toEqual(times);
+
+    const texts = data.map((i: { text: string }) => i.text).join("\n");
+    expect(texts).toContain("Pulse Probe was hired");
+    expect(texts).toContain("completed"); // Noah's seeded reconcile task
+    expect(texts).toContain("is blocked on"); // Zoe's seeded vendor quote
+    // Every line traces to a stored record and links where possible.
+    for (const item of data) expect(["task", "approval", "audit"]).toContain(item.kind);
+  });
+
+  it("respects the limit parameter", async () => {
+    const res = await app.request("/v1/pulse?limit=2");
+    const { data } = await res.json();
+    expect(data.length).toBeLessThanOrEqual(2);
+  });
+});
