@@ -126,6 +126,17 @@ export const api = {
     call<{ data: import("@wankong/core").AnomalyFinding[] }>("/v1/accounting/anomalies").then(
       (r) => r.data,
     ),
+  marketplaceTemplates: () =>
+    call<{ data: (Omit<import("@wankong/core").RoleTemplate, "starterEvals"> & { evalTasks: number })[] }>(
+      "/v1/marketplace/templates",
+    ).then((r) => r.data),
+  billing: () =>
+    call<{
+      plan: import("@wankong/core").Plan;
+      availablePlans: import("@wankong/core").Plan[];
+      usage: { employees: number; employeeLimit: number; monthTokens: number; estAiCostUsd: number };
+      invoicePreview: { base: number; note: string };
+    }>("/v1/billing"),
   studios: () =>
     call<{ data: (import("@wankong/core").StudioDef & { active: boolean; connectedVia: string[] })[] }>(
       "/v1/studios",
