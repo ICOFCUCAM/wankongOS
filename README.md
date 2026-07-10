@@ -127,6 +127,10 @@ store code is tested in CI on real SQL via PGlite (ADR-0009).
 | `GET`  | `/v1/pulse` | Company activity feed, phrased for humans *(org:read)* |
 | `POST` | `/v1/employees/:id/clone` · `/offboard` | Duplicate (fresh probation) / retire an employee *(employee:create/manage)* |
 | `GET`  | `/v1/tools` · `/v1/goals` | Tool catalog · org goals |
+| `POST` | `/v1/auth/register` · `/login` · `/logout-all` | Real tenants: org + owner signup (optional starter pack), sessions, revocation |
+| `POST` | `/v1/worker/tick` (also GET for cron) | Scheduler + autonomous work cycle |
+| `GET`  | `/v1/notifications` · `/v1/events/stream` | Decision inbox · live SSE events |
+| `GET/POST` | `/v1/billing` · `/v1/marketplace/*` | Plans with enforcement · role templates with eval-gated hiring |
 | `GET`  | `/v1/audit` | Audit trail *(audit:read)* |
 
 Authorization is permission-based. Machine access: create an API key and call with

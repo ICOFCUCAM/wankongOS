@@ -27,6 +27,15 @@ status ACTIVE_HEALTHY).
    durable data: employees, tasks, assets, brand kit, journal entries,
    accounting periods, companies, bank transactions, FX rates.
 
+## Production env vars
+
+- `DATABASE_URL` — durability (above).
+- `WANKONG_AUTH_SECRET` — signs session tokens; REQUIRED in production
+  (without it, sessions die on each serverless instance).
+- `CRON_SECRET` — guards the GET /api/v1/worker/tick cron (vercel.json
+  registers a 5-minute schedule that drives the autonomous work cycle).
+- `PG_POOL_MAX` — optional, connections per function instance (default 1).
+
 ## Notes
 
 - The client is pooler-safe by default: `prepare: false`, small pool,
