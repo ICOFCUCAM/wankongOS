@@ -70,3 +70,24 @@ describe("explainability: the activity log reaches the prompt", () => {
     expect(prompt).toContain("cite timestamps");
   });
 });
+
+describe("the executive meeting", () => {
+  it("every staffed department reports from its own records; minutes are filed", async () => {
+    await runWorkCycle(ctx, { maxTasks: 5 }); // give leads something real to report
+    const res = await app.request("/v1/meetings/executive", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+    expect(res.status).toBe(201);
+    const { updates, minutesAssetId } = await res.json();
+    expect(updates.length).toBeGreaterThanOrEqual(8); // seeded staffed departments
+    for (const u of updates) {
+      expect(u.update.length).toBeGreaterThan(20);
+      expect(u.employeeName.length).toBeGreaterThan(0);
+    }
+    const minutes = await (await app.request(`/v1/assets/${minutesAssetId}`)).json();
+    expect(minutes.kind).toBe("meeting_minutes");
+    expect(minutes.content).toContain("Executive meeting");
+    expect(minutes.content).toContain(updates[0].department);
+
+    const list = await (await app.request("/v1/meetings")).json();
+    expect(list.data).toHaveLength(1);
+  });
+});

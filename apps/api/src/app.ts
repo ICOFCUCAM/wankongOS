@@ -41,6 +41,7 @@ import { billingRoutes } from "./routes/billing.js";
 import { marketplaceRoutes } from "./routes/marketplace.js";
 import { adminRoutes } from "./routes/admin.js";
 import { timelineRoutes } from "./routes/timeline.js";
+import { meetingRoutes } from "./routes/meetings.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
 import { rateLimit, type RateLimitOptions } from "./ratelimit.js";
 
@@ -178,6 +179,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", marketplaceRoutes);
   v1.route("/", adminRoutes);
   v1.route("/", timelineRoutes);
+  v1.route("/", meetingRoutes);
   app.route("/v1", v1);
 
   app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));
