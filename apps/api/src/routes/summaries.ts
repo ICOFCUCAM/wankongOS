@@ -15,6 +15,11 @@ export interface EmployeeSummary {
   /** In-progress task titles, most recently touched first (max 3). */
   workingOn: string[];
   currentTask: { title: string; progress: number | null; dueAt: string | null } | null;
+  /** The checkpoint step being worked right now, when the task is a long job. */
+  currentStep: string | null;
+  /** Next queued task title — what they'll pick up after this. */
+  nextUp: string | null;
+  knowledgeBases: number;
   /** Most recent completed task — proof of life when nothing is in flight. */
   lastDelivered: { title: string; at: string } | null;
   completedToday: number;
@@ -84,6 +89,15 @@ summaryRoutes.get("/employees/summaries", async (c) => {
             dueAt: current.dueDate ?? null,
           }
         : null,
+      currentStep:
+        current?.checkpoint && current.checkpoint.completed < current.checkpoint.steps.length
+          ? (current.checkpoint.steps[current.checkpoint.completed] ?? null)
+          : null,
+      nextUp:
+        p.tasks
+          .filter((t) => t.status === "todo")
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]?.title ?? null,
+      knowledgeBases: e.knowledgeBaseIds.length,
       lastDelivered: (() => {
         const done = p.tasks
           .filter((t) => t.status === "done")

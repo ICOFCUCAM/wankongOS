@@ -16,6 +16,8 @@ export interface DepartmentPulse {
   completedToday: number;
   costTodayUsd: number;
   health: DepartmentHealth;
+  /** Open tasks ÷ (members × 3 concurrent slots), capped at 100 — a disclosed staffing heuristic. */
+  capacityPct: number;
 }
 
 export interface WorkforceHealth {
@@ -135,6 +137,7 @@ workforceHealthRoutes.get("/workforce/health", async (c) => {
         completedToday: deptDoneToday,
         costTodayUsd,
         health,
+        capacityPct: Math.min(100, Math.round((deptOpen.length / Math.max(1, members.length * 3)) * 100)),
       };
     })
     .filter((d) => d.employees > 0);
