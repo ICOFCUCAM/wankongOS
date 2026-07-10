@@ -26,7 +26,7 @@ function dominant(byActivity: Partial<Record<ActivityStatus, number>>): Activity
  */
 export function DepartmentStatusList({ health }: { health: WorkforceHealth }) {
   const depts = health.departmentsDetail;
-  const max = Math.max(1, ...depts.map((d) => d.openTasks + d.completedToday));
+  const total = Math.max(1, depts.reduce((n, d) => n + d.openTasks + d.completedToday, 0));
   return (
     <div className="card">
       <h2 className="mb-3 font-medium">Departments</h2>
@@ -51,11 +51,12 @@ export function DepartmentStatusList({ health }: { health: WorkforceHealth }) {
                   <span
                     className="bar-fill block h-full rounded-full bg-accent"
                     style={{
-                      width: `${Math.max(4, Math.round(((d.openTasks + d.completedToday) / max) * 100))}%`,
+                      width: `${Math.max(3, Math.round(((d.openTasks + d.completedToday) / total) * 100))}%`,
                     }}
                   />
                 </span>
-                <span className="w-16 shrink-0 text-right font-mono text-xs text-muted">
+                <span className="w-24 shrink-0 text-right font-mono text-xs text-muted">
+                  {Math.round(((d.openTasks + d.completedToday) / total) * 100)}% ·{" "}
                   {d.completedToday > 0 ? `${d.completedToday} done` : `${d.openTasks} open`}
                 </span>
               </Link>
