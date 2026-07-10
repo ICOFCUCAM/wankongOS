@@ -93,11 +93,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
     }
 
     // Human sessions: a signed wks_ token pins BOTH the user and the tenant —
-    // the request runs against that organization, isolated by the same
-    // organizationId filters every query already applies.
-    if (bearer?.startsWith("wks_")) {
+    // via Authorization header (API clients) or the wk_session cookie
+    // (browser console). Same token, same verification.
+    const cookieToken = c.req
+      .header("cookie")
+      ?.split(/;\s*/)
+      .find((p) => p.startsWith("wk_session="))
+      ?.slice("wk_session=".length);
+    const sessionToken = bearer?.startsWith("wks_") ? bearer : cookieToken;
+    if (sessionToken?.startsWith("wks_")) {
       const { verifySession } = await import("./auth-session.js");
-      const claims = verifySession(bearer);
+      const claims = verifySession(sessionToken);
       if (!claims) return c.json({ error: "Invalid or expired session" }, 401);
       const user = await context.store.users.get(claims.userId);
       if (

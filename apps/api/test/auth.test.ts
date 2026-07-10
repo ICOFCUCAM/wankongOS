@@ -110,3 +110,16 @@ describe("session revocation", () => {
     expect((await app.request("/v1/auth/me", auth(relog.token))).status).toBe(200);
   });
 });
+
+describe("cookie sessions (browser console)", () => {
+  it("accepts the wks_ token from the wk_session cookie", async () => {
+    const reg = await (await app.request("/v1/auth/register", json({
+      organizationName: "Cookie Co", name: "C", email: "c@cookie.io", password: "password-of-ten+",
+    }))).json();
+    const res = await app.request("/v1/auth/me", { headers: { cookie: `other=1; wk_session=${reg.token}` } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).user.email).toBe("c@cookie.io");
+    const bad = await app.request("/v1/employees", { headers: { cookie: "wk_session=wks_forged.x" } });
+    expect(bad.status).toBe(401);
+  });
+});
