@@ -25,6 +25,12 @@ const ConnectInput = z.discriminatedUnion("kind", [
     name: z.string().min(1).max(120),
     config: z.object({ webhookUrl: z.string().url() }),
   }),
+  z.object({
+    kind: z.literal("github"),
+    name: z.string().min(1).max(120),
+    /** Personal-access or app installation token; redacted from reads. */
+    config: z.object({ token: z.string().min(4) }),
+  }),
 ]);
 
 export const integrationRoutes = new Hono<Env>();
@@ -38,7 +44,7 @@ integrationRoutes.get("/integrations", async (c) => {
   );
   return c.json({
     data: integrations.map((i) => {
-      const { headers: _h, ...config } = i.config as Record<string, unknown>;
+      const { headers: _h, token: _t, ...config } = i.config as Record<string, unknown>;
       return { ...i, config };
     }),
   });
