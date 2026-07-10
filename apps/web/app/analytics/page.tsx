@@ -51,6 +51,7 @@ export default async function AnalyticsPage() {
                 <th className="pb-2 pr-4 font-medium">Requests</th>
                 <th className="pb-2 pr-4 font-medium">Tokens</th>
                 <th className="pb-2 pr-4 font-medium">Avg latency</th>
+                <th className="pb-2 pr-4 font-medium">Today</th>
                 <th className="pb-2 text-right font-medium">Est. cost</th>
               </tr>
             </thead>
@@ -85,6 +86,9 @@ export default async function AnalyticsPage() {
                     </td>
                     <td className="py-2.5 pr-4 font-mono">
                       {r.avgLatencyMs === null ? "—" : `${r.avgLatencyMs} ms`}
+                    </td>
+                    <td className="py-2.5 pr-4 font-mono">
+                      {r.requestsToday > 0 ? `${r.requestsToday} req · ${money(r.costTodayUsd)}` : "—"}
                     </td>
                     <td className="py-2.5 text-right font-mono">{money(r.estCostUsd)}</td>
                   </tr>

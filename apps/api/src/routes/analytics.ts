@@ -12,6 +12,8 @@ export interface AnalyticsRow {
   tokensOut: number;
   estCostUsd: number;
   avgLatencyMs: number | null;
+  costTodayUsd: number;
+  requestsToday: number;
 }
 
 export interface AnalyticsData {
@@ -50,6 +52,8 @@ analyticsRoutes.get("/analytics", async (c) => {
         tokensOut: b?.tokensOut ?? 0,
         estCostUsd: round6(b?.estCostUsd ?? 0),
         avgLatencyMs: avgOf(b?.latencies ?? []),
+        costTodayUsd: round6(b?.todayCostUsd ?? 0),
+        requestsToday: b?.todayRequests ?? 0,
       };
     })
     .sort((a, b) => b.tokensOut + b.tokensIn - (a.tokensOut + a.tokensIn));
