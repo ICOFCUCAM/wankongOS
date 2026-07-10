@@ -218,3 +218,31 @@ describe("bank feed import and auto-reconciliation", () => {
     expect(status.unmatched).toBe(1);
   });
 });
+
+describe("FX translation with recorded rates only", () => {
+  it("translates consolidated totals when rates exist, refuses when missing", async () => {
+    const no = await (await app.request("/v1/accounting/companies", json({ name: "Acme Norway AS", jurisdiction: "NO" }))).json();
+    await app.request("/v1/accounting/entries", json({ ...INVOICE, companyId: no.id, reference: "NO-FX" }));
+    await app.request("/v1/accounting/entries", json(INVOICE)); // primary in USD
+
+    // No NOK->USD rate yet: NOK entity excluded and reported missing.
+    const before = await (await app.request("/v1/accounting/consolidated?presentation=USD")).json();
+    expect(before.presentation.missingRates).toContain("NOK->USD");
+    expect(before.presentation.revenue).toBe(100); // USD entity only
+
+    await app.request("/v1/accounting/fx-rates", json({ base: "NOK", quote: "USD", rate: 0.095, asOf: "2026-07-01" }));
+    const after = await (await app.request("/v1/accounting/consolidated?presentation=USD")).json();
+    expect(after.presentation.missingRates).toHaveLength(0);
+    expect(after.presentation.revenue).toBeCloseTo(100 + 100 * 0.095, 2);
+    expect(after.presentation.method).toContain("Not a full IAS 21");
+  });
+
+  it("uses inverse rates when only the opposite pair is recorded", async () => {
+    await app.request("/v1/accounting/fx-rates", json({ base: "USD", quote: "NOK", rate: 10.5 }));
+    const no = await (await app.request("/v1/accounting/companies", json({ name: "Acme Norway AS", jurisdiction: "NO" }))).json();
+    await app.request("/v1/accounting/entries", json({ ...INVOICE, companyId: no.id, reference: "NO-INV2" }));
+    const cons = await (await app.request("/v1/accounting/consolidated?presentation=USD")).json();
+    expect(cons.presentation.missingRates).toHaveLength(0);
+    expect(cons.presentation.revenue).toBeCloseTo(100 / 10.5, 2);
+  });
+});

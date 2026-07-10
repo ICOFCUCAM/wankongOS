@@ -120,8 +120,9 @@ VAT-return + trial-balance filing documents with the review safeguard,
 /accounting console page. ✅ Periods (controlled close/reopen), audit trail, cash flow, one-click
 audit package. ✅ Bank-feed import + deterministic reconciliation (drafts, never
 auto-posted). ⬜ More jurisdictions, payroll engines,
-e-filing connectors. ✅ Multi-company ledgers + per-currency consolidation
-(FX translation and eliminations explicitly not applied yet).
+e-filing connectors. ✅ Multi-company ledgers + consolidation with optional presentation-currency
+translation from recorded FX rates (closing-rate method, limits disclosed;
+intercompany eliminations still not applied).
 ⬜ Real revenue (M6 billing), event push (websockets),
 human-utilization split.
 

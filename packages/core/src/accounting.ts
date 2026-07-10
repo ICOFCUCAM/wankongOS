@@ -233,6 +233,34 @@ export function reconcile(
   return { matches, unmatched };
 }
 
+/** A recorded exchange rate: 1 unit of base = rate units of quote. */
+export const FxRate = z.object({
+  id: Id,
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+  organizationId: Id,
+  base: z.string().min(3).max(3),
+  quote: z.string().min(3).max(3),
+  rate: z.number().positive(),
+  asOf: z.string().min(8).max(30),
+  source: z.string().max(120).default("manual"),
+});
+export type FxRate = z.infer<typeof FxRate>;
+
+/**
+ * Latest recorded rate from `from` to `to` (direct or inverse). Returns null
+ * when no rate is recorded — translation is refused, never guessed.
+ */
+export function latestRate(rates: FxRate[], from: string, to: string): number | null {
+  if (from === to) return 1;
+  const pick = (b: string, q: string) =>
+    rates.filter((r) => r.base === b && r.quote === q).sort((a, x) => x.asOf.localeCompare(a.asOf))[0];
+  const direct = pick(from, to);
+  if (direct) return direct.rate;
+  const inverse = pick(to, from);
+  return inverse ? Math.round((1 / inverse.rate) * 1e8) / 1e8 : null;
+}
+
 export interface AnomalyFinding {
   severity: "warning" | "recommendation";
   code: string;

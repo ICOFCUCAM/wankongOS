@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   ACCOUNTING_SAFEGUARD,
   cashFlow,
+  latestRate,
   reconcile,
   detectAnomalies,
   engineFor,
@@ -294,9 +295,42 @@ accountingRoutes.get("/accounting/consolidated", async (c) => {
     b.revenue += u.revenue; b.netIncome += u.netIncome; b.assets += u.assets; b.entities += 1;
   }
   const currencies = Object.keys(byCurrency);
+
+  // Optional presentation translation — recorded rates only, never guessed.
+  const presentation = c.req.query("presentation")?.toUpperCase();
+  let presented: null | {
+    currency: string;
+    revenue: number;
+    netIncome: number;
+    assets: number;
+    translatedEntities: number;
+    missingRates: string[];
+    method: string;
+  } = null;
+  if (presentation) {
+    const rates = await ctx.store.fxRates.list((r) => r.organizationId === ctx.organizationId);
+    const missing = new Set<string>();
+    let revenue = 0, netIncome = 0, assets = 0, translated = 0;
+    for (const u of perEntity) {
+      const rate = latestRate(rates, u.currency, presentation);
+      if (rate === null) { missing.add(`${u.currency}->${presentation}`); continue; }
+      revenue += u.revenue * rate; netIncome += u.netIncome * rate; assets += u.assets * rate; translated += 1;
+    }
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    presented = {
+      currency: presentation,
+      revenue: r2(revenue),
+      netIncome: r2(netIncome),
+      assets: r2(assets),
+      translatedEntities: translated,
+      missingRates: [...missing],
+      method: "Closing-rate translation of entity totals using the latest recorded rate. Not a full IAS 21 / ASC 830 translation (no CTA, no average-rate P&L); entities without a recorded rate are excluded and listed in missingRates.",
+    };
+  }
   return c.json({
     perEntity,
     byCurrency,
+    presentation: presented,
     note:
       currencies.length > 1
         ? `Entities report in ${currencies.join(", ")}. FX translation and intercompany eliminations are NOT applied — totals are per currency and must not be summed across currencies.`
@@ -395,4 +429,36 @@ accountingRoutes.get("/accounting/bank", async (c) => {
     matched: txs.filter((t) => t.status === "matched").length,
     unmatched: txs.filter((t) => t.status === "unmatched").length,
   });
+});
+
+const PutRate = z.object({
+  base: z.string().length(3),
+  quote: z.string().length(3),
+  rate: z.number().positive(),
+  asOf: z.string().min(8).max(30).optional(),
+  source: z.string().max(120).optional(),
+});
+
+accountingRoutes.get("/accounting/fx-rates", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const rates = await ctx.store.fxRates.list((r) => r.organizationId === ctx.organizationId);
+  rates.sort((a, b) => b.asOf.localeCompare(a.asOf));
+  return c.json({ data: rates });
+});
+
+accountingRoutes.post("/accounting/fx-rates", async (c) => {
+  authorize(c, "org:manage");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, PutRate);
+  const rate = await ctx.store.fxRates.create({
+    organizationId: ctx.organizationId,
+    base: input.base.toUpperCase(),
+    quote: input.quote.toUpperCase(),
+    rate: input.rate,
+    asOf: input.asOf ?? new Date().toISOString().slice(0, 10),
+    source: input.source ?? "manual",
+  });
+  await ctx.store.audit({ organizationId: ctx.organizationId, actor: { kind: "user", id: c.get("actor").user.id }, action: "accounting.fx.record", targetType: "fxRate", targetId: rate.id, metadata: { pair: `${rate.base}/${rate.quote}`, rate: rate.rate } });
+  return c.json(rate, 201);
 });

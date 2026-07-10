@@ -41,6 +41,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "accounting.company.create": "registered a new group company",
   "accounting.bank.import": "imported a bank feed",
   "accounting.bank.reconcile": "ran bank reconciliation",
+  "accounting.fx.record": "recorded an exchange rate",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */

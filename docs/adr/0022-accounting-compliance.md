@@ -67,3 +67,9 @@ Bank feeds (same day): imported statements are records; reconciliation is
 deterministic (exact reference, or exact cash movement within five days);
 whatever doesn't match returns as drafted entries for human review — the
 system never posts to the ledger from a bank line on its own.
+
+FX (same day): exchange rates are recorded records (with source and as-of
+date); `consolidated?presentation=CCY` translates entity totals using the
+latest recorded rate (direct or inverse), excludes and lists entities with
+no recorded rate, and discloses the method's limits (closing-rate on
+totals; not a full IAS 21 / ASC 830 translation).
