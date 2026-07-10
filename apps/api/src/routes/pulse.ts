@@ -33,6 +33,9 @@ const AUDIT_PHRASES: Record<string, string> = {
   "document.injection_flagged": "flagged a suspicious document",
 };
 
+/** Audit actions whose story is already told by the task items themselves. */
+const AUDIT_SKIP = new Set(["tool.task.progress", "tool.task.complete"]);
+
 export const pulseRoutes = new Hono<Env>();
 
 /**
@@ -98,6 +101,7 @@ pulseRoutes.get("/pulse", async (c) => {
   }
 
   for (const e of auditEvents) {
+    if (AUDIT_SKIP.has(e.action)) continue;
     const phrase = AUDIT_PHRASES[e.action];
     const subjectId =
       e.targetType === "employee" && e.targetId

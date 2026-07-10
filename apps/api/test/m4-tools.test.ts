@@ -116,3 +116,69 @@ describe("M4a: employees execute real tools from chat", () => {
     expect(await context.store.tasks.count()).toBe(before);
   });
 });
+
+describe("employees report progress and complete their own tasks", () => {
+  it("updates real task progress via the task.progress tool", async () => {
+    const res = await app.request(
+      "/v1/employees/emp_exec_assistant/chat",
+      json({ input: "Progress report on my task: the board deck is at 90 percent." }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tools.some((t: { name: string }) => t.name === "task.progress")).toBe(true);
+  });
+
+  it("marks a task done and records the completion in the audit trail", async () => {
+    // Drive the tool directly through the registry (deterministic args).
+    const result = await context.toolRegistry.execute(
+      "task.progress",
+      { title: "board deck", done: true, result: "Deck compiled and sent." },
+      {
+        organizationId: SEED_ORG_ID,
+        employeeId: "emp_exec_assistant",
+        permissions: ["task:create"],
+      },
+    );
+    expect(String(result)).toContain("done");
+
+    const task = (await context.store.tasks.list((t) => t.title.includes("board deck")))[0]!;
+    expect(task.status).toBe("done");
+    expect(task.progress).toBe(1);
+    expect(task.result).toContain("Deck compiled");
+
+    const audits = await context.store.auditEvents.list(
+      (a) => a.action === "tool.task.complete",
+    );
+    expect(audits).toHaveLength(1);
+
+    // The living card follows the record: activity is no longer "working" on it.
+    const summaries = await (await app.request("/v1/employees/summaries")).json();
+    const ava = summaries.data.find(
+      (s: { employeeId: string }) => s.employeeId === "emp_exec_assistant",
+    );
+    expect(ava.completedToday).toBeGreaterThanOrEqual(1);
+  });
+
+  it("asks for disambiguation instead of guessing between open tasks", async () => {
+    await context.store.tasks.create({
+      organizationId: SEED_ORG_ID,
+      title: "Second open task",
+      description: "",
+      status: "in_progress",
+      priority: "normal",
+      assignee: { kind: "employee", id: "emp_exec_assistant" },
+      createdBy: { kind: "user", id: "usr_ceo" },
+      labels: [],
+    });
+    const result = await context.toolRegistry.execute(
+      "task.progress",
+      { progress: 0.5 },
+      {
+        organizationId: SEED_ORG_ID,
+        employeeId: "emp_exec_assistant",
+        permissions: ["task:create"],
+      },
+    );
+    expect(String(result)).toContain("Which task?");
+  });
+});

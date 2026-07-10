@@ -61,6 +61,74 @@ export function buildToolRegistry(
     },
   });
 
+  registry.register("task.progress", {
+    definition: {
+      name: "task.progress",
+      description:
+        "Report progress on one of your assigned tasks: update completion (0-1), or mark it done with a result. Identify the task by id or title.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: { type: "string", description: "Task id (task_...)" },
+          title: { type: "string", description: "Or: (part of) the task title" },
+          progress: { type: "number", minimum: 0, maximum: 1 },
+          done: { type: "boolean", description: "Mark the task complete" },
+          result: { type: "string", description: "What was produced (required when done)" },
+        },
+      },
+      triggers: [
+        "\\b(finished|completed|done with)\\b[^.]*\\btask\\b",
+        "\\bprogress\\b[^.]*\\btask\\b",
+        "\\btask\\b[^.]*\\b(done|complete|progress)\\b",
+      ],
+    },
+    requires: "task:create",
+    async run(args, ctx) {
+      const mine = await store.tasks.list(
+        (t) =>
+          t.organizationId === ctx.organizationId &&
+          t.assignee?.kind === "employee" &&
+          t.assignee.id === ctx.employeeId &&
+          !["done", "cancelled"].includes(t.status),
+      );
+      const taskId = str(args.taskId);
+      const title = str(args.title)?.toLowerCase();
+      const task =
+        (taskId && mine.find((t) => t.id === taskId)) ||
+        (title && mine.find((t) => t.title.toLowerCase().includes(title))) ||
+        (mine.length === 1 ? mine[0] : undefined);
+      if (!task) {
+        return mine.length === 0
+          ? "You have no open assigned tasks."
+          : `Which task? Your open tasks: ${mine.map((t) => `"${t.title}" (${t.id})`).join(", ")}.`;
+      }
+
+      const done = args.done === true;
+      const progress =
+        typeof args.progress === "number" ? Math.min(1, Math.max(0, args.progress)) : undefined;
+      const updated = await store.tasks.update(task.id, {
+        ...(done
+          ? { status: "done" as const, progress: 1 }
+          : {
+              ...(progress !== undefined ? { progress } : {}),
+              ...(task.status === "todo" ? { status: "in_progress" as const } : {}),
+            }),
+        ...(str(args.result) ? { result: str(args.result)!.slice(0, 20000) } : {}),
+      });
+      await store.audit({
+        organizationId: ctx.organizationId,
+        actor: { kind: "employee", id: ctx.employeeId },
+        action: done ? "tool.task.complete" : "tool.task.progress",
+        targetType: "task",
+        targetId: task.id,
+        metadata: { title: task.title, progress: updated.progress ?? null },
+      });
+      return done
+        ? `Marked "${task.title}" done.`
+        : `Updated "${task.title}" to ${Math.round((updated.progress ?? 0) * 100)}% complete.`;
+    },
+  });
+
   registry.register("kb.search", {
     definition: {
       name: "kb.search",
