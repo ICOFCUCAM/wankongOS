@@ -65,3 +65,50 @@ describe("production studios", () => {
     expect((await put.json()).toneOfVoice).toBe("Bold and playful.");
   });
 });
+
+describe("builtin generators produce real files", () => {
+  it("document/invoice totals line items into markdown", async () => {
+    const res = await app.request(
+      "/v1/studios/document/generate",
+      json({ kind: "invoice", title: "INV-42", data: { billTo: "BigCo", items: [{ description: "Consulting", qty: 2, unitPrice: 500 }] } }),
+    );
+    expect(res.status).toBe(201);
+    const asset = await res.json();
+    expect(asset.mimeType).toBe("text/markdown");
+    expect(asset.content).toContain("**Total: $1000.00**");
+  });
+
+  it("design/business_card renders brand-driven SVG", async () => {
+    await app.request("/v1/brand", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ colors: { primary: "#ff0000", secondary: "#111111", accent: "#00ff00" } }) });
+    const res = await app.request("/v1/studios/design/generate", json({ kind: "business_card", title: "Card", data: { name: "Ava Chen", subtitle: "Executive Assistant" } }));
+    const asset = await res.json();
+    expect(asset.mimeType).toBe("image/svg+xml");
+    expect(asset.content).toContain("#ff0000");
+    expect(asset.content).toContain("Ava Chen");
+  });
+
+  it("financial/spend_report reads recorded usage", async () => {
+    const res = await app.request("/v1/studios/financial/generate", json({ kind: "spend_report" }));
+    const asset = await res.json();
+    expect(asset.content).toContain("Total estimated spend");
+  });
+
+  it("cad/floor_plan lays out rooms as SVG", async () => {
+    const res = await app.request("/v1/studios/cad/generate", json({ kind: "floor_plan", title: "Office", data: { rooms: [{ name: "Lobby", size: "6x4m" }, { name: "Workshop", size: "10x8m" }] } }));
+    const asset = await res.json();
+    expect(asset.content).toContain("Lobby");
+    expect(asset.content.startsWith("<svg")).toBe(true);
+  });
+
+  it("conversion/csv_to_json round-trips structure", async () => {
+    const res = await app.request("/v1/studios/conversion/generate", json({ kind: "csv_to_json", data: { source: "name,qty\nWidget,3" } }));
+    const asset = await res.json();
+    expect(JSON.parse(asset.content)).toEqual([{ name: "Widget", qty: "3" }]);
+  });
+
+  it("422s for connector-tier kinds with an honest message", async () => {
+    const res = await app.request("/v1/studios/video/generate", json({ kind: "commercial" }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toContain("Integration Hub");
+  });
+});

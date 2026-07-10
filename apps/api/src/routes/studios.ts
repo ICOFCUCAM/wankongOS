@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { Asset, BrandKit, STUDIOS } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
+import { z } from "zod";
+import { generate, StudioError } from "../studios/generate.js";
 
 const CreateAsset = Asset.omit({ id: true, createdAt: true, updatedAt: true, organizationId: true, createdBy: true, version: true });
 const UpdateAsset = CreateAsset.partial();
@@ -124,3 +126,39 @@ studioRoutes.put("/brand", async (c) => {
   return c.json(updated);
 });
 
+
+const GenerateInput = z.object({
+  kind: z.string().min(1).max(60),
+  title: z.string().max(200).optional(),
+  data: z.record(z.unknown()).optional(),
+});
+
+/** Run a builtin generator and store the result as a versioned asset. */
+studioRoutes.post("/studios/:studioId/generate", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const studioId = c.req.param("studioId");
+  const input = await parseBody(c, GenerateInput);
+  try {
+    const result = await generate(ctx, studioId, input);
+    const asset = await ctx.store.assets.create({
+      organizationId: ctx.organizationId,
+      studioId,
+      version: 1,
+      createdBy: { kind: "user", id: c.get("actor").user.id },
+      ...result,
+    });
+    await ctx.store.audit({
+      organizationId: ctx.organizationId,
+      actor: { kind: "user", id: c.get("actor").user.id },
+      action: "studio.generate",
+      targetType: "asset",
+      targetId: asset.id,
+      metadata: { studioId, kind: result.kind, title: result.title },
+    });
+    return c.json(asset, 201);
+  } catch (e) {
+    if (e instanceof StudioError) return c.json({ error: e.message }, 422);
+    throw e;
+  }
+});
