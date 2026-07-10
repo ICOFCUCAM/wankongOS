@@ -12,6 +12,8 @@ export interface PromptContext {
   toolNames?: string[];
   /** Org brand tone of voice — applied to every employee automatically. */
   brandVoice?: string;
+  /** Timestamped recent-activity lines — lets the employee answer "why?" with evidence. */
+  activityLog?: string[];
 }
 
 /**
@@ -67,6 +69,11 @@ export function buildSystemPrompt(employee: Employee, ctx: PromptContext): strin
     );
   }
 
+  if (ctx.activityLog?.length) {
+    sections.push(
+      `Your recent activity log (cite timestamps from here when explaining your decisions):\n${ctx.activityLog.join("\n")}`,
+    );
+  }
   if (ctx.brandVoice) {
     sections.push(`Brand voice (apply to all external communication): ${ctx.brandVoice}`);
   }

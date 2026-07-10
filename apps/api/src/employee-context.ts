@@ -31,12 +31,28 @@ export async function buildGroundedEmployeeContext(
   employee: Employee,
   options: GroundingOptions = {},
 ): Promise<GroundedContext> {
-  const [org, department, manager, brandKits] = await Promise.all([
+  const [org, department, manager, brandKits, myTasks, myApprovals] = await Promise.all([
     store.organizations.get(organizationId),
     store.departments.get(employee.departmentId),
     employee.managerId ? store.employees.get(employee.managerId) : Promise.resolve(null),
     store.brandKits.list((b) => b.organizationId === organizationId),
+    store.tasks.listByOrg(organizationId, (t) => t.assignee?.kind === "employee" && t.assignee.id === employee.id),
+    store.approvals.listByOrg(organizationId, (a) => a.requestedBy.kind === "employee" && a.requestedBy.id === employee.id),
   ]);
+
+  // Evidence for explainability: the employee's own recent, timestamped acts.
+  const stamp = (iso: string) => iso.slice(0, 16).replace("T", " ");
+  const activityLog = [
+    ...myTasks
+      .filter((t) => t.status === "done")
+      .map((t) => `[${stamp(t.updatedAt)}] Completed "${t.title}"${t.result ? `: ${t.result.slice(0, 120).replace(/\s+/g, " ")}` : ""}`),
+    ...myTasks
+      .filter((t) => t.status === "in_progress")
+      .map((t) => `[${stamp(t.updatedAt)}] Working on "${t.title}"${typeof t.progress === "number" ? ` (${Math.round(t.progress * 100)}%)` : ""}`),
+    ...myApprovals.map((a) => `[${stamp(a.createdAt)}] Requested approval: ${a.summary.slice(0, 120)} (${a.status})`),
+  ]
+    .sort()
+    .slice(-12);
 
   const memories = rankMemories(
     await store.memories.list(
@@ -74,6 +90,7 @@ export async function buildGroundedEmployeeContext(
       knowledge,
       toolNames: employee.toolIds,
       brandVoice: brandKits[0]?.toneOfVoice,
+      activityLog,
     },
   };
 }
