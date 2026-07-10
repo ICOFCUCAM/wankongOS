@@ -60,10 +60,11 @@ export function WorkforceControls({ activeCount, pausedCount }: { activeCount: n
 
   return (
     <button
-      className="rounded-lg border border-danger/40 px-3 py-1.5 text-xs text-danger transition hover:bg-danger/10"
+      className="rounded-lg px-3 py-1.5 text-xs text-muted transition hover:border hover:border-danger/40 hover:text-danger"
       onClick={() => setConfirming(true)}
+      title="Emergency controls: pause the entire workforce (asks for confirmation)"
     >
-      ⏻ Kill switch
+      ⏻ Emergency
     </button>
   );
 }

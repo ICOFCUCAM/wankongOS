@@ -6,9 +6,9 @@
   color-scheme: dark;
   /* Elevation ladder (design review): bg < card < hover < border. */
   --c-bg: 18 21 28; /* #12151C */
-  --c-surface: 26 31 43; /* #1A1F2B */
-  --c-surface-2: 34 40 58; /* #22283A */
-  --c-border: 48 56 74; /* #30384A */
+  --c-surface: 24 28 36; /* #181C24 */
+  --c-surface-2: 33 40 56; /* #212838 */
+  --c-border: 44 52 68; /* #2C3444 */
   --c-text: 231 233 240;
   --c-muted: 139 144 163;
   --c-accent: 109 94 252;
@@ -70,6 +70,10 @@ body {
 @layer components {
   .card {
     @apply rounded-xl border border-border bg-surface p-5 transition-colors;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  }
+  :root[data-theme="light"] .card {
+    box-shadow: 0 4px 16px rgb(26 31 43 / 0.06);
   }
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs font-medium;

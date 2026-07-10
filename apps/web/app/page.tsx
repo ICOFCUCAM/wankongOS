@@ -7,6 +7,7 @@ import { AttentionBanner } from "@/components/AttentionBanner";
 import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
 import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { LastUpdated } from "@/components/LastUpdated";
 import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
 import { DepartmentStatusList } from "@/components/DepartmentStatusList";
 import { BriefingPanel } from "@/components/BriefingPanel";
@@ -55,9 +56,16 @@ export default async function DashboardPage() {
   const taskEntries = Object.entries(data.tasks.byStatus);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <AutoRefresh seconds={15} />
-      <PageHeader workforce={data.workforce} />
+      <PageHeader
+        workforce={data.workforce}
+        greeting={{
+          active: health.activeEmployees,
+          running: health.tasksToday.running,
+          attention: data.approvals.pending + health.liveQueue.blocked,
+        }}
+      />
 
       <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />
 
@@ -130,12 +138,32 @@ function Row({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function PageHeader({ workforce }: { workforce?: DashboardData["workforce"] }) {
+function PageHeader({
+  workforce,
+  greeting,
+}: {
+  workforce?: DashboardData["workforce"];
+  greeting?: { active: number; running: number; attention: number };
+}) {
+  const hour = new Date().getHours();
+  const daypart = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold">CEO Dashboard</h1>
-        <p className="text-sm text-muted">A live snapshot of your AI workforce.</p>
+        <h1 className="text-2xl font-semibold">Good {daypart}.</h1>
+        {greeting ? (
+          <p className="text-sm text-muted">
+            {greeting.active} AI employees active · {greeting.running} task
+            {greeting.running === 1 ? "" : "s"} running
+            {greeting.attention > 0 ? (
+              <span className="text-warn"> · {greeting.attention} item{greeting.attention === 1 ? "" : "s"} need you</span>
+            ) : (
+              " · nothing needs you right now"
+            )}
+          </p>
+        ) : (
+          <p className="text-sm text-muted">A live snapshot of your AI workforce.</p>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {workforce && (
@@ -144,9 +172,7 @@ function PageHeader({ workforce }: { workforce?: DashboardData["workforce"] }) {
             pausedCount={workforce.byStatus.paused ?? 0}
           />
         )}
-        <div className="pill border-success/40 text-success">
-          <span className="live-dot h-2 w-2 rounded-full bg-success" /> Live
-        </div>
+        <LastUpdated />
       </div>
     </div>
   );
