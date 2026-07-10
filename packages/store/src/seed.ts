@@ -445,7 +445,6 @@ export function buildSeedData(): SeedData {
     role: "owner",
     status: "active",
     tokenVersion: 0,
-    tokenVersion: 0,
     createdAt: TS,
     updatedAt: TS,
   };
