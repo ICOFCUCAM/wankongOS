@@ -35,6 +35,6 @@ describe("seed organization", () => {
       nodes.reduce((n, node) => n + 1 + count(node.reports), 0);
     expect(count(chart)).toBe(11);
     expect(await store.goals.count()).toBe(3);
-    expect(await store.tasks.count()).toBe(3);
+    expect(await store.tasks.count()).toBe(6);
   });
 });

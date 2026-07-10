@@ -229,6 +229,8 @@ export const Task = z.object({
   parentTaskId: Id.optional(),
   dueDate: Timestamp.optional(),
   labels: z.array(z.string().max(40)).default([]),
+  /** Visible completion of an in-progress task, 0..1 (Problem 4: live cards). */
+  progress: z.number().min(0).max(1).optional(),
   result: z.string().max(20000).optional(),
 });
 export type Task = z.infer<typeof Task>;

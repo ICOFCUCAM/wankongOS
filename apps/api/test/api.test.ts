@@ -127,7 +127,7 @@ describe("API", () => {
     const dash = await (await app.request("/v1/dashboard")).json();
     expect(dash.workforce.employees).toBe(11);
     expect(dash.workforce.departments).toBe(10);
-    expect(dash.tasks.total).toBe(3);
+    expect(dash.tasks.total).toBe(6);
     expect(dash.goals.total).toBe(3);
     expect(typeof dash.automation.estimatedHoursSaved).toBe("number");
   });
