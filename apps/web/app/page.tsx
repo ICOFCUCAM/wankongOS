@@ -7,31 +7,10 @@ import { AttentionBanner } from "@/components/AttentionBanner";
 import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
 import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import type { PulseItem } from "@/lib/server-api";
+import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
+import type { PulseItem, WorkforceHealth } from "@/lib/server-api";
 
 export const dynamic = "force-dynamic";
-
-function Metric({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  accent?: boolean;
-}) {
-  return (
-    <div className="card">
-      <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
-      <div className={`mt-2 text-3xl font-semibold ${accent ? "text-accent-soft" : ""}`}>
-        {value}
-      </div>
-      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
-    </div>
-  );
-}
 
 function Bar({ label, value, total }: { label: string; value: number; total: number }) {
   const pct = total === 0 ? 0 : Math.round((value / total) * 100);
@@ -52,11 +31,13 @@ export default async function DashboardPage() {
   let data: DashboardData;
   let summaries: EmployeeSummary[];
   let pulse: PulseItem[];
+  let health: WorkforceHealth;
   try {
-    [data, summaries, pulse] = await Promise.all([
+    [data, summaries, pulse, health] = await Promise.all([
       api.dashboard(),
       api.employeeSummaries(),
       api.pulse(12),
+      api.workforceHealth(),
     ]);
   } catch {
     return (
@@ -76,30 +57,7 @@ export default async function DashboardPage() {
 
       <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Metric
-          label="AI Employees"
-          value={data.workforce.employees}
-          sub={`${data.workforce.activeEmployees} active · ${data.workforce.departments} departments`}
-          accent
-        />
-        <Metric
-          label="Open Tasks"
-          value={data.tasks.open}
-          sub={`${data.tasks.completed} completed`}
-        />
-        <Metric
-          label="Pending Approvals"
-          value={data.approvals.pending}
-          sub="awaiting human decision"
-        />
-        <Metric
-          label="Est. Hours Saved"
-          value={data.automation.estimatedHoursSaved}
-          sub={data.automation.formula}
-          accent
-        />
-      </div>
+      <WorkforceHealthBar health={health} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -148,6 +106,7 @@ export default async function DashboardPage() {
               label="Goal progress"
               value={`${Math.round(data.goals.averageProgress * 100)}%`}
             />
+            <Row label="Est. hours saved" value={data.automation.estimatedHoursSaved} />
           </div>
         </div>
       </div>
