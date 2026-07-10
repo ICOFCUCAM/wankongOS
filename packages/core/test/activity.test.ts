@@ -24,15 +24,38 @@ describe("activity status derivation", () => {
     expect(deriveActivityStatus(emp("training"), { tasks: [], pendingApprovals: [] })).toBe("learning");
   });
 
-  it("blocked > waiting > working > idle precedence", () => {
+  it("blocked > needs_approval > thinking > working > waiting > idle precedence", () => {
     expect(
       deriveActivityStatus(emp("active"), { tasks: [task("blocked"), task("in_progress")], pendingApprovals: [] }),
     ).toBe("blocked");
     expect(
       deriveActivityStatus(emp("active"), { tasks: [task("awaiting_approval")], pendingApprovals: [] }),
-    ).toBe("waiting");
+    ).toBe("needs_approval");
     expect(deriveActivityStatus(emp("active"), { tasks: [task("in_progress")], pendingApprovals: [] })).toBe("working");
+    expect(deriveActivityStatus(emp("active"), { tasks: [task("todo")], pendingApprovals: [] })).toBe("waiting");
     expect(deriveActivityStatus(emp("active"), { tasks: [task("done")], pendingApprovals: [] })).toBe("idle");
+  });
+
+  it("thinking: a fresh assistant message wins over working, and expires", () => {
+    const now = Date.parse("2026-01-02T00:10:00.000Z");
+    const fresh = "2026-01-02T00:09:30.000Z"; // 30s ago
+    const stale = "2026-01-02T00:05:00.000Z"; // 5m ago
+    expect(
+      deriveActivityStatus(emp("active"), {
+        tasks: [task("in_progress")], pendingApprovals: [], lastAssistantAt: fresh, now,
+      }),
+    ).toBe("thinking");
+    expect(
+      deriveActivityStatus(emp("active"), {
+        tasks: [task("in_progress")], pendingApprovals: [], lastAssistantAt: stale, now,
+      }),
+    ).toBe("working");
+    // Urgent states still outrank thinking.
+    expect(
+      deriveActivityStatus(emp("active"), {
+        tasks: [task("blocked")], pendingApprovals: [], lastAssistantAt: fresh, now,
+      }),
+    ).toBe("blocked");
   });
 
   it("currentTask picks the most recently touched in-progress task", () => {

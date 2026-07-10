@@ -1,29 +1,53 @@
 import type { Approval, Employee, Task } from "./schemas.js";
 
 /**
- * Live activity status for an AI employee (Problem 6 of the console redesign).
+ * Live presence for an AI employee — the command center's core signal.
  *
  * Derived — never stored — from real records, so it can't drift from reality:
- * lifecycle status maps to offline/learning; an active employee is `blocked`
- * if any of its tasks are blocked, `waiting` if it has approvals pending a
- * human, `working` if it has tasks in progress, otherwise `idle`.
+ *
+ *   blocked         a task it owns is stuck (red)
+ *   needs_approval  a human must approve something it requested (orange)
+ *   thinking        an AI response landed moments ago — actively reasoning (blue)
+ *   working         a task is in progress (green)
+ *   waiting         work is queued (todo) but not started (yellow)
+ *   learning        on probation / in training (purple)
+ *   idle            active, nothing assigned (gray)
+ *   offline         paused or offboarded (dim)
  */
-export type ActivityStatus = "working" | "waiting" | "blocked" | "learning" | "idle" | "offline";
+export type ActivityStatus =
+  | "working"
+  | "waiting"
+  | "needs_approval"
+  | "thinking"
+  | "blocked"
+  | "learning"
+  | "idle"
+  | "offline";
 
+/** Most-urgent-first, for rollups and sorting. */
 export const ACTIVITY_STATUS_ORDER: ActivityStatus[] = [
   "blocked",
-  "waiting",
+  "needs_approval",
+  "thinking",
   "working",
-  "idle",
+  "waiting",
   "learning",
+  "idle",
   "offline",
 ];
+
+/** How recently an assistant message must have landed to count as "thinking". */
+export const THINKING_WINDOW_MS = 120_000;
 
 export interface ActivityInput {
   /** Tasks assigned to the employee. */
   tasks: Task[];
   /** Approvals requested by the employee that are still pending. */
   pendingApprovals: Approval[];
+  /** Timestamp of the employee's latest assistant message, if any. */
+  lastAssistantAt?: string;
+  /** "Now" for the thinking window (injectable for tests). Defaults to Date.now(). */
+  now?: number;
 }
 
 export function deriveActivityStatus(employee: Employee, input: ActivityInput): ActivityStatus {
@@ -33,9 +57,15 @@ export function deriveActivityStatus(employee: Employee, input: ActivityInput): 
   const open = input.tasks.filter((t) => !["done", "cancelled"].includes(t.status));
   if (open.some((t) => t.status === "blocked")) return "blocked";
   if (input.pendingApprovals.length > 0 || open.some((t) => t.status === "awaiting_approval")) {
-    return "waiting";
+    return "needs_approval";
+  }
+  if (input.lastAssistantAt) {
+    const now = input.now ?? Date.now();
+    const at = Date.parse(input.lastAssistantAt);
+    if (Number.isFinite(at) && now - at >= 0 && now - at < THINKING_WINDOW_MS) return "thinking";
   }
   if (open.some((t) => t.status === "in_progress")) return "working";
+  if (open.some((t) => t.status === "todo")) return "waiting";
   return "idle";
 }
 

@@ -1,18 +1,28 @@
 /**
  * The console's status color language (client-safe, no server imports).
  *
- * One place maps every derived activity state to its dot color, text tone,
- * and human label so cards, org chart, and department rollups always speak
- * the same visual language:
+ * One place maps every derived presence state to its dot color, text tone,
+ * and human label so cards, rollups, and panels always speak the same
+ * visual language:
  *
- *   working  → green (actively executing a task)
- *   waiting  → amber (blocked on a human approval)
- *   blocked  → red   (a task it owns is stuck)
- *   learning → blue  (in training/probation)
- *   idle     → gray  (active but nothing in progress)
- *   offline  → dim   (paused or offboarded)
+ *   working        → green  (actively executing a task)
+ *   thinking       → blue   (an AI response landed moments ago)
+ *   waiting        → amber  (work queued, not started)
+ *   needs_approval → orange (a human must approve something)
+ *   blocked        → red    (a task it owns is stuck)
+ *   learning       → purple (in training/probation)
+ *   idle           → gray   (active but nothing assigned)
+ *   offline        → dim    (paused or offboarded)
  */
-export type ActivityStatus = "working" | "waiting" | "blocked" | "learning" | "idle" | "offline";
+export type ActivityStatus =
+  | "working"
+  | "waiting"
+  | "needs_approval"
+  | "thinking"
+  | "blocked"
+  | "learning"
+  | "idle"
+  | "offline";
 
 export interface ActivityStyle {
   label: string;
@@ -26,9 +36,11 @@ export interface ActivityStyle {
 
 export const ACTIVITY_STYLES: Record<ActivityStatus, ActivityStyle> = {
   working: { label: "Working", dot: "bg-success", text: "text-success", live: true },
-  waiting: { label: "Waiting on approval", dot: "bg-warn", text: "text-warn", live: true },
+  thinking: { label: "Thinking", dot: "bg-info", text: "text-info", live: true },
+  waiting: { label: "Waiting", dot: "bg-warn", text: "text-warn", live: false },
+  needs_approval: { label: "Needs approval", dot: "bg-approval", text: "text-approval", live: true },
   blocked: { label: "Blocked", dot: "bg-danger", text: "text-danger", live: false },
-  learning: { label: "Learning", dot: "bg-info", text: "text-info", live: true },
+  learning: { label: "Learning", dot: "bg-learning", text: "text-learning", live: true },
   idle: { label: "Idle", dot: "bg-muted", text: "text-muted", live: false },
   offline: { label: "Offline", dot: "bg-border", text: "text-muted", live: false },
 };
@@ -40,8 +52,10 @@ export function activityStyle(status: string): ActivityStyle {
 /** Order used when rolling statuses up (most urgent first). */
 export const ACTIVITY_ORDER: ActivityStatus[] = [
   "blocked",
-  "waiting",
+  "needs_approval",
+  "thinking",
   "working",
+  "waiting",
   "learning",
   "idle",
   "offline",

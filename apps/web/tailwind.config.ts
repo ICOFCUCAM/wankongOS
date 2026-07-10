@@ -17,6 +17,8 @@ export default {
         warn: "#f5b64b",
         danger: "#f2597f",
         info: "#4ba3f5",
+        approval: "#ff8a4c",
+        learning: "#b07cf7",
       },
       fontFamily: {
         sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
