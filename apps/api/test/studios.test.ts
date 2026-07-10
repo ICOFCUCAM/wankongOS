@@ -125,6 +125,7 @@ describe("employees produce assets via the studio.produce tool", () => {
       embedder: new LocalEmbedder(),
       organizationId: ORG,
     });
+    await ctx.ready;
     const out = await ctx.toolRegistry.execute(
       "studio.produce",
       { studioId: "document", kind: "sop", title: "Refund SOP", data: { purpose: "Handle refunds", steps: "1. Verify order" } },
