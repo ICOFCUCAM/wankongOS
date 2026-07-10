@@ -1,14 +1,9 @@
 import { Hono } from "hono";
-import {
-  currentTask,
-  deriveActivityStatus,
-  type ActivityStatus,
-  type Employee,
-  type Task,
-} from "@wankong/core";
+import { currentTask, type ActivityStatus, type Employee, type Task } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize } from "../http.js";
-import { avgOf, perEmployeeUsage, round6 } from "../metrics.js";
+import { avgOf, round6 } from "../metrics.js";
+import { deriveOrgPresence } from "../presence.js";
 
 export interface EmployeeSummary {
   employeeId: string;
@@ -44,38 +39,33 @@ export interface EmployeeSummary {
 export const summaryRoutes = new Hono<Env>();
 
 /**
- * The living console feed (Problems 1/2/4/6/7/12): one call returns every
- * employee's derived activity status, what they're working on right now,
- * today's output, pending approvals, usage metrics, and eval-evidence
- * confidence — all computed from stored records, nothing simulated.
+ * The living console feed: one call returns every employee's derived
+ * presence, what they're working on right now, today's output, pending
+ * approvals, usage metrics, and eval-evidence confidence — all computed
+ * from stored records (via the shared presence derivation), nothing
+ * simulated.
  */
 summaryRoutes.get("/employees/summaries", async (c) => {
   authorize(c, "employee:read");
   const ctx = c.get("ctx");
   const orgId = ctx.organizationId;
 
-  const [employees, tasks, approvals, evalReports, usage] = await Promise.all([
-    ctx.store.employees.list((e) => e.organizationId === orgId),
-    ctx.store.tasks.list((t) => t.organizationId === orgId),
-    ctx.store.approvals.list((a) => a.organizationId === orgId && a.status === "pending"),
+  const [presence, evalReports] = await Promise.all([
+    deriveOrgPresence(ctx.store, orgId),
     ctx.store.evalReports.list((r) => r.organizationId === orgId),
-    perEmployeeUsage(ctx.store, orgId),
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const nameOf = new Map(employees.map((e) => [e.id, e.name]));
+  const nameOf = new Map(presence.employees.map((e) => [e.id, e.name]));
 
-  const data: EmployeeSummary[] = employees.map((e) => {
-    const mine = tasks.filter((t) => t.assignee?.kind === "employee" && t.assignee.id === e.id);
-    const pending = approvals.filter(
-      (a) => a.requestedBy.kind === "employee" && a.requestedBy.id === e.id,
-    );
-    const inProgress = mine
+  const data: EmployeeSummary[] = presence.employees.map((e) => {
+    const p = presence.byEmployee.get(e.id)!;
+    const inProgress = p.tasks
       .filter((t) => t.status === "in_progress")
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    const current = currentTask(mine);
+    const current = currentTask(p.tasks);
     const myReports = evalReports.filter((r) => r.employeeId === e.id);
-    const u = usage.get(e.id);
+    const u = p.usage;
 
     return {
       employeeId: e.id,
@@ -83,19 +73,15 @@ summaryRoutes.get("/employees/summaries", async (c) => {
       title: e.title,
       departmentId: e.departmentId,
       status: e.status,
-      activity: deriveActivityStatus(e, {
-        tasks: mine,
-        pendingApprovals: pending,
-        lastAssistantAt: u?.lastAssistantAt,
-      }),
+      activity: p.activity,
       workingOn: inProgress.slice(0, 3).map((t: Task) => t.title),
       currentTask: current
         ? { title: current.title, progress: current.progress ?? null }
         : null,
-      completedToday: mine.filter((t) => t.status === "done" && t.updatedAt.startsWith(today))
+      completedToday: p.tasks.filter((t) => t.status === "done" && t.updatedAt.startsWith(today))
         .length,
-      waitingApprovals: pending.length,
-      openTasks: mine.filter((t) => !["done", "cancelled"].includes(t.status)).length,
+      waitingApprovals: p.pendingApprovals.length,
+      openTasks: p.tasks.filter((t) => !["done", "cancelled"].includes(t.status)).length,
       metrics: {
         requests: u?.requests ?? 0,
         tokensIn: u?.tokensIn ?? 0,

@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { deriveActivityStatus, type ActivityStatus } from "@wankong/core";
+import type { ActivityStatus } from "@wankong/core";
 import type { Env } from "../context.js";
 import { authorize } from "../http.js";
-import { avgOf, perEmployeeUsage, round6 } from "../metrics.js";
+import { avgOf, round6 } from "../metrics.js";
+import { deriveOrgPresence } from "../presence.js";
 
 export type DepartmentHealth = "healthy" | "busy" | "attention";
 
@@ -55,15 +56,13 @@ workforceHealthRoutes.get("/workforce/health", async (c) => {
   const ctx = c.get("ctx");
   const orgId = ctx.organizationId;
 
-  const [employees, departments, tasks, approvals, runs, evalReports, usage] = await Promise.all([
-    ctx.store.employees.list((e) => e.organizationId === orgId),
+  const [presence, departments, runs, evalReports] = await Promise.all([
+    deriveOrgPresence(ctx.store, orgId),
     ctx.store.departments.list((d) => d.organizationId === orgId),
-    ctx.store.tasks.list((t) => t.organizationId === orgId),
-    ctx.store.approvals.list((a) => a.organizationId === orgId && a.status === "pending"),
     ctx.store.workflowRuns.list((r) => r.organizationId === orgId),
     ctx.store.evalReports.list((r) => r.organizationId === orgId),
-    perEmployeeUsage(ctx.store, orgId),
   ]);
+  const { employees, tasks, pendingApprovals: approvals, usage } = presence;
 
   const today = new Date().toISOString().slice(0, 10);
   const openTasks = tasks.filter((t) => !["done", "cancelled"].includes(t.status));
@@ -71,22 +70,10 @@ workforceHealthRoutes.get("/workforce/health", async (c) => {
     (t) => t.status === "done" && t.updatedAt.startsWith(today),
   ).length;
 
-  // Presence per employee (same derivation the cards use).
-  const activityOf = new Map<string, ActivityStatus>();
-  for (const e of employees) {
-    const mine = tasks.filter((t) => t.assignee?.kind === "employee" && t.assignee.id === e.id);
-    const pending = approvals.filter(
-      (a) => a.requestedBy.kind === "employee" && a.requestedBy.id === e.id,
-    );
-    activityOf.set(
-      e.id,
-      deriveActivityStatus(e, {
-        tasks: mine,
-        pendingApprovals: pending,
-        lastAssistantAt: usage.get(e.id)?.lastAssistantAt,
-      }),
-    );
-  }
+  // Presence per employee — the exact map the summaries feed uses.
+  const activityOf = new Map<string, ActivityStatus>(
+    [...presence.byEmployee.values()].map((p) => [p.employee.id, p.activity]),
+  );
 
   // Company health — the formula is part of the contract.
   const activeEmployees = employees.filter((e) => e.status === "active").length;
