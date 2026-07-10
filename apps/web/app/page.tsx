@@ -8,6 +8,7 @@ import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
 import { CompanyPulse } from "@/components/CompanyPulse";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
+import { DepartmentStatusList } from "@/components/DepartmentStatusList";
 import type { PulseItem, WorkforceHealth } from "@/lib/server-api";
 
 export const dynamic = "force-dynamic";
@@ -60,8 +61,9 @@ export default async function DashboardPage() {
       <WorkforceHealthBar health={health} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
           <LiveWorkforceRow summaries={summaries} />
+          <DepartmentStatusList health={health} />
         </div>
         <CompanyPulse items={pulse} showAllLink />
       </div>
