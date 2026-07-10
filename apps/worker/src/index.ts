@@ -1,4 +1,4 @@
-import { createAppContext, runScheduledWorkflows } from "@wankong/api";
+import { createAppContext, runScheduledWorkflows, runWorkCycle } from "@wankong/api";
 
 /**
  * The background worker: drives the scheduler tick once per minute against
@@ -15,10 +15,10 @@ async function tick(): Promise<void> {
   try {
     await context.ready;
     const result = await runScheduledWorkflows(context);
-    if (result.started.length > 0 || result.skipped.length > 0) {
+    const work = await runWorkCycle(context);
+    if (result.started.length > 0 || work.completed.length > 0 || work.approvalsRequested.length > 0) {
       console.log(
-        `[worker] tick: checked=${result.checked} started=${result.started.length} skipped=${result.skipped.length}`,
-        result.started.map((s) => `${s.workflowId}→${s.status}`).join(", "),
+        `[worker] tick: workflows started=${result.started.length} · tasks completed=${work.completed.length} approvals=${work.approvalsRequested.length} skipped=${work.skipped.length}`,
       );
     }
   } catch (err) {
@@ -26,6 +26,6 @@ async function tick(): Promise<void> {
   }
 }
 
-console.log("WankongOS worker started — scheduler tick every 60s");
+console.log("WankongOS worker started — scheduler + autonomous work cycle every 60s");
 void tick();
 setInterval(() => void tick(), 60_000);
