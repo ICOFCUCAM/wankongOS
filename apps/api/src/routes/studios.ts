@@ -4,7 +4,6 @@ import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
 import { z } from "zod";
 import { generate, StudioError } from "../studios/generate.js";
-import { z } from "zod";
 
 const CreateAsset = Asset.omit({ id: true, createdAt: true, updatedAt: true, organizationId: true, createdBy: true, version: true });
 const UpdateAsset = CreateAsset.partial();
