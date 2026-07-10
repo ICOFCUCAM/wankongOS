@@ -137,8 +137,13 @@ indexed tenant queries · live SSE event stream with event-driven console
 refresh · real Slack/GitHub connectors · billing plans with enforcement ·
 role marketplace with CI-enforced benchmark · eval drift detection ·
 retention runs + full-org export (M5c) · dependency-free PDF rendering
-(ADR-0026). ⬜ Stripe payment rails, SSO/OIDC, session revocation,
-long-job checkpointing, object storage, visual workflow builder,
+(ADR-0026). ✅ Stripe payment rails (checkout + signature-verified
+webhooks), session revocation via token versioning, long-job
+checkpointing. ✅ Company memory search · collaboration threads + feed ·
+executive meetings with filed minutes · evidence-cited employee memory
+timeline (ADR-0027) · department packs with benchmark-enforced
+guardrails · the digital office floor · computer-use registered
+connector-tier. ⬜ SSO/OIDC, object storage, visual workflow builder,
 human-utilization split.
 
 ### Security 🟡 (hardening core shipped)
