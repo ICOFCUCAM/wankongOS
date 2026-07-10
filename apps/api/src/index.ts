@@ -9,3 +9,4 @@
 export { createApp, type CreateAppOptions } from "./app.js";
 export { createAppContext, type AppContext } from "./context.js";
 export { runScheduledWorkflows, type TickResult } from "./scheduler.js";
+export type { EmployeeSummary } from "./routes/summaries.js";

@@ -1,6 +1,6 @@
 import "server-only";
 import type { Hono } from "hono";
-import { createApp, createAppContext } from "@wankong/api";
+import { createApp, createAppContext, type EmployeeSummary } from "@wankong/api";
 import type {
   Department,
   Employee,
@@ -67,6 +67,8 @@ export const api = {
   departments: () => call<{ data: Department[] }>("/v1/departments").then((r) => r.data),
   orgChart: () => call<{ data: OrgChartNode[] }>("/v1/org-chart").then((r) => r.data),
   employees: () => call<{ data: Employee[] }>("/v1/employees").then((r) => r.data),
+  employeeSummaries: () =>
+    call<{ data: EmployeeSummary[] }>("/v1/employees/summaries").then((r) => r.data),
   employee: (id: string) => call<Employee>(`/v1/employees/${id}`),
   employeeGoals: (id: string) =>
     call<{ data: Goal[] }>(`/v1/employees/${id}/goals`).then((r) => r.data),
@@ -106,3 +108,4 @@ export interface DocumentMeta {
 }
 
 export { EmbeddedApiError as ApiError };
+export type { EmployeeSummary };
