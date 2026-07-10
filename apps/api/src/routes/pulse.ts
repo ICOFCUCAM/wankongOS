@@ -49,6 +49,7 @@ const AUDIT_PHRASES: Record<string, string> = {
   "recruiting.interview.schedule": "scheduled a candidate interview",
   "recruiting.interview.complete": "completed an interview and filed the report",
   "autonomy.task.complete": "autonomously completed an assigned task",
+  "studio.publish": "published a post through a connected channel",
 };
 
 /** Audit actions whose story is already told by the task items themselves. */

@@ -139,3 +139,34 @@ describe("employees produce assets via the studio.produce tool", () => {
     expect(audits).toHaveLength(1);
   });
 });
+
+describe("publishing studio goes live over Slack", () => {
+  it("is gated without a channel, publishes and records with one", async () => {
+    const gated = await app.request("/v1/studios/publishing/publish", json({ text: "We shipped v2!" }));
+    expect(gated.status).toBe(422);
+
+    const calls: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push(String(init?.body));
+      return new Response("ok", { status: 200 });
+    }) as typeof fetch;
+    try {
+      // Connect Slack through the real integrations API, then check the catalog lights up.
+      await app.request("/v1/integrations", json({ kind: "slack", name: "Announcements", config: { webhookUrl: "https://hooks.slack.example/T/B" } }));
+      const studios = (await (await app.request("/v1/studios")).json()).data;
+      const publishing = studios.find((s: { id: string }) => s.id === "publishing");
+      expect(publishing.active).toBe(true);
+      expect(publishing.connectedVia).toContain("slack");
+
+      const res = await app.request("/v1/studios/publishing/publish", json({ text: "We shipped v2!", title: "Release note" }));
+      expect(res.status).toBe(201);
+      const { asset, delivery } = await res.json();
+      expect(delivery.delivered).toBe(true);
+      expect(calls[0]).toContain("shipped v2");
+      expect(asset.studioId).toBe("publishing");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});

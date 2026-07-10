@@ -4,6 +4,7 @@ import type { Env } from "../context.js";
 import { authorize, findScoped, parseBody } from "../http.js";
 import { z } from "zod";
 import { generate, StudioError } from "../studios/generate.js";
+import { z } from "zod";
 
 const CreateAsset = Asset.omit({ id: true, createdAt: true, updatedAt: true, organizationId: true, createdBy: true, version: true });
 const UpdateAsset = CreateAsset.partial();
@@ -161,4 +162,45 @@ studioRoutes.post("/studios/:studioId/generate", async (c) => {
     if (e instanceof StudioError) return c.json({ error: e.message }, 422);
     throw e;
   }
+});
+
+const PublishInput = z.object({
+  text: z.string().min(1).max(4000),
+  title: z.string().max(200).optional(),
+});
+
+/**
+ * Publishing Studio, live: posts through a connected channel (Slack today;
+ * LinkedIn/X/WordPress attach the same way) and stores the published post
+ * as an asset with its delivery result. No connected channel → honest 422.
+ */
+studioRoutes.post("/studios/publishing/publish", async (c) => {
+  authorize(c, "task:create");
+  const ctx = c.get("ctx");
+  const input = await parseBody(c, PublishInput);
+  const { deliverSlack } = await import("../notify.js");
+  const delivery = await deliverSlack(ctx.store, ctx.organizationId, input.text);
+  if (!delivery.delivered) {
+    return c.json({ error: `No connected publishing channel: ${delivery.reason}. Connect one in the Integration Hub.` }, 422);
+  }
+  const asset = await ctx.store.assets.create({
+    organizationId: ctx.organizationId,
+    studioId: "publishing",
+    kind: "post",
+    title: input.title ?? `Post ${new Date().toISOString().slice(0, 16)}`,
+    mimeType: "text/markdown",
+    content: `${input.text}\n\n---\nPublished via Slack · delivered`,
+    version: 1,
+    tags: ["publishing", "slack"],
+    createdBy: { kind: "user", id: c.get("actor").user.id },
+  });
+  await ctx.store.audit({
+    organizationId: ctx.organizationId,
+    actor: { kind: "user", id: c.get("actor").user.id },
+    action: "studio.publish",
+    targetType: "asset",
+    targetId: asset.id,
+    metadata: { channel: "slack", title: asset.title },
+  });
+  return c.json({ asset, delivery }, 201);
 });
