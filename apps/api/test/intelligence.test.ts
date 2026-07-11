@@ -90,3 +90,47 @@ describe("Strategy Office (plan)", () => {
     expect(plan?.content).toContain("illustrative scenarios");
   });
 });
+
+describe("Executive Intelligence Engine", () => {
+  it("answers the CEO's three questions from disclosed rules over records", async () => {
+    // Manufacture conditions: a blocked task and a stale approval.
+    const emp = (await ctx.store.employees.listByOrg(SEED_ORG_ID))[0]!;
+    await ctx.store.tasks.create({
+      organizationId: SEED_ORG_ID, title: "Stuck integration", status: "blocked",
+      assignee: { kind: "employee", id: emp.id }, createdBy: { kind: "user", id: "usr_demo_owner" },
+      priority: "high", tags: [],
+    } as never);
+    const stale = await ctx.store.approvals.create({
+      organizationId: SEED_ORG_ID, status: "pending", summary: "Old spend request",
+      requestedBy: { kind: "employee", id: emp.id }, requiredPermission: "task:approve",
+    } as never);
+    await ctx.store.approvals.update(stale.id, { createdAt: new Date(Date.now() - 3 * 24 * 3_600_000).toISOString() } as never);
+
+    const res = await app.request("/v1/intelligence/executive");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.topRisks.length).toBeGreaterThan(0);
+    const text = JSON.stringify(body.allRisks);
+    expect(text).toContain("blocked");
+    expect(text).toContain("48h");
+    // Every risk names its rule and links to where it can be acted on.
+    for (const r of body.allRisks) {
+      expect(r.rule.length).toBeGreaterThan(0);
+      expect(r.link.startsWith("/")).toBe(true);
+    }
+    expect(body.note).toContain("never add to them");
+    // Hiring advice only appears with real capacity pressure; narrative only with a staffed BI dept.
+    expect(body.narrative).toBeNull();
+  });
+
+  it("adds the BI narrative only over the derived items once BI is staffed", async () => {
+    await ctx.store.tasks.create({
+      organizationId: SEED_ORG_ID, title: "Blocked thing", status: "blocked",
+      createdBy: { kind: "user", id: "usr_demo_owner" }, priority: "medium", tags: [],
+    } as never);
+    await staffPack("business-intelligence");
+    const body = await (await app.request("/v1/intelligence/executive")).json();
+    expect(body.narrative).not.toBeNull();
+    expect(body.narrative.analyst).toBeTruthy();
+  });
+});

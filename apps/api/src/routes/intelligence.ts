@@ -246,3 +246,102 @@ intelligenceRoutes.post("/intelligence/plan", async (c) => {
     201,
   );
 });
+
+/**
+ * The Executive Intelligence Engine: the CEO's advisor. Not another
+ * dashboard — direct answers to "what are the biggest risks this week?",
+ * "which departments are overloaded?", "what should I hire next?". Every
+ * item is derived from records with its rule disclosed and carries
+ * evidence links; when the BI department is staffed, its lead adds a
+ * grounded narrative on top of (never instead of) the derived items.
+ */
+intelligenceRoutes.get("/intelligence/executive", async (c) => {
+  authorize(c, "org:read");
+  const ctx = c.get("ctx");
+  const orgId = ctx.organizationId;
+  const [health, tasks, approvals, evalReports] = await Promise.all([
+    computeWorkforceHealth(ctx.store, orgId),
+    ctx.store.tasks.listByOrg(orgId),
+    ctx.store.approvals.listByOrg(orgId, (a) => a.status === "pending"),
+    ctx.store.evalReports.list((r) => r.organizationId === orgId),
+  ]);
+
+  const now = Date.now();
+  const dayMs = 24 * 3_600_000;
+  type Risk = { severity: "high" | "medium"; risk: string; rule: string; link: string };
+  const risks: Risk[] = [];
+
+  const blocked = tasks.filter((t) => t.status === "blocked");
+  if (blocked.length > 0) {
+    risks.push({
+      severity: blocked.length >= 3 ? "high" : "medium",
+      risk: `${blocked.length} task${blocked.length > 1 ? "s are" : " is"} blocked — oldest: "${blocked.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))[0]!.title}".`,
+      rule: "any task with status=blocked; high at ≥3",
+      link: "/tasks",
+    });
+  }
+  const staleApprovals = approvals.filter((a) => now - new Date(a.createdAt).getTime() > 2 * dayMs);
+  if (staleApprovals.length > 0) {
+    risks.push({
+      severity: "high",
+      risk: `${staleApprovals.length} approval${staleApprovals.length > 1 ? "s have" : " has"} waited over 48h — employees are stalled on your decision.`,
+      rule: "pending approvals older than 48h",
+      link: "/tasks",
+    });
+  }
+  const failingReports = evalReports.filter((r) => !r.pass);
+  const failingEmployees = new Set(failingReports.map((r) => r.employeeId));
+  if (failingEmployees.size > 0) {
+    risks.push({
+      severity: "medium",
+      risk: `${failingEmployees.size} employee${failingEmployees.size > 1 ? "s have" : " has"} failing eval reports — output quality is at risk.`,
+      rule: "any eval report with pass=false",
+      link: "/employees",
+    });
+  }
+  const overloaded = health.departmentsDetail.filter((d) => d.capacityPct >= 80);
+  for (const d of overloaded) {
+    risks.push({
+      severity: d.capacityPct >= 100 ? "high" : "medium",
+      risk: `${d.name} is at ${d.capacityPct}% capacity (${d.openTasks} open tasks across ${d.employees} ${d.employees === 1 ? "person" : "people"}).`,
+      rule: "capacityPct = open/(members×3 slots); flagged at ≥80%",
+      link: "/employees",
+    });
+  }
+  const unassignedOpen = tasks.filter((t) => !["done", "cancelled"].includes(t.status) && !t.assignee);
+  if (unassignedOpen.length >= 3) {
+    risks.push({ severity: "medium", risk: `${unassignedOpen.length} open tasks have no owner — work is queued with nobody responsible.`, rule: "open tasks with no assignee; flagged at ≥3", link: "/tasks" });
+  }
+  risks.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "high" ? -1 : 1));
+
+  const hireNext =
+    overloaded.length > 0
+      ? {
+          department: overloaded[0]!.name,
+          reason: `Highest capacity pressure (${overloaded[0]!.capacityPct}%). Browse the marketplace for a matching role — hiring remains your decision.`,
+          link: "/marketplace",
+        }
+      : null;
+
+  let narrative: { analyst: string; text: string } | null = null;
+  const analyst = await analystFor(ctx, /intelligence|analytics/i);
+  if (analyst && risks.length > 0) {
+    const grounded = await buildGroundedEmployeeContext(ctx.store, orgId, analyst);
+    const run = await ctx.runtime.complete({
+      employee: analyst,
+      context: grounded.context,
+      input: `Executive briefing. Derived risk items (from records, rules disclosed):\n${risks.map((r) => `- [${r.severity}] ${r.risk} (rule: ${r.rule})`).join("\n")}\n\nIn 3–4 sentences, advise the CEO: which item to act on first and why — using ONLY the items above. Do not add risks that are not listed.`,
+    });
+    narrative = { analyst: analyst.name, text: run.text.trim() };
+  }
+
+  return c.json({
+    week: new Date().toISOString().slice(0, 10),
+    topRisks: risks.slice(0, 3),
+    allRisks: risks,
+    overloadedDepartments: overloaded.map((d) => ({ name: d.name, capacityPct: d.capacityPct, openTasks: d.openTasks })),
+    hireNext,
+    narrative,
+    note: "Every item is a disclosed rule over stored records; the narrative (when a BI analyst is staffed) may only re-order and explain the derived items, never add to them.",
+  });
+});
