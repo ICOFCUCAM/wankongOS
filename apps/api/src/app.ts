@@ -46,6 +46,7 @@ import { intelligenceRoutes } from "./routes/intelligence.js";
 import { accountingExportRoutes } from "./routes/accounting-exports.js";
 import { dnaRoutes } from "./routes/dna.js";
 import { composeRoutes } from "./routes/compose.js";
+import { workflowInsightRoutes } from "./routes/workflow-insights.js";
 import { collaborationRoutes } from "./routes/collaboration.js";
 import { searchRoutes } from "./routes/search.js";
 import { looksLikeApiKey, resolveApiKey } from "./auth.js";
@@ -161,6 +162,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<Env> {
   v1.route("/", taskRoutes);
   v1.route("/", chatRoutes);
   v1.route("/", dashboardRoutes);
+  v1.route("/", workflowInsightRoutes); // before workflowRoutes: /workflows/insights vs /workflows/:id
   v1.route("/", workflowRoutes);
   v1.route("/", knowledgeRoutes);
   v1.route("/", memoryRoutes);
