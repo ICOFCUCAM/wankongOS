@@ -11,8 +11,9 @@ export const dynamic = "force-dynamic";
  */
 export default async function IntelligencePage() {
   let m;
+  let brief;
   try {
-    m = await api.intelligenceMetrics();
+    [m, brief] = await Promise.all([api.intelligenceMetrics(), api.executiveBrief()]);
   } catch {
     return <ApiDownNotice />;
   }
@@ -25,6 +26,48 @@ export default async function IntelligencePage() {
           Executive questions and cross-functional plans, grounded in the company&apos;s own
           records.
         </p>
+      </div>
+
+      <div className="card">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs uppercase tracking-wide text-muted">
+            Executive advisor — this week&apos;s answers
+          </h2>
+          <span className="text-[11px] text-muted">{brief.week}</span>
+        </div>
+        {brief.topRisks.length === 0 ? (
+          <p className="text-sm text-muted">
+            No risk rules are firing right now — nothing blocked, no stale approvals, no
+            overloaded departments.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {brief.topRisks.map((r, i) => (
+              <a key={i} href={r.link} title={`rule: ${r.rule}`} className="flex items-start gap-2.5 rounded-lg border border-border px-3 py-2 text-sm transition hover:border-accent">
+                <span className={`pill shrink-0 text-[10px] ${r.severity === "high" ? "border-danger/50 text-danger" : "border-warn/50 text-warn"}`}>
+                  {r.severity}
+                </span>
+                <span>{r.risk}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {brief.hireNext && (
+          <p className="mt-3 text-sm">
+            <span className="text-muted">Hire next: </span>
+            <a href={brief.hireNext.link} className="text-accent-soft hover:underline">
+              {brief.hireNext.department}
+            </a>{" "}
+            <span className="text-xs text-muted">— {brief.hireNext.reason}</span>
+          </p>
+        )}
+        {brief.narrative && (
+          <div className="mt-3 rounded-lg border border-border bg-surface-2 p-3">
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted">{brief.narrative.analyst} advises</div>
+            <p className="whitespace-pre-wrap text-sm">{brief.narrative.text}</p>
+          </div>
+        )}
+        <p className="mt-3 text-[11px] text-muted">{brief.note}</p>
       </div>
 
       <IntelligencePanels />

@@ -211,6 +211,16 @@ export const api = {
         lastMessage: string | null;
       }[];
     }>(`/v1/employees/${id}/conversations`).then((r) => r.data),
+  executiveBrief: () =>
+    call<{
+      week: string;
+      topRisks: { severity: string; risk: string; rule: string; link: string }[];
+      allRisks: { severity: string; risk: string; rule: string; link: string }[];
+      overloadedDepartments: { name: string; capacityPct: number; openTasks: number }[];
+      hireNext: { department: string; reason: string; link: string } | null;
+      narrative: { analyst: string; text: string } | null;
+      note: string;
+    }>("/v1/intelligence/executive"),
   intelligenceMetrics: () =>
     call<{
       generatedAt: string;
