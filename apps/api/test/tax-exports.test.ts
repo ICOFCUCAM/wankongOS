@@ -98,3 +98,22 @@ describe("FEC export", () => {
     expect(res.headers.get("x-safeguard")).toContain("Validate with the DGFiP");
   });
 });
+
+describe("jurisdiction packages (two-layer accounting)", () => {
+  it("lists every jurisdiction as a versioned package with exports and gated portals", async () => {
+    const res = await app.request("/v1/accounting/packages");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.layers.universalLedger).toContain("never changes");
+    expect(body.data.length).toBeGreaterThanOrEqual(18);
+    const no = body.data.find((p: { code: string }) => p.code === "NO");
+    expect(no.rulesVersion).toBe("2026.07");
+    expect(no.structuredExports).toContain("saf-t");
+    expect(no.eFilingPortal.name).toBe("Altinn");
+    expect(no.eFilingPortal.status).toContain("never submits");
+    const fr = body.data.find((p: { code: string }) => p.code === "FR");
+    expect(fr.structuredExports).toContain("fec");
+    const us = body.data.find((p: { code: string }) => p.code === "US");
+    expect(us.structuredExports).toEqual([]);
+  });
+});

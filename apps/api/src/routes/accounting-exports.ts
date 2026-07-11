@@ -188,3 +188,47 @@ accountingExportRoutes.get("/accounting/exports/fec", async (c) => {
     },
   });
 });
+
+/**
+ * The Accounting Engine's two layers, made explicit. Layer 1 is the
+ * universal ledger — balanced journal entries, derived statements — and it
+ * never changes per country. Layer 2 is this registry: every jurisdiction
+ * is a versioned rules PACKAGE (rates, filings, chart, payroll model) plus
+ * its structured export formats and the e-filing portal that remains
+ * connector-gated. Adding country #201 means adding a package, not
+ * modifying the engine.
+ */
+accountingExportRoutes.get("/accounting/packages", async (c) => {
+  authorize(c, "org:read");
+  const { JURISDICTION_ENGINES } = await import("@wankong/core");
+  const PORTALS: Record<string, string> = {
+    NO: "Altinn", UK: "HMRC (MTD) / Companies House", DE: "ELSTER", FR: "DGFiP",
+    US: "IRS + state portals", CA: "CRA", SE: "Skatteverket", DK: "Erhvervsstyrelsen",
+    FI: "OmaVero", NL: "Belastingdienst", BE: "MyMinfin", IE: "ROS", AU: "ATO",
+    NZ: "IRD", SG: "IRAS/ACRA", JP: "e-Tax", KR: "Hometax", ZA: "SARS eFiling",
+  };
+  const data = JURISDICTION_ENGINES.map((e) => ({
+    code: e.code,
+    country: e.country,
+    rulesVersion: e.rulesVersion,
+    standard: e.standard,
+    currency: e.currency,
+    language: e.language,
+    vat: { name: e.vatName, rate: e.vatRate },
+    payroll: { name: e.payroll.name, employerRate: e.payroll.employerRate },
+    filings: e.filings,
+    structuredExports: [
+      ...(e.filings.some((f) => f.id === "saf-t") ? ["saf-t"] : []),
+      ...(e.code === "FR" ? ["fec"] : []),
+    ],
+    eFilingPortal: { name: PORTALS[e.code] ?? "national portal", status: "connector-gated — the system never submits" },
+  }));
+  return c.json({
+    layers: {
+      universalLedger: "Layer 1: balanced-only journal, derived trial balance / P&L / balance sheet / cash flow — identical in every country, never changes per jurisdiction.",
+      jurisdictionPackages: "Layer 2: versioned rules data per country. Installing a package changes rates, filings, chart, and payroll — not the engine.",
+    },
+    data,
+    note: "Structured exports generate from recorded entries and must be validated with the authority's tools; e-filing portals activate via connectors, country by country.",
+  });
+});
