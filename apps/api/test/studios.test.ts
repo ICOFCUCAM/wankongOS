@@ -24,7 +24,7 @@ const json = (body: unknown) => ({
 describe("production studios", () => {
   it("lists the catalog with derived availability", async () => {
     const { data } = await (await app.request("/v1/studios")).json();
-    expect(data.length).toBeGreaterThanOrEqual(17);
+    expect(data.length).toBeGreaterThanOrEqual(18);
     const cu = data.find((s: { id: string }) => s.id === "computer-use");
     expect(cu.active).toBe(false); // honestly gated until a connector exists
     expect(cu.connectors).toContain("anthropic-computer-use");
