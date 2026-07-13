@@ -15,8 +15,9 @@ const RUN_STATUS: Record<string, string> = {
 export default async function WorkflowsPage() {
   let workflows: Workflow[];
   let runs: WorkflowRun[];
+  let insights: Awaited<ReturnType<typeof api.workflowInsights>>;
   try {
-    [workflows, runs] = await Promise.all([api.workflows(), api.runs()]);
+    [workflows, runs, insights] = await Promise.all([api.workflows(), api.runs(), api.workflowInsights()]);
   } catch {
     return (
       <div className="space-y-6">
@@ -52,6 +53,37 @@ export default async function WorkflowsPage() {
           );
         })}
       </div>
+
+      {insights.data.some((i) => i.recommendations.length > 0 || i.successRatePct !== null) && (
+        <section className="card">
+          <h2 className="mb-2 text-xs uppercase tracking-wide text-muted">
+            Workflow intelligence — learned from run history
+          </h2>
+          <div className="space-y-2">
+            {insights.data
+              .filter((i) => i.successRatePct !== null || i.recommendations.length > 0)
+              .map((i) => (
+                <div key={i.workflowId} className="rounded-lg border border-border px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{i.name}</span>
+                    {i.successRatePct !== null && (
+                      <span className={`pill text-[10px] ${i.successRatePct >= 80 ? "border-success/50 text-success" : "border-warn/50 text-warn"}`}>
+                        {i.successRatePct}% success · {i.runs} runs
+                      </span>
+                    )}
+                    {i.avgRunMs !== null && (
+                      <span className="text-[11px] text-muted">avg {(i.avgRunMs / 1000).toFixed(1)}s</span>
+                    )}
+                  </div>
+                  {i.recommendations.map((r, j) => (
+                    <p key={j} className="mt-1 text-xs text-muted">→ {r}</p>
+                  ))}
+                </div>
+              ))}
+          </div>
+          <p className="mt-2 text-[11px] text-muted">{insights.note}</p>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 text-sm font-medium text-muted">Recent runs</h2>

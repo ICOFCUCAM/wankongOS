@@ -211,6 +211,15 @@ export const api = {
         lastMessage: string | null;
       }[];
     }>(`/v1/employees/${id}/conversations`).then((r) => r.data),
+  workflowInsights: () =>
+    call<{
+      data: {
+        workflowId: string; name: string; runs: number; completed: number; failed: number;
+        successRatePct: number | null; avgRunMs: number | null;
+        recommendations: string[];
+      }[];
+      note: string;
+    }>("/v1/workflows/insights"),
   executiveBrief: () =>
     call<{
       week: string;
