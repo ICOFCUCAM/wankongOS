@@ -38,7 +38,7 @@ export default function LoginPage() {
         return;
       }
       document.cookie = `wk_session=${body.token}; path=/; max-age=${7 * 24 * 3600}; samesite=lax`;
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -48,8 +48,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto mt-16 max-w-md">
-      <div className="card space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-bg px-6">
+      <div className="card w-full max-w-md space-y-4">
         <div>
           <h1 className="text-xl font-semibold">
             {mode === "login" ? "Sign in" : "Create your company"}

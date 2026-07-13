@@ -121,3 +121,57 @@ body {
 .live-dot {
   animation: pulse-dot 1.6s ease-in-out infinite;
 }
+
+/* ---- Home launcher (ADR-0031) ------------------------------------------- */
+.home-bg {
+  background:
+    radial-gradient(60% 80% at 15% 10%, rgb(var(--c-accent) / 0.22), transparent 60%),
+    radial-gradient(50% 70% at 85% 15%, rgb(var(--c-info) / 0.18), transparent 60%),
+    radial-gradient(70% 90% at 75% 95%, rgb(var(--c-learning) / 0.16), transparent 60%),
+    rgb(var(--c-bg));
+}
+.home-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.home-aurora span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: home-drift 22s ease-in-out infinite;
+}
+.home-aurora span:nth-child(1) { width: 42vw; height: 42vw; left: -8vw; top: -6vw; background: rgb(var(--c-accent) / 0.5); }
+.home-aurora span:nth-child(2) { width: 34vw; height: 34vw; right: -6vw; top: 4vw; background: rgb(var(--c-info) / 0.4); animation-delay: -7s; }
+.home-aurora span:nth-child(3) { width: 40vw; height: 40vw; right: 12vw; bottom: -12vw; background: rgb(var(--c-learning) / 0.4); animation-delay: -14s; }
+@keyframes home-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(4vw, 3vh, 0) scale(1.08); }
+  66% { transform: translate3d(-3vw, -2vh, 0) scale(0.96); }
+}
+@media (prefers-reduced-motion: reduce) { .home-aurora span { animation: none; } }
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--c-border) / 0.7);
+  background: rgb(var(--c-surface) / 0.55);
+  backdrop-filter: blur(12px);
+  padding: 1.1rem 0.5rem;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.home-tile:hover {
+  transform: translateY(-3px);
+  border-color: rgb(var(--c-accent) / 0.8);
+  background: rgb(var(--c-surface) / 0.85);
+}
+.home-glass {
+  border: 1px solid rgb(var(--c-border) / 0.7);
+  background: rgb(var(--c-surface) / 0.55);
+  backdrop-filter: blur(12px);
+}

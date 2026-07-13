@@ -6,7 +6,7 @@ import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
-  { href: "/", label: "Dashboard", icon: "▤" },
+  { href: "/dashboard", label: "Dashboard", icon: "▤" },
   { href: "/employees", label: "AI Workforce", icon: "◈" },
   { href: "/office", label: "The Office", icon: "🏢" },
   { href: "/org", label: "Org Chart", icon: "☍" },
@@ -28,7 +28,7 @@ export function Sidebar({ orgName }: { orgName: string }) {
   const pathname = usePathname();
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-surface">
-      <div className="flex items-center gap-2.5 px-5 py-5">
+      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 transition hover:opacity-80" title="Home launcher">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-bold text-white">
           W
         </div>
@@ -36,7 +36,7 @@ export function Sidebar({ orgName }: { orgName: string }) {
           <div className="text-sm font-semibold leading-tight">WankongOS</div>
           <div className="text-xs text-muted">AI Workforce</div>
         </div>
-      </div>
+      </Link>
 
       <form method="get" action="/search" className="px-3 pb-1">
         <input
@@ -49,8 +49,7 @@ export function Sidebar({ orgName }: { orgName: string }) {
 
       <nav className="flex flex-col gap-1 px-3 py-2">
         {NAV.map((item) => {
-          const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

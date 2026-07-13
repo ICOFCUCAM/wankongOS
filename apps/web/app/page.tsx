@@ -1,178 +1,175 @@
 import Link from "next/link";
-import { api, type EmployeeSummary } from "@/lib/server-api";
-import type { DashboardData } from "@/lib/api";
-import { ApiDownNotice } from "@/components/ApiDownNotice";
-import { WorkforceControls } from "@/components/WorkforceControls";
-import { AttentionBanner } from "@/components/AttentionBanner";
-import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
-import { CompanyPulse } from "@/components/CompanyPulse";
-import { AutoRefresh } from "@/components/AutoRefresh";
-import { LastUpdated } from "@/components/LastUpdated";
-import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
-import { DepartmentStatusList } from "@/components/DepartmentStatusList";
-import { BriefingPanel } from "@/components/BriefingPanel";
-import type { Briefing, PulseItem, WorkforceHealth } from "@/lib/server-api";
+import { api, type PulseItem, type WorkforceHealth } from "@/lib/server-api";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { HomeClock } from "@/components/HomeClock";
 
 export const dynamic = "force-dynamic";
 
-function Bar({ label, value, total }: { label: string; value: number; total: number }) {
-  const pct = total === 0 ? 0 : Math.round((value / total) * 100);
-  return (
-    <div>
-      <div className="mb-1 flex justify-between text-xs">
-        <span className="capitalize text-muted">{label.replace(/_/g, " ")}</span>
-        <span className="text-text">{value}</span>
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-        <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
+/**
+ * The home launcher (ADR-0031). The first thing you see is not the dashboard
+ * but a calm entry point: brand, one command box that searches the whole
+ * company, quick-access tiles to every area, and a few live numbers drawn
+ * from real records. The dashboard lives at /dashboard.
+ */
+
+const TILES = [
+  { href: "/dashboard", label: "Dashboard", icon: "▤", hint: "CEO overview" },
+  { href: "/employees", label: "AI Workforce", icon: "◈", hint: "Your employees" },
+  { href: "/office", label: "The Office", icon: "🏢", hint: "The building" },
+  { href: "/accounting", label: "Accounting", icon: "⚖", hint: "The books" },
+  { href: "/intelligence", label: "Intelligence", icon: "◎", hint: "Ask & advise" },
+  { href: "/studios", label: "Studios", icon: "▣", hint: "Produce work" },
+  { href: "/marketplace", label: "Marketplace", icon: "◇", hint: "Hire & install" },
+  { href: "/dna", label: "Company DNA", icon: "❖", hint: "Operating context" },
+];
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 5) return "Working late";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
-export default async function DashboardPage() {
-  let data: DashboardData;
-  let summaries: EmployeeSummary[];
-  let pulse: PulseItem[];
-  let health: WorkforceHealth;
-  let briefing: Briefing;
+function healthTone(score: number): string {
+  if (score >= 85) return "text-success";
+  if (score >= 60) return "text-warn";
+  return "text-danger";
+}
+
+export default async function HomePage() {
+  let orgName = "WankongOS";
+  let health: WorkforceHealth | null = null;
+  let pulse: PulseItem[] = [];
   try {
-    [data, summaries, pulse, health, briefing] = await Promise.all([
-      api.dashboard(),
-      api.employeeSummaries(),
-      api.pulse(12),
-      api.workforceHealth(),
-      api.briefing(),
-    ]);
+    const [org, h, p] = await Promise.all([api.organization(), api.workforceHealth(), api.pulse(4)]);
+    orgName = org.name;
+    health = h;
+    pulse = p;
   } catch {
-    return (
-      <div className="space-y-6">
-        <PageHeader />
-        <ApiDownNotice />
-      </div>
-    );
+    // The launcher still renders — it degrades to a plain entry point.
   }
 
-  const taskEntries = Object.entries(data.tasks.byStatus);
+  const stats = health
+    ? [
+        { label: "AI employees", value: `${health.activeEmployees}`, sub: `${health.employees} total`, href: "/employees" },
+        {
+          label: "Company health",
+          value: `${health.companyHealth.score}%`,
+          sub: health.companyHealth.score >= 85 ? "Excellent" : health.companyHealth.score >= 60 ? "Stable" : "Attention",
+          tone: healthTone(health.companyHealth.score),
+          href: "/dashboard",
+        },
+        { label: "Tasks running", value: `${health.tasksToday.running}`, sub: `${health.completedToday} done today`, href: "/tasks" },
+        {
+          label: "Need you",
+          value: `${health.pendingApprovals}`,
+          sub: "approvals",
+          tone: health.pendingApprovals > 0 ? "text-approval" : undefined,
+          href: "/tasks",
+        },
+      ]
+    : [];
 
   return (
-    <div className="space-y-8">
-      <AutoRefresh seconds={15} />
-      <PageHeader
-        workforce={data.workforce}
-        greeting={{
-          active: health.activeEmployees,
-          running: health.tasksToday.running,
-          attention: data.approvals.pending + health.liveQueue.blocked,
-        }}
-      />
-
-      <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />
-
-      <WorkforceHealthBar health={health} />
-
-      <BriefingPanel briefing={briefing} />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <LiveWorkforceRow summaries={summaries} />
-          <DepartmentStatusList health={health} />
-        </div>
-        <CompanyPulse items={pulse} showAllLink clock />
+    <div className="home-bg relative min-h-screen overflow-hidden">
+      <div className="home-aurora" aria-hidden>
+        <span />
+        <span />
+        <span />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-medium">Task pipeline</h2>
-            <Link href="/tasks" className="text-xs text-accent-soft hover:underline">
-              View all →
-            </Link>
+      <div className="relative mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-6">
+        {/* header */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-bold text-white">W</div>
+            <span className="text-sm font-semibold">{orgName}</span>
           </div>
-          {taskEntries.length === 0 ? (
-            <p className="text-sm text-muted">No tasks yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {taskEntries.map(([status, count]) => (
-                <Bar key={status} label={status} value={count} total={data.tasks.total} />
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <HomeClock />
+            <ThemeToggle />
+          </div>
+        </header>
+
+        {/* hero */}
+        <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+          <p className="text-sm font-medium text-accent-soft">{greeting()}</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">WankongOS</h1>
+          <p className="mt-3 max-w-md text-sm text-muted">
+            Your AI workforce — hire, manage, and scale AI employees that do real work from your
+            company&apos;s own records.
+          </p>
+
+          {/* command box → company memory search */}
+          <form method="get" action="/search" className="mt-7 w-full max-w-xl">
+            <div className="home-glass flex items-center gap-2 rounded-2xl px-4 py-2.5 shadow-lg">
+              <span className="text-muted">⌕</span>
+              <input
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
+                type="search"
+                name="q"
+                autoComplete="off"
+                placeholder="Search your company — people, tasks, documents, decisions…"
+              />
+              <button type="submit" className="btn shrink-0 !px-3 !py-1.5 text-xs">
+                Search
+              </button>
+            </div>
+          </form>
+
+          {/* quick-access tiles */}
+          <nav className="mt-8 grid w-full grid-cols-4 gap-3 sm:gap-4">
+            {TILES.map((t) => (
+              <Link key={t.href} href={t.href} className="home-tile" title={t.hint}>
+                <span className="text-2xl text-accent-soft">{t.icon}</span>
+                <span className="text-[11px] font-medium leading-tight sm:text-xs">{t.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {/* live footer: real numbers + latest activity */}
+        <div className="grid grid-cols-1 gap-4 pb-2 lg:grid-cols-[1fr_1.1fr]">
+          {stats.length > 0 && (
+            <div className="home-glass grid grid-cols-4 gap-px overflow-hidden rounded-2xl">
+              {stats.map((s) => (
+                <Link key={s.label} href={s.href} className="bg-transparent px-3 py-3 transition hover:bg-surface-2/50">
+                  <div className="text-[10px] uppercase tracking-wide text-muted">{s.label}</div>
+                  <div className={`mt-1 text-xl font-semibold leading-none ${s.tone ?? ""}`}>{s.value}</div>
+                  <div className="mt-1 text-[10px] text-muted">{s.sub}</div>
+                </Link>
               ))}
             </div>
           )}
-        </div>
 
-        <div className="card">
-          <h2 className="mb-4 font-medium">AI utilization</h2>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-semibold text-success">
-              {Math.round(data.ai.utilization * 100)}%
-            </span>
-            <span className="text-xs text-muted">workforce active</span>
-          </div>
-          <div className="mt-4 space-y-2 text-sm">
-            <Row label="Conversations" value={data.ai.conversations} />
-            <Row label="Tokens in" value={data.ai.tokensIn.toLocaleString()} />
-            <Row label="Tokens out" value={data.ai.tokensOut.toLocaleString()} />
-            <Row label="Est. AI cost" value={`$${data.ai.estimatedCostUsd.toFixed(4)}`} />
-            <Row
-              label="Avg latency"
-              value={data.ai.avgLatencyMs === null ? "—" : `${data.ai.avgLatencyMs} ms`}
-            />
-            <Row
-              label="Goal progress"
-              value={`${Math.round(data.goals.averageProgress * 100)}%`}
-            />
-            <Row label="Est. hours saved" value={data.automation.estimatedHoursSaved} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex justify-between border-b border-border pb-2 last:border-0">
-      <span className="text-muted">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function PageHeader({
-  workforce,
-  greeting,
-}: {
-  workforce?: DashboardData["workforce"];
-  greeting?: { active: number; running: number; attention: number };
-}) {
-  const hour = new Date().getHours();
-  const daypart = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-semibold">Good {daypart}.</h1>
-        {greeting ? (
-          <p className="text-sm text-muted">
-            {greeting.active} AI employees active · {greeting.running} task
-            {greeting.running === 1 ? "" : "s"} running
-            {greeting.attention > 0 ? (
-              <span className="text-warn"> · {greeting.attention} item{greeting.attention === 1 ? "" : "s"} need you</span>
+          <div className="home-glass rounded-2xl px-4 py-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wide text-muted">Company pulse</span>
+              <Link href="/pulse" className="text-[11px] text-accent-soft hover:underline">
+                View all →
+              </Link>
+            </div>
+            {pulse.length === 0 ? (
+              <p className="text-xs text-muted">Activity appears here as your workforce works.</p>
             ) : (
-              " · nothing needs you right now"
+              <ul className="space-y-1.5">
+                {pulse.map((p, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-soft" />
+                    <span className="line-clamp-1 text-muted">{p.text}</span>
+                  </li>
+                ))}
+              </ul>
             )}
-          </p>
-        ) : (
-          <p className="text-sm text-muted">A live snapshot of your AI workforce.</p>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        {workforce && (
-          <WorkforceControls
-            activeCount={workforce.byStatus.active ?? 0}
-            pausedCount={workforce.byStatus.paused ?? 0}
-          />
-        )}
-        <LastUpdated />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center pt-4">
+          <Link href="/dashboard" className="btn">
+            Enter the console →
+          </Link>
+        </div>
       </div>
     </div>
   );

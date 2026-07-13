@@ -1,0 +1,179 @@
+import Link from "next/link";
+import { api, type EmployeeSummary } from "@/lib/server-api";
+import type { DashboardData } from "@/lib/api";
+import { ApiDownNotice } from "@/components/ApiDownNotice";
+import { WorkforceControls } from "@/components/WorkforceControls";
+import { AttentionBanner } from "@/components/AttentionBanner";
+import { LiveWorkforceRow } from "@/components/LiveWorkforceRow";
+import { CompanyPulse } from "@/components/CompanyPulse";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { LastUpdated } from "@/components/LastUpdated";
+import { WorkforceHealthBar } from "@/components/WorkforceHealthBar";
+import { DepartmentStatusList } from "@/components/DepartmentStatusList";
+import { BriefingPanel } from "@/components/BriefingPanel";
+import type { Briefing, PulseItem, WorkforceHealth } from "@/lib/server-api";
+
+export const dynamic = "force-dynamic";
+
+function Bar({ label, value, total }: { label: string; value: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.round((value / total) * 100);
+  return (
+    <div>
+      <div className="mb-1 flex justify-between text-xs">
+        <span className="capitalize text-muted">{label.replace(/_/g, " ")}</span>
+        <span className="text-text">{value}</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+        <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+export default async function DashboardPage() {
+  let data: DashboardData;
+  let summaries: EmployeeSummary[];
+  let pulse: PulseItem[];
+  let health: WorkforceHealth;
+  let briefing: Briefing;
+  try {
+    [data, summaries, pulse, health, briefing] = await Promise.all([
+      api.dashboard(),
+      api.employeeSummaries(),
+      api.pulse(12),
+      api.workforceHealth(),
+      api.briefing(),
+    ]);
+  } catch {
+    return (
+      <div className="space-y-6">
+        <PageHeader />
+        <ApiDownNotice />
+      </div>
+    );
+  }
+
+  const taskEntries = Object.entries(data.tasks.byStatus);
+
+  return (
+    <div className="space-y-8">
+      <AutoRefresh seconds={15} />
+      <PageHeader
+        workforce={data.workforce}
+        greeting={{
+          active: health.activeEmployees,
+          running: health.tasksToday.running,
+          attention: data.approvals.pending + health.liveQueue.blocked,
+        }}
+      />
+
+      <AttentionBanner pendingApprovals={data.approvals.pending} summaries={summaries} />
+
+      <WorkforceHealthBar health={health} />
+
+      <BriefingPanel briefing={briefing} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <LiveWorkforceRow summaries={summaries} />
+          <DepartmentStatusList health={health} />
+        </div>
+        <CompanyPulse items={pulse} showAllLink clock />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="card lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-medium">Task pipeline</h2>
+            <Link href="/tasks" className="text-xs text-accent-soft hover:underline">
+              View all →
+            </Link>
+          </div>
+          {taskEntries.length === 0 ? (
+            <p className="text-sm text-muted">No tasks yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {taskEntries.map(([status, count]) => (
+                <Bar key={status} label={status} value={count} total={data.tasks.total} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h2 className="mb-4 font-medium">AI utilization</h2>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-semibold text-success">
+              {Math.round(data.ai.utilization * 100)}%
+            </span>
+            <span className="text-xs text-muted">workforce active</span>
+          </div>
+          <div className="mt-4 space-y-2 text-sm">
+            <Row label="Conversations" value={data.ai.conversations} />
+            <Row label="Tokens in" value={data.ai.tokensIn.toLocaleString()} />
+            <Row label="Tokens out" value={data.ai.tokensOut.toLocaleString()} />
+            <Row label="Est. AI cost" value={`$${data.ai.estimatedCostUsd.toFixed(4)}`} />
+            <Row
+              label="Avg latency"
+              value={data.ai.avgLatencyMs === null ? "—" : `${data.ai.avgLatencyMs} ms`}
+            />
+            <Row
+              label="Goal progress"
+              value={`${Math.round(data.goals.averageProgress * 100)}%`}
+            />
+            <Row label="Est. hours saved" value={data.automation.estimatedHoursSaved} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex justify-between border-b border-border pb-2 last:border-0">
+      <span className="text-muted">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}
+
+function PageHeader({
+  workforce,
+  greeting,
+}: {
+  workforce?: DashboardData["workforce"];
+  greeting?: { active: number; running: number; attention: number };
+}) {
+  const hour = new Date().getHours();
+  const daypart = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-semibold">Good {daypart}.</h1>
+        {greeting ? (
+          <p className="text-sm text-muted">
+            {greeting.active} AI employees active · {greeting.running} task
+            {greeting.running === 1 ? "" : "s"} running
+            {greeting.attention > 0 ? (
+              <span className="text-warn"> · {greeting.attention} item{greeting.attention === 1 ? "" : "s"} need you</span>
+            ) : (
+              " · nothing needs you right now"
+            )}
+          </p>
+        ) : (
+          <p className="text-sm text-muted">A live snapshot of your AI workforce.</p>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        {workforce && (
+          <WorkforceControls
+            activeCount={workforce.byStatus.active ?? 0}
+            pausedCount={workforce.byStatus.paused ?? 0}
+          />
+        )}
+        <LastUpdated />
+      </div>
+    </div>
+  );
+}
