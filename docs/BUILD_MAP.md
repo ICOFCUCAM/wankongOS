@@ -157,7 +157,13 @@ health-history snapshots with an honest dashboard trend (no history → no
 arrow). ✅ Visual workflow builder (ADR-0028). ✅ BI + Strategy departments
 (ADR-0029): evidence-pack grounded Q&A and scenario plans, marketplace
 packs, honestly gated, briefs filed as searchable assets. ⬜ SSO/OIDC,
-object storage, human-utilization split.
+object storage, human-utilization split. ✅ Platform engines (ADR-0030): Company DNA +
+central Policy Engine + Style Engine in every grounded prompt · Enterprise
+Composition Engine (structured docs → evidence resolution → deterministic
+Quality Engine → branded/watermarked/verifiable render; doc.compose tool) ·
+Presentation Engine (branded HTML decks) · two-layer accounting packages
+registry · Workflow Intelligence (run-history recommendations) · Executive
+Intelligence (rule-derived CEO advisor).
 
 ### Security 🟡 (hardening core shipped)
 Permission-based least-privilege access on every route; per-tenant scoping (404 on
